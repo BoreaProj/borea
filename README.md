@@ -8,7 +8,7 @@ implemented yet. Installation and networking in the preview are simulated.
 
 [![Borea design preview: boot, family selection, Omarchy trim and restart](design/promo/borea-design-preview.gif)](design/promo/borea-design-preview.mp4)
 
-[Watch the 1080p video](design/promo/borea-design-preview.mp4) ·
+[Watch the 1080p / 60 fps video](design/promo/borea-design-preview.mp4) ·
 [View the looping GIF](design/promo/borea-design-preview.gif) ·
 [Browse the design](design/flow/LOCKED.md)
 

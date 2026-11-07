@@ -7,7 +7,7 @@ The HTML remains an interactive simulation; the live system and worker described
 in [SYSTEM.md](../../docs/architecture/SYSTEM.md) do not exist yet.
 
 The accepted HTML snapshot has SHA-256
-`fb2f9eddc7fd6f9c30bd9522d07965ad36a45525768a4522c523e091b0df8133`.
+`427421509c7c0febf09c5765c86a09bfe4609613cdca7be7d30b1291268240db`.
 This identifies this baseline; later approved HTML changes should update this
 contract and the recorded fingerprint together.
 

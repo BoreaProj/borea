@@ -1,25 +1,28 @@
 {
   "source": "design/flow/borea-flow.html",
-  "source_sha256": "fb2f9eddc7fd6f9c30bd9522d07965ad36a45525768a4522c523e091b0df8133",
+  "source_sha256": "427421509c7c0febf09c5765c86a09bfe4609613cdca7be7d30b1291268240db",
   "design_preview": true,
   "installation_simulated": true,
+  "capture_mode": "frame-by-frame, no frame interpolation",
   "audio": false,
-  "duration_seconds": 35.58,
+  "duration_seconds": 36.0,
   "video": {
     "file": "borea-design-preview.mp4",
     "width": 1920,
     "height": 1080,
-    "fps": 25,
+    "fps": 60,
+    "frames": 2160,
     "codec": "H.264",
-    "bytes": 4537915
+    "bytes": 5901924
   },
   "gif": {
     "file": "borea-design-preview.gif",
     "width": 960,
     "height": 540,
-    "fps": 12,
+    "fps": 25,
+    "duration_seconds": 16.6,
     "loop": "forever",
-    "bytes": 9610315
+    "bytes": 9485684
   },
   "scenes": [
     "Boot: highlight loop and dot-to-arrow",

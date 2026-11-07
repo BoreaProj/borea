@@ -12,6 +12,10 @@ behavior rather than treating the prototype's simulation as production logic.
 
 ## Shared language: every future page
 
+Wind movement uses elapsed time so its speed is consistent at 30, 60 and 120 Hz.
+The install fill and text reveal interpolate continuously between progress updates;
+keep the locked boot and restart animation timing unchanged.
+
 
 The layout scales from a 1920 × 1080 reference instead of stopping at a fixed
 20px UI size. Use a 24px reference unit, scaled by the smaller available width/
