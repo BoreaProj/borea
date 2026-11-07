@@ -1,0 +1,7 @@
+# Local promo capture metadata contains a temporary recording path.
+/design/promo/capture.json
+
+# Local editor and Python artifacts.
+.DS_Store
+__pycache__/
+*.py[cod]

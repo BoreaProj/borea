@@ -1,0 +1,33 @@
+{
+  "source": "design/flow/borea-flow.html",
+  "source_sha256": "fb2f9eddc7fd6f9c30bd9522d07965ad36a45525768a4522c523e091b0df8133",
+  "design_preview": true,
+  "installation_simulated": true,
+  "audio": false,
+  "duration_seconds": 35.58,
+  "video": {
+    "file": "borea-design-preview.mp4",
+    "width": 1920,
+    "height": 1080,
+    "fps": 25,
+    "codec": "H.264",
+    "bytes": 4537915
+  },
+  "gif": {
+    "file": "borea-design-preview.gif",
+    "width": 960,
+    "height": 540,
+    "fps": 12,
+    "loop": "forever",
+    "bytes": 9610315
+  },
+  "scenes": [
+    "Boot: highlight loop and dot-to-arrow",
+    "Logo springs into the corner / Get online",
+    "Choose your family / colour and card motion",
+    "Arch flavours / Omarchy",
+    "Trim Omarchy / individual and group selection",
+    "Silent install / highlight as progress",
+    "Restart / exact boot wordmark, dot-to-arrow and prompt"
+  ]
+}

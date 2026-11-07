@@ -1,0 +1,83 @@
+<div id="scene" style="background:#0b0f14;border-radius:12px;overflow:hidden;position:relative;width:100%;aspect-ratio:16/9;color:#e3eaf2;font-family:var(--font-sans,sans-serif);-webkit-font-smoothing:antialiased">
+<style>
+#ui .mono{font-family:var(--font-mono,monospace);font-size:.72em;color:#8497ab}
+#ui .lnk{cursor:pointer;color:#9fb0c2;border-bottom:1px dashed #33414f}
+#ui ul.t{list-style:none;margin:0;padding-left:1.5em}
+#ui ul.t>li{position:relative}
+#ui ul.t>li::before{content:"";position:absolute;left:-1.05em;top:0;bottom:0;border-left:1px solid #2a3542}
+#ui ul.t>li:last-child::before{bottom:auto;height:1.05em}
+#ui ul.t>li::after{content:"";position:absolute;left:-1.05em;top:1.05em;width:.85em;border-top:1px solid #2a3542}
+#ui .bn{display:flex;align-items:center;gap:.7em;padding:.35em .5em;border-radius:.4em;cursor:pointer;outline:none}
+#ui .bn:focus-visible,#ui .lf:focus-visible{box-shadow:0 0 0 2px #85b7eb}
+#ui .car{display:inline-block;color:#1793d1;transition:transform .3s cubic-bezier(.34,1.56,.64,1);font-size:.8em}
+#ui .open>.bn .car{transform:rotate(90deg)}
+#ui .lv{overflow:hidden;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.1em 1em;padding:.15em 0 .3em .1em;margin:0 0 .4em .82em;border-left:1px solid #2a3542}
+#ui .lf{position:relative;display:inline-flex;align-items:center;gap:.5em;font-size:.82em;padding:.22em .4em;border-radius:.3em;cursor:pointer;outline:none;user-select:none;transition:color .2s;justify-self:start}
+#ui .lf::before{content:"";width:.6em;border-top:1px solid #2a3542;flex:none}
+#ui .lf .t{position:relative}
+#ui .lf .x,#ui .bx{position:absolute;left:-.15em;right:-.15em;top:50%;height:.32em;margin-top:-.16em;background:#1793d1;border-radius:1px 3px 2px 3px;transform:skewX(-10deg) rotate(-1deg) scaleX(0);transform-origin:0 50%;opacity:.9}
+#ui .lf.rm{color:#6f8296}
+#ui .bnm{position:relative;font-family:var(--font-voice,serif);font-size:1.05em}
+#ui .tog{display:inline-flex;align-items:center;gap:.6em;cursor:pointer;font-size:.8em;color:#c9d6e3}
+#ui .sw{width:2.2em;height:1.2em;border-radius:.6em;background:#1f2a36;position:relative;transition:background .25s}
+#ui .sw i{position:absolute;top:.15em;left:.15em;width:.9em;height:.9em;border-radius:50%;background:#e3eaf2;transition:left .3s cubic-bezier(.34,1.56,.64,1)}
+#ui .tog.on .sw{background:#1793d1}#ui .tog.on .sw i{left:1.15em}
+.hl{position:absolute;border-radius:2px 6px 3px 7px;transform:skewX(-10deg) rotate(-1deg);transform-origin:0 50%}
+</style>
+<canvas id="c" style="position:absolute;inset:0;width:100%;height:100%"></canvas>
+<div id="ui" style="position:absolute;inset:0;font-size:16px;display:flex;align-items:center;justify-content:center">
+<div style="position:absolute;top:1.4em;left:2em;font-family:var(--font-voice,serif);font-size:1.15em;letter-spacing:.05em;padding:.1em .35em"><span class="hl" style="inset:16% 0 10%;background:#85b7eb"></span><span style="position:relative;color:#0b0f14">borea.</span></div>
+<div style="width:min(46em,86%)">
+<div id="back" role="button" tabindex="0" class="mono" style="cursor:pointer;margin-bottom:.6em;display:inline-flex;gap:.4em"><span style="color:#1793d1">←</span> arch · omarchy</div>
+<div style="font-family:var(--font-voice,serif);font-size:1.7em;color:#f1f5f9">Trim Omarchy</div>
+<div style="font-size:.85em;color:#9fb0c2;margin:.35em 0 .2em">Omarchy installs everything below. Tap anything you don't want and Borea removes it straight after Omarchy finishes.</div>
+<div style="margin-top:1.3em"><div style="display:flex;align-items:center;gap:.7em"><span style="position:relative;font-family:var(--font-voice,serif);font-size:1.15em;padding:0 .25em"><span class="hl" style="inset:10% -2% 6%;background:#1793d1"></span><b style="position:relative;font-weight:400;color:#0b0f14">omarchy</b></span><span class="mono" id="tot"></span></div><ul class="t" id="groups" style="margin-top:.2em"></ul></div>
+<div style="display:flex;align-items:center;justify-content:space-between;gap:1em;margin-top:1.6em;flex-wrap:wrap">
+<div id="keep" class="tog on" role="switch" aria-checked="true" tabindex="0"><span class="sw"><i></i></span>Keep them removed after Omarchy updates</div>
+<div class="mono"><span class="lnk" id="none">keep everything</span></div>
+</div>
+</div>
+<div style="position:absolute;left:2em;bottom:1.3em" class="mono" id="status"></div>
+<div id="go" role="button" aria-label="Continue" tabindex="0" style="position:absolute;right:2em;bottom:1.1em;width:3em;height:1.9em;clip-path:polygon(0% 27%,56% 27%,56% -4%,100% 50%,56% 104%,56% 73%,0% 73%);transform:skewX(-10deg);background:linear-gradient(90deg,rgb(93,179,223) 10%,#1793d1 90%);cursor:pointer"></div>
+</div>
+</div>
+<div style="display:flex;gap:8px;margin-top:12px;align-items:center;flex-wrap:wrap">
+<button id="replay"><i class="ti ti-refresh" aria-hidden="true"></i> Replay</button>
+<span style="font-size:13px;color:var(--text-secondary)">--dry-run: sample list · real list is read from Omarchy's own package set at install time</span>
+</div>
+<script>
+const $=id=>document.getElementById(id),ui=$('ui'),G=$('groups'),S=$('status'),go=$('go');
+const DATA=[
+{g:'Apps',items:['Chromium','LibreOffice','Obsidian','Kdenlive','OBS Studio','Pinta','Xournal++','Signal','Spotify','Typora','LocalSend','1Password']},
+{g:'Web apps',items:['HEY','Basecamp','WhatsApp','YouTube','X','Zoom','Discord','ChatGPT','Grok','GitHub','Figma','Google Photos','Google Maps','Google Messages','Google Contacts','Fizzy']},
+{g:'Developer tools',items:['Docker','lazydocker','Claude Code','opencode']}];
+const rm=new Set();
+function fit(){const r=$('scene').getBoundingClientRect();ui.style.fontSize=Math.round(Math.max(10,Math.min(r.width*.019,r.height*.03,20)))+'px'}
+function count(){const n=rm.size;S.textContent=n?n+' to remove · '+($('keep').classList.contains('on')?'kept removed after updates':'may return after updates'):'keeping everything'}
+const SKX='skewX(-10deg) rotate(-1deg) ';let openG=-1;
+function strike(bar,on){bar.getAnimations().forEach(a=>a.cancel());bar.animate(on?[{transform:SKX+'scaleX(0)'},{transform:SKX+'scaleX(1.08) scaleY(1.3)',offset:.6},{transform:SKX+'scaleX(1)'}]:[{transform:SKX+'scaleX(1)'},{transform:SKX+'scaleX(0)'}],{duration:on?380:220,fill:'forwards',easing:on?'ease-out':'ease-in'})}
+function grpCount(gi){const g=DATA[gi],n=g.items.filter(x=>rm.has(x)).length,li=G.children[gi];li.querySelector('.gc').textContent=n?n+' of '+g.items.length+' removed':g.items.length+' installed';li.querySelector('[data-all]').textContent=n===g.items.length?'keep all':'remove all';
+const all=n===g.items.length,bx=li.querySelector('.bx');if(all!==(bx.dataset.on==='1')){bx.dataset.on=all?'1':'0';strike(bx,all)}$('tot').textContent=DATA.reduce((a,d)=>a+d.items.length,0)+' extras'}
+function render(){G.innerHTML=DATA.map((d,gi)=>'<li data-g="'+gi+'"><div class="bn" tabindex="0" role="treeitem" aria-expanded="false"><span class="car">\u25b8</span><span class="bnm"><span class="bx" data-on="0"></span><span style="position:relative">'+d.g+'</span></span><span class="mono gc"></span><span class="mono lnk" data-all="'+gi+'" style="margin-left:auto">remove all</span></div><div class="lv" style="display:none">'+d.items.map(x=>'<div class="lf" tabindex="0" role="checkbox" aria-checked="false" data-x="'+x+'" data-g="'+gi+'"><span class="t"><span class="x"></span>'+x+'</span></div>').join('')+'</div></li>').join('');
+G.querySelectorAll('.bn').forEach(b=>{const gi=+b.parentNode.dataset.g;b.onclick=e=>{if(e.target.dataset.all==null)expand(gi)};b.onkeydown=e=>{if(e.key==='Enter'||e.key===' '||e.key==='ArrowRight'){e.preventDefault();expand(gi,e.key==='ArrowRight'?true:undefined)}if(e.key==='ArrowLeft'&&openG===gi)expand(gi,false)}});
+G.querySelectorAll('.lf').forEach(c=>{c.onclick=()=>toggle(c);c.onkeydown=e=>{if(e.key===' '||e.key==='Enter'){e.preventDefault();toggle(c)}if(e.key==='ArrowLeft'){expand(+c.dataset.g,false);G.children[c.dataset.g].querySelector('.bn').focus()}}});
+G.querySelectorAll('[data-all]').forEach(l=>l.onclick=e=>{e.stopPropagation();const gi=+l.dataset.all;if(openG!==gi)expand(gi,true);const cs=[...G.querySelectorAll('.lf[data-g="'+gi+'"]')],all=cs.every(c=>rm.has(c.dataset.x));cs.forEach((c,k)=>setTimeout(()=>{if(all===rm.has(c.dataset.x))toggle(c)},120+k*35))});
+DATA.forEach((_,i)=>grpCount(i));count()}
+function expand(gi,want){const li=G.children[gi],lv=li.querySelector('.lv'),open=li.classList.contains('open'),go2=want===undefined?!open:want;if(go2===open)return;
+if(go2&&openG>=0&&openG!==gi)expand(openG,false);
+li.classList.toggle('open',go2);li.querySelector('.bn').setAttribute('aria-expanded',go2);lv.getAnimations().forEach(a=>a.cancel());
+if(go2){openG=gi;lv.style.display='grid';const h=lv.scrollHeight;lv.animate([{height:'0px',opacity:0,transform:'scaleY(.85)'},{height:(h*1.04)+'px',opacity:1,transform:'scaleY(1.03)',offset:.6},{height:h+'px',opacity:1,transform:'none'}],{duration:440,easing:'ease-out'}).onfinish=()=>{};
+[...lv.children].forEach((c,k)=>c.animate([{opacity:0,transform:'translateX(-.6em)'},{opacity:1,transform:'none'}],{duration:260,delay:60+k*18,easing:'ease-out',fill:'backwards'}))}
+else{if(openG===gi)openG=-1;const h=lv.scrollHeight;lv.animate([{height:h+'px',opacity:1},{height:'0px',opacity:0}],{duration:220,easing:'ease-in'}).onfinish=()=>{lv.style.display='none'}}}
+function toggle(c){const x=c.dataset.x,on=!rm.has(x);on?rm.add(x):rm.delete(x);c.classList.toggle('rm',on);c.setAttribute('aria-checked',on);strike(c.querySelector('.x'),on);
+c.animate([{transform:'scale(1,1)'},{transform:'scale(1.06,.9)',offset:.35},{transform:'scale(.98,1.04)',offset:.7},{transform:'scale(1,1)'}],{duration:360,easing:'ease-out'});grpCount(+c.dataset.g);count()}
+$('none').onclick=()=>{[...G.querySelectorAll('.lf.rm')].forEach((c,k)=>setTimeout(()=>toggle(c),k*30))};
+$('keep').onclick=$('keep').onkeydown=e=>{if(e.type==='keydown'&&e.key!==' '&&e.key!=='Enter')return;e.preventDefault&&e.preventDefault();const t=$('keep');t.classList.toggle('on');t.setAttribute('aria-checked',t.classList.contains('on'));count()};
+go.onclick=()=>{go.animate([{transform:'skewX(-10deg) scale(1,1)'},{transform:'skewX(-10deg) scale(1.15,.85)',offset:.4},{transform:'skewX(-10deg) scale(1,1)'}],{duration:320,easing:'ease-out'});S.textContent='→ hand over to Omarchy installer, then remove '+rm.size+' item'+(rm.size===1?'':'s')};
+$('back').onclick=()=>{S.textContent='← back to Arch flavours'};
+function start(){rm.clear();openG=-1;fit();render();[...G.children].forEach((g,i)=>g.animate([{opacity:0,transform:'translateX(-.8em)'},{opacity:1,transform:'translateX(.1em)',offset:.6},{opacity:1,transform:'none'}],{duration:480,delay:i*90,easing:'ease-out',fill:'backwards'}));setTimeout(()=>expand(0,true),450)}
+const cv=$('c'),ctx=cv.getContext('2d');let W,H,L=[];
+function size(){W=cv.width=cv.clientWidth*devicePixelRatio;H=cv.height=cv.clientHeight*devicePixelRatio;L=Array.from({length:26},()=>({x:Math.random()*W,y:Math.random()*H,l:60+Math.random()*160,s:1+Math.random()*2,a:.04+Math.random()*.1,p:Math.random()*6}))}
+function draw(ts){ctx.clearRect(0,0,W,H);L.forEach(o=>{ctx.beginPath();for(let i=0;i<=o.l;i+=8){const x=o.x-i,y=o.y+Math.sin((x+ts*.05+o.p*40)/90)*10*devicePixelRatio;i?ctx.lineTo(x,y):ctx.moveTo(x,y)}ctx.strokeStyle='rgba(133,183,235,'+o.a+')';ctx.lineWidth=devicePixelRatio;ctx.stroke();o.x+=o.s*devicePixelRatio;if(o.x-o.l>W){o.x=-10;o.y=Math.random()*H}});requestAnimationFrame(draw)}
+$('replay').onclick=start;addEventListener('resize',()=>{size();fit()});size();requestAnimationFrame(draw);start();
+</script>

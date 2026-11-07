@@ -1,0 +1,1212 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Borea · Omarchy installation flow</title>
+
+<style>
+:root{--font-sans:Inter,system-ui,sans-serif;--font-voice:"Source Serif 4",Georgia,serif;--font-mono:"JetBrains Mono",ui-monospace,monospace;--text-secondary:#8497ab}
+html,body{margin:0;background:#05080b;color:#e3eaf2;font-family:var(--font-sans)}
+body{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px;box-sizing:border-box}
+body>#scene{max-width:1600px}
+button,select{font:inherit;font-size:13px;background:transparent;color:#e3eaf2;border:1px solid #33414f;border-radius:6px;padding:6px 10px;cursor:pointer}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+</style><style>
+#arch-page .card{position:relative;background:#0f151d;border:1px solid #1f2a36;border-radius:.7em;padding:1.5em 1.3em 1.4em;cursor:pointer;outline:none;transform-origin:50% 100%;transition:opacity .3s,border-color .3s;display:flex;flex-direction:column}
+#arch-page .card.dim{opacity:.45}
+#arch-page .card:focus-visible{outline:none}
+#arch-page .nm{position:relative;display:inline-block;align-self:flex-start;font-family:var(--font-voice,serif);font-size:1.4em;padding:0 .25em;margin:1.1em 0 .9em;margin-left:-.25em}
+#arch-page .nm b{position:relative;font-weight:400}
+#arch-page .q{font-family:var(--font-voice,serif);font-style:italic;font-size:.88em;color:#c9d6e3;line-height:1.5;flex:1}
+#arch-page .src{font-family:var(--font-mono,monospace);font-size:.62em;color:#6f8296;margin-top:1.2em}
+#arch-page .tg{font-family:var(--font-mono,monospace);font-size:.62em;color:#8497ab;margin-top:.9em;padding-top:.8em;border-top:1px solid #1f2a36}
+#arch-page .tg.sug{color:#7cc4ec}
+#arch-page .mono{font-family:var(--font-mono,monospace);font-size:.72em;color:#8497ab}
+.hl{position:absolute;border-radius:2px 6px 3px 7px;transform:skewX(-10deg) rotate(-1deg);transform-origin:0 50%}
+
+
+#trim-page .mono{font-family:var(--font-mono,monospace);font-size:.72em;color:#8497ab}
+#trim-page .lnk{cursor:pointer;color:#9fb0c2;border-bottom:1px dashed #33414f}
+#trim-page ul.t{list-style:none;margin:0;padding-left:1.5em}
+#trim-page ul.t>li{position:relative}
+#trim-page ul.t>li::before{content:"";position:absolute;left:-1.05em;top:0;bottom:0;border-left:1px solid #2a3542}
+#trim-page ul.t>li:last-child::before{bottom:auto;height:1.05em}
+#trim-page ul.t>li::after{content:"";position:absolute;left:-1.05em;top:1.05em;width:.85em;border-top:1px solid #2a3542}
+#trim-page .bn{display:flex;align-items:center;gap:.7em;padding:.35em .5em;border-radius:.4em;cursor:pointer;outline:none}
+#trim-page .bn:focus-visible,#trim-page .lf:focus-visible{box-shadow:0 0 0 2px #85b7eb}
+#trim-page .car{display:inline-block;color:#1793d1;transition:transform .3s cubic-bezier(.34,1.56,.64,1);font-size:.8em}
+#trim-page .open>.bn .car{transform:rotate(90deg)}
+#trim-page .lv{overflow:hidden;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.1em 1em;padding:.15em 0 .3em .1em;margin:0 0 .4em .82em}
+#trim-page .lf{position:relative;display:inline-flex;align-items:center;gap:.5em;font-size:.82em;padding:.22em .4em;border-radius:.3em;cursor:pointer;outline:none;user-select:none;transition:color .2s;justify-self:start}
+#trim-page .lf::before{content:"";width:.6em;border-top:1px solid #2a3542;flex:none}
+#trim-page .lf .t{position:relative}
+#trim-page .lf .x,#trim-page .bx{position:absolute;left:-.15em;right:-.15em;top:50%;height:.32em;margin-top:-.16em;background:#1793d1;border-radius:1px 3px 2px 3px;transform:skewX(-10deg) rotate(-1deg) scaleX(0);transform-origin:0 50%;opacity:.9}
+#trim-page .lf.rm{color:#6f8296}
+#trim-page .bnm{position:relative;font-family:var(--font-voice,serif);font-size:1.05em}
+#trim-page .tog{display:inline-flex;align-items:center;gap:.6em;cursor:pointer;font-size:.8em;color:#c9d6e3}
+#trim-page .sw{width:2.2em;height:1.2em;border-radius:.6em;background:#1f2a36;position:relative;transition:background .25s}
+#trim-page .sw i{position:absolute;top:.15em;left:.15em;width:.9em;height:.9em;border-radius:50%;background:#e3eaf2;transition:left .3s cubic-bezier(.34,1.56,.64,1)}
+#trim-page .tog.on .sw{background:#1793d1}#trim-page .tog.on .sw i{left:1.15em}
+.hl{position:absolute;border-radius:2px 6px 3px 7px;transform:skewX(-10deg) rotate(-1deg);transform-origin:0 50%}
+
+
+#arch-page,#trim-page{max-height:76%;overflow:auto;padding:1em .5em;box-sizing:border-box}
+#arch-page .card:focus-visible,.fcard:focus-visible{outline:2px solid #85b7eb;outline-offset:4px}
+.flow-back{align-self:flex-start;border:0;padding:0;margin-bottom:.6em;font:inherit;font-size:.75em;color:#8497ab}
+#arch-page .card[aria-pressed=true]{border-color:#1793d188}
+#arch-page .card.dim{opacity:.45}
+#trim-page .lnk{font:inherit;padding:0;border:0;border-radius:0}
+#nstatus{max-width:75%;pointer-events:none}
+@media(max-width:650px){#arch-cards{gap:.6em!important}#arch-page .card{padding:.8em}.lv{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
+
+.review-layout{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:1em;align-items:start}
+.review-layout .review-row{grid-template-columns:6em 1fr auto;padding:.55em 0;font-size:.75em}
+.review-layout .next-warning{margin-top:0}
+@media(max-width:800px){.review-layout{grid-template-columns:1fr}}
+#bootwrap{gap:var(--brand-gap,30px)!important}
+#status{font-size:var(--brand-status-size,11px)!important;height:var(--brand-status-height,16px)!important}
+/* One wordmark design at both sizes; all geometry scales with its font. */
+.wordmark{position:relative;padding:.05em .25em;font-family:var(--font-voice,serif);letter-spacing:.05em;line-height:1.2;white-space:nowrap;text-shadow:0 .025em .05em rgb(0 0 0 / 20%)}
+.wordmark > .brand-highlight{box-shadow:0 .08em .2em rgb(0 0 0 / 38%)}
+/* From family onward, titles share the logo row and content gets the full body. */
+#page-title{position:absolute;margin:0;right:8em;font-family:var(--font-voice);font-size:1.7em;font-weight:400;line-height:1.2;color:#f1f5f9;pointer-events:none}
+#page-comment{position:absolute;margin:0;font-size:.85em;line-height:1.5;color:#9fb0c2}
+#fam,#arch-page,#trim-page{position:absolute;left:0;right:0;top:var(--flow-content-top,6em);bottom:4.2em;margin:0 auto;max-height:none;overflow:auto;box-sizing:border-box;padding:.4em .5em}
+#fam,#arch-page{display:flex;flex-direction:column}
+#cards,#arch-cards{flex:1;grid-auto-rows:minmax(14em,1fr)}
+@media(max-width:650px){#page-title{font-size:1.4em;right:1.5em}}
+#next-page{position:absolute;left:0;right:0;top:var(--flow-content-top,6em);bottom:4.2em;width:min(58em,88%);margin:0 auto;overflow:auto;padding:.4em .5em;box-sizing:border-box}
+#next-page .next-back{display:block;margin-bottom:1em}
+.next-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1em}
+.next-two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1.3em}
+.next-panel,.next-option{background:#0f151d;border:1px solid #1f2a36;border-radius:.7em;padding:1.1em 1.2em;color:#e3eaf2;text-align:left}
+.next-option{font-size:1em;line-height:1.45;transition:border-color .25s,transform .25s}
+.next-option:hover{transform:translateY(-.15em);border-color:#42586d}
+.next-option[aria-pressed=true]{border-color:#1793d1;background:#101e29}
+.next-option[aria-pressed=true] .pick-name{background:#1793d1;color:#0b0f14;box-decoration-break:clone}
+.pick-name{font-family:var(--font-voice);font-size:1.2em;padding:0 .2em;border-radius:.12em}
+.next-desc{display:block;font-size:.8em;color:#9fb0c2;line-height:1.55;margin-top:.6em}
+.next-kicker{font-family:var(--font-mono);font-size:.65em;letter-spacing:.1em;text-transform:uppercase;color:#8497ab;margin:0 0 1em}
+.next-section{margin-top:1.4em}
+.next-section h2,.next-panel h2{font:400 1.2em var(--font-voice);margin:0 0 .8em}
+.next-pick{display:flex;align-items:flex-start;gap:.65em;padding:.65em 0;cursor:pointer;font-size:.9em;line-height:1.4}
+#ui input[type=checkbox]{flex:none;width:1em;height:1em;margin:.2em 0 0;accent-color:#1793d1;padding:0}
+.next-pick small{display:block;color:#8497ab;font-size:.8em;margin-top:.2em}
+.next-field{display:flex;flex-direction:column;gap:.4em;margin-bottom:.9em;font-size:.82em;min-width:0}
+#ui .next-field input,#ui .next-field select{box-sizing:border-box;width:100%;font-size:1em;min-width:0;background:#121922;border:1px solid #2a3542;border-radius:.3em;color:#e3eaf2;padding:.6em .7em}
+#ui input[type=range]{accent-color:#1793d1;padding:0}
+.next-caption{font-size:.75em;color:#8497ab;line-height:1.6;margin:.6em 0}
+.next-warning{border-left:2px solid #d7a56a;padding:.6em .9em;background:#1a1816;font-size:.8em;line-height:1.55;color:#e1c5a5}
+.next-hint{font-family:var(--font-mono);font-size:.65em;color:#9fb0c2;line-height:1.5;margin:.8em 0;min-height:1.5em}
+.disk-strip{display:flex;height:2.3em;border-radius:.35em;overflow:hidden;margin:.8em 0;color:#dce7f1;font: .7em var(--font-mono)}
+.disk-strip span{display:flex;align-items:center;justify-content:center;background:#25364a;min-width:0}
+.disk-strip .borea-space{background:#1793d1;color:#0b0f14}
+.next-table{width:100%;border-collapse:collapse;font-size:.75em;text-align:left}
+.next-table th,.next-table td{padding:.7em .5em;border-bottom:1px solid #25303d;font-weight:400}
+.next-table th{color:#8497ab}
+.review-row{display:grid;grid-template-columns:7em 1fr auto;gap:.8em;padding:.8em 0;border-bottom:1px solid #1f2a36;align-items:start;font-size:.85em;line-height:1.5}
+.review-row dt{color:#8497ab}.review-row dd{margin:0;overflow-wrap:anywhere}
+.next-edit{font: .75em var(--font-mono);padding:.25em .4em;color:#85b7eb;border:0}
+.next-primary{background:#1793d1;color:#0b0f14;border:0;padding:.7em 1.1em;font-size:.85em;border-radius:.3em;cursor:pointer}
+.next-primary:disabled{opacity:.35;cursor:default}
+.next-actions{display:flex;align-items:center;gap:1em;flex-wrap:wrap;margin-top:1em}
+#next-page button:focus-visible,#next-page input:focus-visible,#next-page select:focus-visible,#locale-controls select:focus-visible{outline:2px solid #85b7eb;outline-offset:3px}
+#locale-controls{font-size:var(--ui-font-size,16px);position:absolute;top:1.9em;right:2.3em;display:flex;gap:.5em;z-index:2}
+#locale-controls label{font:.6em var(--font-mono);color:#8497ab}
+#locale-controls select{display:block;font:inherit;margin-top:.35em;padding:.4em;background:#0b0f14;max-width:7em}
+#page-title{right:9em}
+.install-number{font:400 3em var(--font-voice);color:#1793d1;margin:0}
+.install-phase{font:400 1.6em var(--font-voice);margin:.4em 0}
+.install-track{height:.45em;background:#1f2a36;border-radius:1em;overflow:hidden;margin:1.2em 0}
+.install-track span{display:block;height:100%;background:#1793d1;transition:width .35s ease;border-radius:1em}
+.install-steps{list-style:none;padding:0;margin:1.4em 0 0;font:.75em var(--font-mono);line-height:2.3;color:#8497ab}
+.install-steps [data-state=active]{color:#e3eaf2}.install-steps [data-state=done]{color:#1793d1}
+.done-mark{font:400 3.2em var(--font-voice);color:#1793d1;margin:.2em 0}
+@media(max-width:800px){.next-grid{gap:.6em}.next-panel,.next-option{padding:.8em}.next-two{gap:.8em}.review-row{grid-template-columns:5em 1fr auto}}
+@media(max-width:650px){.next-two{grid-template-columns:1fr}.next-grid{grid-template-columns:1fr}#locale-controls{top:1em;right:1.5em}#locale-controls label{font-size:.5em}#page-title{right:8em}.review-row{grid-template-columns:1fr auto}.review-row dt{grid-column:1/-1}}
+
+/* Fit to the available window. Extra content is paged, never clipped or scrolled. */
+html,body{height:100%;overflow:hidden}
+body{height:100dvh;padding:8px;gap:8px;justify-content:flex-start;min-height:0}
+body>#scene{max-width:none;flex:none;min-height:0;container-type:size}
+#preview-toolbar{display:flex;flex:none;align-items:center;justify-content:center;gap:8px;width:100%;min-height:32px;font-size:12px}
+#preview-toolbar label{display:flex;align-items:center;gap:6px;color:#8497ab;white-space:nowrap}
+#preview-toolbar button,#preview-toolbar select,#demo-tools summary{font-size:12px;padding:5px 8px}
+#demo-tools{position:relative}
+#demo-tools summary{cursor:pointer;border:1px solid #33414f;border-radius:6px;color:#9fb0c2;list-style:none}
+#demo-tools>div{position:fixed;z-index:20;bottom:54px;right:12px;width:min(450px,calc(100vw - 48px));padding:12px;display:flex;gap:10px;flex-wrap:wrap;background:#111821;border:1px solid #33414f;border-radius:8px;box-shadow:0 8px 30px #0008}
+#demo-tools:not([open])>div{display:none}
+#demo-tools #note{white-space:normal;font-size:11px!important;line-height:1.4}
+#fam,#arch-page,#trim-page,#next-page{overflow:visible;bottom:3.8em;padding:.3em .5em}
+#ncol{position:absolute;top:5em;bottom:3.8em;overflow:visible;margin:auto}
+#cards,#arch-cards{flex:0;grid-auto-rows:auto;align-content:start}
+#screen-pager{position:absolute;bottom:1em;left:50%;transform:translateX(-50%);display:flex;gap:.6em;align-items:center;font:.75em var(--font-mono);color:#9fb0c2}
+#screen-pager[hidden]{display:none}
+#screen-pager button{font:inherit;padding:.3em .6em;min-width:2em}
+#nstatus{max-width:32%;font-size:.65em!important}
+[data-fit-hidden]{display:none!important}
+#next-page .next-back{margin-bottom:.7em}
+.next-panel{padding:.85em 1em}.next-section{margin-top:.8em}
+.next-panel h2{font-size:1.1em;margin-bottom:.5em}
+.next-field{gap:.3em;margin-bottom:.65em;font-size:.85em}
+#ui .next-field input,#ui .next-field select{padding:.45em .6em}
+.next-caption{line-height:1.4;margin:.45em 0}
+.next-pick{padding:.45em 0}.next-hint{margin:.4em 0;min-height:0}
+.next-warning{padding:.5em .7em;line-height:1.4}
+.next-two,.review-layout{align-items:start}
+.app-layout{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:2.5em;max-width:46em;margin:0 auto}
+.app-group{padding:.5em 0}
+.app-group h2{font:400 1.1em var(--font-voice);margin:0 0 .5em;color:#c9d6e3}
+.app-choice{display:flex;align-items:center;gap:.75em;padding:.7em .25em;border-bottom:1px solid #1f2a36;cursor:pointer}
+.app-choice:has(input:checked){border-bottom-color:#1793d1}
+.app-choice span{font-size:.9em}.app-choice small{display:block;margin-top:.15em;font-size:.8em;color:#8497ab;line-height:1.4}
+.app-caption{max-width:46em;margin:1em auto 0;font-size:.75em;color:#8497ab;line-height:1.4}
+.install-number{font-size:2.5em}.install-steps{line-height:1.8;margin-top:.8em}
+.install-track{margin:.7em 0}.done-mark{font-size:2.3em}
+@container(max-width:850px){
+ #cards{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:.8em!important}
+ #arch-cards{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:.8em!important}
+ .next-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .review-layout,.next-two{gap:.7em}.review-layout{grid-template-columns:1fr}
+ .app-layout{gap:1em}.review-row{font-size:.8em}
+ #nstatus{display:none}
+}
+@container(max-width:560px){
+ #cards,#arch-cards{grid-template-columns:1fr!important}
+ .next-two,.next-grid,.app-layout,.review-layout{grid-template-columns:1fr}
+ #page-title{font-size:1.15em;right:7em}
+ #locale-controls{top:.8em;right:1em;gap:.3em}
+ #locale-controls label{font-size:0}#locale-controls select{font-size:10px;max-width:5.5em;padding:.3em}
+ .app-group{padding:0}.app-choice{padding:.4em .2em}.app-caption{margin:.5em 0 0}
+ .review-layout .review-row{grid-template-columns:5em 1fr auto}
+ .review-layout .review-row dt{grid-column:auto}
+ .next-panel{padding:.6em .7em}.next-option{padding:.6em .7em}
+ .next-field{font-size:.9em}.next-caption{font-size:.8em}
+}
+@container(max-height:520px){
+ .app-group{padding:0}
+ #fam .fcard,#arch-page .card{padding:.65em .8em;position:relative}
+ #fam .fcard>svg,#arch-page .card>svg{position:absolute;right:.7em;top:.65em;width:1.1em!important;height:1.1em!important}
+ #fam .fnm,#arch-page .nm{font-size:1.15em;margin:.1em 0 .5em}
+ #fam .fq,#arch-page .q{font-size:.88em;line-height:1.35;flex:none}
+ #fam .fsrc,#arch-page .src{margin-top:.6em;font-size:.7em}
+ #arch-page .tg{margin-top:.5em;padding-top:.4em}
+ #next-page .next-back{margin-bottom:.45em}
+ .next-kicker{margin-bottom:.55em}.next-panel{padding:.65em .8em}
+ .next-pick{padding:.3em 0}.next-caption{line-height:1.35}
+ .next-section{margin-top:.6em}.next-warning{margin:.4em 0}
+ .next-actions{gap:.5em;margin-top:.6em}.next-primary{padding:.5em .75em}
+ .review-layout .review-row{padding:.4em 0;line-height:1.35}
+ .install-number{font-size:2em}.install-phase{font-size:1.2em}
+ .install-track{margin:.5em 0}.install-steps{margin-top:.5em;line-height:1.6}
+ .done-mark{font-size:1.7em}.next-desc{margin-top:.3em;line-height:1.35}
+ #trim-page .lv{margin-bottom:.1em;padding-bottom:.1em}
+ #trim-page .lf{font-size:.85em}.flow-back{margin-bottom:.4em}
+}
+@container(max-height:340px){
+ #page-comment{font-size:.78em;line-height:1.25}
+ #ncol{top:4em}
+ #ncol>div:first-child{font-size:1.2em!important}
+ #ncol>div:nth-child(2){font-size:.78em!important;margin-bottom:.5em!important}
+ #fam,#arch-page,#trim-page,#next-page,#ncol{bottom:3.3em}
+ .next-panel{padding:.45em .6em}.next-field{margin-bottom:.4em}
+ .next-field input,.next-field select{padding:.3em .4em!important}
+ .app-choice{padding:.25em .2em}
+ #trim-page .bn{padding:.2em .3em}
+ #trim-page .lv{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+
+
+@media(max-width:600px){#preview-toolbar>label{font-size:0;gap:0}}
+@container(max-height:520px){
+ #trim-page>div:first-of-type{margin-top:.3em!important}
+ #trim-page>div:first-of-type>div:first-child{display:none}
+ #trim-page>div:last-of-type{margin-top:.4em!important}
+}
+@container(max-height:340px){.install-number{float:right;font-size:1.3em;margin-left:.4em}.install-phase{margin-top:0;font-size:1.1em}}
+
+
+@container(max-height:400px){
+ #next-page .next-back,#arch-back,#trim-back{position:absolute;bottom:-2.4em;left:.5em;margin:0;z-index:1}
+}
+
+
+#screen-back-slot{position:absolute;left:2em;bottom:1.3em;z-index:2}
+#screen-back-slot .flow-back{position:static!important;margin:0!important}
+#ui:has(#screen-back-slot:not([hidden])) #nstatus{display:none}
+
+#ncol{top:var(--flow-content-top,5em)}
+@container(max-height:520px){
+ #ui #fam .fcard{padding:.65em .8em}
+ #ui #fam .fnm{font-size:1.15em;margin:.1em 0 .5em}
+ #ui #fam .fq{font-size:.88em;line-height:1.35;flex:none}
+ #ui #fam .fsrc{margin-top:.6em;font-size:.7em}
+}
+@container(max-height:340px){
+ #ui #fam .fcard,#arch-page .card{padding:.4em .6em}
+ #ui #fam .fnm,#arch-page .nm{margin:0 0 .3em;font-size:1.05em}
+ #ui #fam .fsrc,#arch-page .src{margin-top:.35em}
+ #arch-page .tg{margin-top:.25em;padding-top:.2em;line-height:1.2}
+ #ui .msg{font-size:.85em;line-height:1.3;padding:.5em .6em}
+ #ui .msg .btn{font-size:.75em!important;padding:.3em .5em!important}
+ #ui .msg>div{flex-wrap:wrap}
+}
+
+
+.review-layout .review-row dt{grid-column:auto}
+.install-facts{list-style:none;margin:.6em 0;padding:0;font-size:.75em;line-height:1.5;color:#8497ab}
+@container(max-height:340px){
+ .next-table th,.next-table td{padding:.35em .4em}
+ .next-section h2{font-size:1em;line-height:1.2;margin-bottom:.3em}
+ .next-section .next-field[style]{margin-top:.3em!important}
+ #next-page p[style]{line-height:1.4!important}
+}
+
+/* The header settles first; the body occupies the quieter central region. */
+#locale-controls{display:none!important}
+#page-title{right:2em!important}
+#fam,#arch-page,#trim-page,#next-page,#ncol{display:flex;flex-direction:column;justify-content:safe center}
+#fam>*,#arch-page>*,#trim-page>*,#next-page>*,#ncol>*{flex-shrink:0}
+#page-title,#page-comment{will-change:clip-path,transform,opacity}
+
+/* Small inline icons keep the mockup independent of network/CDN availability. */
+.ti{display:inline-block;font-style:normal;line-height:1}
+.ti-refresh::before{content:"↻"}.ti-player-play::before{content:"▷"}
+.ti-network::before{content:"↔"}.ti-plus::before{content:"+"}
+.ti-lock{position:relative;width:.7em;height:.55em;border:1px solid currentColor;border-radius:.12em;box-sizing:border-box;margin-top:.3em}
+.ti-lock::before{content:"";position:absolute;left:.1em;right:.1em;height:.4em;bottom:.45em;border:1px solid currentColor;border-bottom:0;border-radius:.3em .3em 0 0}
+.sudo-choice{align-items:center;min-height:2.3em}
+.sudo-choice>label:not(.sr-only){cursor:pointer}
+#ui .sudo-choice>input[type=password]{flex:1;min-width:0;width:0;box-sizing:border-box;font-size:1em}
+
+.install-hero{text-align:center;margin:0 0 .8em}
+.install-hero .next-kicker{margin:0 0 .5em}
+.install-logo-progress{text-align:center;padding:.2em 0 .4em}
+.install-wordmark{display:inline-block;font-size:clamp(28px,min(12cqw,14cqh),160px);color:#3a4a5c;vertical-align:middle}
+.install-ink{position:absolute;left:0;top:18%;height:70%;background:#1793d1;border-radius:.075em .25em .125em .3em;transform:skewX(-10deg) rotate(-1deg);transform-origin:0 50%;transition:width 350ms linear}
+.install-text-progress{transition:clip-path 350ms linear;pointer-events:none}
+.install-readout{display:flex;justify-content:center;align-items:baseline;gap:.7em;margin-top:.4em;font-size:.85em;color:#9fb0c2}
+.install-readout #install-percent{font:inherit;font-family:var(--font-mono);color:#85b7eb;white-space:nowrap}
+.install-readout .install-phase{font:400 1.1em var(--font-voice);line-height:1.25;margin:0;color:#e3eaf2}
+.install-lower{gap:1em}.install-lower .install-steps{margin:0}
+.install-hero .next-actions{justify-content:center}
+@media(prefers-reduced-motion:reduce){.install-ink,.install-text-progress{transition:none}}
+
+
+#install-cover[hidden],#install-details[hidden]{display:none!important}
+.install-details{width:min(46em,100%);margin:0 auto;color:#9fb0c2}
+.install-console{font:.85em var(--font-mono);line-height:1.8}
+.install-console p{margin:.35em 0;overflow-wrap:anywhere}
+.install-console [data-state=done]{color:#1793d1}.install-console [data-state=active]{color:#e3eaf2}.install-console [data-state=waiting]{color:#5f7488}
+.install-output-total{font:.85em var(--font-mono);color:#85b7eb;margin:.5em 0 1em}
+.install-view-control{text-align:center;margin-top:1em}
+#install-view-toggle{position:absolute;left:2em;bottom:1.3em;border:0;background:none;color:#8497ab;font:.7em var(--font-mono);padding:.4em .6em;cursor:pointer}
+#install-view-toggle:focus-visible{outline:2px solid #85b7eb}
+.install-error-actions{text-align:center;color:#e2b185;font-size:.85em;line-height:1.4}
+
+
+/* The silent install scene uses the boot scene's geometry, with fixed theme colour. */
+#scene[data-install-cover] #bootwrap,#scene[data-install-cover] #page-title,#scene[data-install-cover] #page-comment{visibility:hidden!important}
+#scene[data-install-cover] #next-page{top:0;bottom:0;width:100%;padding:0}
+#scene[data-install-cover] #install-cover{margin:0;width:100%}
+#scene[data-install-cover] .install-logo-progress{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:var(--brand-gap,30px);padding:0}
+#scene[data-install-cover] .install-readout{height:var(--brand-status-height,16px);margin:0;font:var(--brand-status-size,11px) var(--font-mono);color:#5f7488;gap:.6em;align-items:center}
+#scene[data-install-cover] .install-readout .install-phase{font:inherit;color:inherit;white-space:normal}
+#scene[data-install-cover] .install-readout #install-percent{font:inherit;color:inherit}
+
+
+#restart-blackout{position:absolute;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;background:#000;border-radius:inherit;outline:none}
+/* Restart uses the exact boot arrow and the same shared motion. */
+#ui .restart-symbol{position:absolute;left:0;top:0;width:0;height:0;padding:0;min-width:0;min-height:0;border:0;border-radius:3px 10px 5px 12px;opacity:0;overflow:hidden;transform-origin:0% 50%;cursor:pointer;pointer-events:none;font:inherit}
+.restart-symbol:focus-visible{filter:drop-shadow(0 0 3px #e3eaf2)}
+.boot-copy-wordmark{text-align:start;color:#e3eaf2}
+.restart-cover{position:absolute;inset:0;background:#0b0f14}
+.restart-finish .install-readout{transition:opacity .4s}
+</style></head><body>
+<div id="scene" class="scene" style="color:#e3eaf2;font-family:var(--font-sans,sans-serif);-webkit-font-smoothing:antialiased;background:#0b0f14;border-radius:12px;overflow:hidden;position:relative;width:100%;aspect-ratio:16/9;margin:0 auto">
+<div id="locale-controls" aria-label="Language and keyboard"><label>language<select id="global-language" aria-label="System language"><option value="en-GB">EN-GB</option><option value="en-US">EN-US</option><option value="de-DE">DE</option><option value="fr-FR">FR</option></select></label><label>keyboard<select id="global-keyboard" aria-label="Keyboard layout"><option value="gb">UK</option><option value="us">US</option><option value="de">DE</option><option value="fr">FR</option></select></label></div>
+<canvas id="c" style="position:absolute;inset:0;width:100%;height:100%"></canvas>
+<div id="bootwrap" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:30px;will-change:transform">
+<div id="hl" class="wordmark" style="font-size:40px">
+<div id="ink" class="brand-highlight" style="position:absolute;left:0;top:18%;height:70%;width:0;background:#1793d1;border-radius:.075em .25em .125em .3em;transform:skewX(-10deg) rotate(-1deg);transform-origin:0% 50%"></div>
+<div id="pill" role="button" aria-label="Continue" style="position:absolute;left:0;top:0;width:0;height:0;background:linear-gradient(90deg,#85b7eb 15%,#73ba25 95%);border-radius:3px 10px 5px 12px;cursor:pointer;opacity:0;overflow:hidden;transform-origin:0% 50%;clip-path:polygon(0% 0%,60% 0%,100% 0%,100% 50%,100% 100%,60% 100%,0% 100%)"><div id="cover" style="position:absolute;inset:0;background:#0b0f14"></div></div><span style="position:relative;color:#3a4a5c">borea</span><span id="over" style="position:absolute;left:.25em;top:.05em;color:#0b0f14;clip-path:inset(0 100% 0 0)">borea</span><span style="position:relative;display:inline-block;width:.3em;height:1em"><div id="dot" style="position:absolute;left:.05em;top:.75em;width:.2em;height:.2em;border-radius:50%;background:#3a4a5c"></div></span>
+</div>
+<div id="status" style="font-family:var(--font-mono,monospace);font-size:max(11px,.3em);color:#5f7488;height:16px;transition:opacity .4s"></div>
+</div>
+
+<style>
+#ui .row{display:flex;align-items:center;gap:.8em;padding:.42em .8em;border-radius:.4em;cursor:pointer;outline:none;position:relative;z-index:1}
+#ui .row:focus-visible,#eye:focus-visible{box-shadow:0 0 0 2px #85b7eb;outline:none}
+#ui .nm{position:relative;padding:0 .3em;transition:color .18s}
+#ui .row.sel .nm{color:#0b0f14}
+#ui .bars{display:flex;align-items:flex-end;gap:.12em;height:.9em}
+#ui .bars i{width:.22em;background:#2a3542;transform:skewX(-10deg);display:block}
+#ui .bars i.on{background:#85b7eb}
+#ui .mono{font-family:var(--font-mono,monospace);font-size:.75em;color:#8497ab}
+#ui input{background:#121922;border:1px solid #2a3542;color:#f1f5f9;border-radius:.3em;padding:.45em .6em;font-size:.9em;height:auto;width:100%}
+#ui .btn{background:none;border:1px solid #33414f;color:#e3eaf2;border-radius:.3em;padding:.35em .7em !important;height:auto !important;font-size:.8em;cursor:pointer}
+#ui .msg{padding:.7em .8em;border-left:2px solid #85b7eb;background:#111821;font-size:.9em;line-height:1.5}
+.hl{position:absolute;background:#85b7eb;border-radius:2px 6px 3px 7px;transform:skewX(-10deg) rotate(-1deg);transform-origin:0 50%}
+#fam .fcard{position:relative;background:#0f151d;border:1px solid #1f2a36;border-radius:.7em;padding:1.5em 1.3em 1.4em;cursor:pointer;outline:none;transform-origin:50% 100%;transition:opacity .3s,border-color .3s;display:flex;flex-direction:column}
+#fam .fcard.dim{opacity:.45}
+#fam .fcard:focus-visible{outline:none}
+#fam .fnm{position:relative;display:inline-block;align-self:flex-start;font-family:var(--font-voice,serif);font-size:1.4em;padding:0 .25em;margin:1.1em 0 .9em;margin-left:-.25em}
+#fam .fnm b{position:relative;font-weight:400}
+#fam .fq{font-family:var(--font-voice,serif);font-style:italic;font-size:.88em;color:#c9d6e3;line-height:1.5;flex:1}
+#fam .fsrc{font-family:var(--font-mono,monospace);font-size:.62em;color:#6f8296;margin-top:1.2em}
+</style>
+<div id="ui" style="position:absolute;inset:0;font-size:16px;display:flex;align-items:center;justify-content:center;visibility:hidden">
+<div id="clogo" aria-label="borea"></div>
+<h1 id="page-title" hidden></h1>
+<p id="page-comment" hidden></p>
+<div id="ncol" data-flow-panel style="width:min(38em,82%);opacity:0">
+<div class="mono" style="margin-bottom:.3em">wired</div>
+<div id="wired" style="position:relative"></div>
+<div class="mono" style="margin:.9em 0 .3em">wi-fi</div>
+<div id="list" style="position:relative"><div id="hi" class="hl" style="opacity:0;z-index:0"></div><div id="wifi"></div></div>
+</div>
+<div id="fam" data-flow-panel style="width:min(64em,88%);display:none">
+<div id="cards" style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1.8em"></div>
+</div>
+<section id="arch-page" data-flow-panel aria-label="Arch flavours" style="width:min(56em,88%);display:none">
+<button id="arch-back" class="flow-back">← families · Arch</button>
+<div id="arch-cards" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1.8em"></div></section>
+<section id="trim-page" data-flow-panel aria-label="Trim Omarchy" style="width:min(58em,88%);display:none">
+<button id="trim-back" class="flow-back">← Arch flavours · Omarchy</button>
+<div style="margin-top:1.3em"><div style="display:flex;align-items:center;gap:.7em"><span style="position:relative;font-family:var(--font-voice,serif);font-size:1.15em;padding:0 .25em"><span class="hl" style="inset:10% -2% 6%;background:#1793d1"></span><b style="position:relative;font-weight:400;color:#0b0f14">omarchy</b></span><span class="mono" id="trim-tot"></span></div><ul class="t" id="trim-groups" style="margin-top:.2em"></ul></div>
+<div style="display:flex;align-items:center;justify-content:space-between;gap:1em;margin-top:1.6em;flex-wrap:wrap">
+<div id="trim-keep" class="tog on" role="switch" aria-checked="true" tabindex="0"><span class="sw"><i></i></span>Keep them removed after Omarchy updates</div>
+<div class="mono"><button class="lnk" id="trim-none">keep everything</button></div>
+</div></section>
+<section id="next-page" data-flow-panel aria-label="Installation choices" style="display:none"></section>
+<div style="position:absolute;left:2em;bottom:1.3em;opacity:0" class="mono" id="nstatus"></div>
+<div id="go" role="button" aria-label="Continue" tabindex="0" style="position:absolute;right:2em;bottom:1.1em;width:3em;height:1.9em;clip-path:polygon(0% 27%,56% 27%,56% -4%,100% 50%,56% 104%,56% 73%,0% 73%);transform:skewX(-10deg);opacity:0;cursor:pointer"><div id="ga" style="position:absolute;inset:0;background:linear-gradient(90deg,#85b7eb 15%,#73ba25 95%)"></div><div id="gb" style="position:absolute;inset:0;opacity:0"></div></div>
+</div>
+
+</div>
+<div style="display:flex;gap:8px;margin-top:12px;align-items:center;flex-wrap:wrap">
+<button id="replay"><i class="ti ti-refresh" aria-hidden="true"></i> Replay</button>
+<button id="readyBtn"><i class="ti ti-player-play" aria-hidden="true"></i> Signal ready</button>
+<select id="mon" aria-label="Monitor"><option value="16/9">16:9</option><option value="16/10">16:10</option><option value="4/3">4:3</option><option value="21/9">21:9</option><option value="32/9">32:9</option></select>
+<select id="scen" aria-label="Network scenario"><option value="wifi">Wi-Fi only</option><option value="eth">Ethernet plugged in</option><option value="rfkill">Wi-Fi switched off</option><option value="unsup">Unsupported dongle</option><option value="none">No adapter</option></select>
+<span style="font-size:13px;color:#8497ab">Design mockup · sample apps · no installation</span>
+<label style="font-size:13px;color:#8497ab">Preview step <select id="preview-page" aria-label="Preview a step"><option value="boot">Boot</option><option value="trim">Omarchy trim</option><option value="disk">Disk</option><option value="you">You</option><option value="review">Review</option><option value="install">Install</option><option value="done">Restart</option></select></label>
+<label style="font-size:13px;color:#8497ab">Install demo <select id="install-outcome" aria-label="Simulated install outcome"><option value="success">Success</option><option value="error">Download interrupted</option></select></label>
+<span id="note" style="font-size:13px;color:var(--text-secondary)"></span>
+</div>
+<script>
+
+
+let headerReady=false,headerPage=null,headerAnimations=[],flowEpoch=0;
+function hidePageHeading(){
+ headerReady=false;headerPage=null;headerAnimations.forEach(a=>a.cancel());headerAnimations=[];
+ for(const id of ['page-title','page-comment']){const el=document.getElementById(id);el.style.visibility='hidden';el.style.opacity='0'}
+}
+function sweepPageHeading(title,comment){
+ headerAnimations.forEach(a=>a.cancel());headerAnimations=[];
+ const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
+ for(const [el,delay] of [[title,0],[comment,45]]){
+  el.style.visibility='visible';el.style.opacity='1';
+  headerAnimations.push(el.animate([{opacity:0,clipPath:'inset(0 100% 0 0)',transform:'translateX(-.6em)'},{opacity:1,clipPath:'inset(0 0 0 0)',transform:'translateX(0)'}],{duration:reduced?1:240,delay:reduced?0:delay,fill:'backwards',easing:'cubic-bezier(.16,1,.3,1)'}));
+ }
+}
+
+function updatePageTitle(){
+ const title=document.getElementById('page-title'),comment=document.getElementById('page-comment');
+ const titles={net:'Get online',fam:'Choose your family',arch:'Choose your Arch flavour',trim:'Trim Omarchy',disk:'Make room',you:'Make yourself at home',review:'Ready when you are',install:'Let’s make it yours',done:'Welcome home'};
+ const comments={net:'Borea downloads your system fresh, so it needs internet first.',fam:"Each one installs fresh from its own source. You'll pick the flavour next.",arch:'All three install fresh from Arch’s own sources. Pick how much is done for you.',trim:"Omarchy installs everything below. Tap anything you don't want and Borea removes it straight after Omarchy finishes.",disk:'Choose where Omarchy will live. Nothing changes until you review the plan.',you:'Your account, your clock, your language. A few details to make this feel like home.',review:'One plan, all your choices. Take a moment to check before you begin.',install:'Your choices are made. We’ll take it from here. This is a simulated installation.',done:'Remove the USB and restart. Your next boot is the beginning.'};
+ const text=titles[page];title.hidden=comment.hidden=!text;
+ if(!text)return;
+ title.textContent=text;comment.textContent=comments[page];
+ title.style.visibility=comment.style.visibility=headerReady?'visible':'hidden';
+ const logo=document.getElementById('clogo'),root=document.getElementById('ui');
+ const em=parseFloat(getComputedStyle(root).fontSize);
+ title.style.left=(logo.offsetLeft+logo.offsetWidth+em)+'px';
+ const line=parseFloat(getComputedStyle(title).lineHeight);
+ title.style.top=(logo.offsetTop+(logo.offsetHeight-line)/2)+'px';
+ comment.style.left=logo.offsetLeft+'px';
+ comment.style.right=(2.3*em)+'px';
+ comment.style.top=(Math.max(logo.offsetTop+logo.offsetHeight,title.offsetTop+title.offsetHeight)+(document.getElementById('scene').clientHeight<440?.15:.65)*em)+'px';
+ const stageHeight=document.getElementById('scene').clientHeight;
+ root.style.setProperty('--flow-content-top',(comment.offsetTop+comment.offsetHeight+(stageHeight<440?.25*em:Math.max(1.8*em,stageHeight*.05)))+'px');
+ if(headerReady&&headerPage!==page){headerPage=page;sweepPageHeading(title,comment)}
+}
+
+// Invisible geometry anchor only. The original boot wordmark stays rendered.
+const logoAnchor=document.getElementById('clogo');
+Object.assign(logoAnchor.style,{position:'absolute',top:'.947em',left:'1.353em',fontSize:'1.7em',visibility:'hidden',pointerEvents:'none'});
+logoAnchor.setAttribute('aria-hidden','true');
+let logoInCorner=false,bootCanContinue=false;
+function sizeLogoAnchor(){
+ const root=document.getElementById('hl');
+ const compact=document.getElementById('scene').clientHeight<440;logoAnchor.style.top=compact?'.47em':'.947em';logoAnchor.style.left=compact?'.9em':'1.353em';
+ const scale=parseFloat(getComputedStyle(logoAnchor).fontSize)/parseFloat(getComputedStyle(root).fontSize);
+ logoAnchor.style.width=(root.offsetWidth*scale)+'px';
+ logoAnchor.style.height=(root.offsetHeight*scale)+'px';
+}
+function positionCornerLogo(animate){
+ const bw=document.getElementById('bootwrap');
+ bw.getAnimations().forEach(a=>a.cancel());bw.style.transform='none';
+ const wr=bw.getBoundingClientRect(),source=hl.getBoundingClientRect(),target=logoAnchor.getBoundingClientRect();
+ const scale=parseFloat(getComputedStyle(logoAnchor).fontSize)/parseFloat(getComputedStyle(hl).fontSize);
+ const tx=target.left-source.left,ty=target.top-source.top;
+ bw.style.transformOrigin=(source.left-wr.left)+'px '+(source.top-wr.top)+'px';
+ const tr=(f,sx,sy)=>'translate('+(tx*f)+'px,'+(ty*f)+'px) scale('+sx+','+sy+')';
+ bw.style.pointerEvents='none';
+ if(animate){
+  return bw.animate([{transform:tr(0,1,1),easing:'ease-out'},{transform:tr(-.04,1.06,.9),offset:.18,easing:'ease-in-out'},{transform:tr(1.04,scale*.9,scale*1.12),offset:.68,easing:'ease-out'},{transform:tr(1,scale*1.05,scale*.94),offset:.84},{transform:tr(1,scale,scale)}],{duration:950,delay:200,fill:'forwards'});
+ }else bw.style.transform=tr(1,scale,scale);
+ bw.style.pointerEvents='none';
+}
+
+let netOn=false;
+const fam=["#1793d1","#d70a53","#51a2da","#85b7eb"],G="#73ba25";
+const $=id=>document.getElementById(id),ink=$('ink'),over=$('over'),status=$('status'),pill=$('pill'),dot=$('dot'),hl=$('hl'),cover=$('cover'),note=$('note');
+const cv=$('c'),ctx=cv.getContext('2d');let W,H,lines=[],timers=[];
+function size(){W=cv.width=cv.clientWidth*devicePixelRatio;H=cv.height=cv.clientHeight*devicePixelRatio}
+function init(){lines=Array.from({length:46},()=>({x:Math.random()*W,y:Math.random()*H,l:60+Math.random()*180,s:2+Math.random()*4,a:.08+Math.random()*.25,p:Math.random()*6}))}
+function draw(ts){ctx.clearRect(0,0,W,H);lines.forEach(L=>{ctx.beginPath();for(let i=0;i<=L.l;i+=8){const x=L.x-i,y=L.y+Math.sin((x+ts*.06+L.p*40)/90)*12*devicePixelRatio;i?ctx.lineTo(x,y):ctx.moveTo(x,y)}ctx.strokeStyle='rgba(133,183,235,'+L.a+')';ctx.lineWidth=devicePixelRatio;ctx.stroke();L.x+=L.s*devicePixelRatio;if(L.x-L.l>W){L.x=-10;L.y=Math.random()*H}});requestAnimationFrame(draw)}
+const R='polygon(0% 0%,60% 0%,100% 0%,100% 50%,100% 100%,60% 100%,0% 100%)',A='polygon(0% 27%,56% 27%,56% -4%,100% 50%,56% 104%,56% 73%,0% 73%)';const ez='cubic-bezier(.65,0,.35,1)',Ap=(x,t,b)=>'polygon('+x+'% '+t+'%,56% 27%,56% -4%,100% 50%,56% 104%,56% 73%,'+x+'% '+b+'%)',SK=' skewX(-10deg) rotate(-1deg)',S0=' skewX(0deg) rotate(0deg)';
+function setP(p,col){ink.style.width=(p*100)+'%';over.style.clipPath='inset(0 '+Math.max(0,100-p*125)+'% 0 0)';if(col)ink.style.background=col}
+function pulse(){ink.animate([{transform:'scale(1,1)'+SK},{transform:'scale(1,1.05)'+SK,offset:.4},{transform:'scale(1,.99)'+SK,offset:.75},{transform:'scale(1,1)'+SK}],{duration:900,easing:'cubic-bezier(.45,0,.55,1)'})}
+function bootReadyMotion({ink,hl,dot,pill,cover,status,active,onReady}){
+const shape=A,deform=Ap,rectangle=R;
+const reduced=matchMedia('(prefers-reduced-motion:reduce)').matches;
+const setTimeout=(fn,ms)=>window.setTimeout(()=>{if(active())fn()},reduced?0:ms);
+const animate=(el,frames,options)=>el.animate(frames,reduced?{...options,duration:1}:options);
+let geo;
+status.style.opacity=0;timers.push(setTimeout(()=>{pill.style.pointerEvents='auto';pill.setAttribute('aria-disabled','false');onReady()},1750));
+const ir=ink.getBoundingClientRect(),hr=hl.getBoundingClientRect(),dr=dot.getBoundingClientRect();
+const em=parseFloat(getComputedStyle(hl).fontSize)/40,er=ir.right-hr.left,h=ir.height*.78,fx=er+16*em,fw=50*em,dx=dr.left-hr.left,dy=dr.top-hr.top,yc=ir.top-hr.top+ir.height/2;
+const Wd=ink.offsetWidth,P=(ir.right-dr.left)+6*em,sx=1-P/Wd,shift=-((fx+fw)-hr.width)/2;geo={er,fx,Wd,em};timers.push(setTimeout(nudge,1400+IDLE));
+const k=(l,w,hh,t,o,ex)=>Object.assign({left:l+'px',width:w+'px',height:hh+'px',top:(yc-hh/2)+'px',transform:t,offset:o,opacity:1,easing:'ease-in-out'},ex||{});
+animate(dot,[{transform:'scale(1,1)',opacity:1},{transform:'scale(1.5,.6)',opacity:1,offset:.95},{transform:'scale(1.5,.6)',opacity:0}],{duration:150,fill:'forwards',easing:'ease-in'});
+timers.push(setTimeout(()=>animate(cover,[{opacity:1},{opacity:1,offset:.08},{opacity:0,offset:.4},{opacity:0}],{duration:1200,fill:'forwards'}),150));
+const flight=[
+{left:dx+'px',top:dy+'px',width:dr.width+'px',height:dr.height+'px',borderRadius:'50%',clipPath:rectangle,transform:'scale(1.5,.6)'+S0,offset:0,opacity:1,easing:'ease-out'},
+k(dx+16*em,14*em,12*em,'scale(.85,1.15)'+SK,.15,{clipPath:rectangle,borderRadius:'45%'}),
+k(fx+20*em,fw,h,'scale(1.1,.92)'+SK,.45,{clipPath:shape,borderRadius:'3px 10px 5px 12px'}),
+k(fx+22*em,fw,h,'scale(1,1)'+SK,.55,{clipPath:shape,easing:'ease-in'}),
+k(er-4*em,fw,h,'scale(.9,1.06)'+SK,.64,{clipPath:deform(5,21,79),easing:'ease-out'}),
+k(er-2*em-P,fw,h,'scale(.8,1.12)'+SK,.72,{clipPath:deform(10,15,85)}),
+k(fx+4*em,fw,h,'scale(1.08,.95)'+SK,.8,{clipPath:deform(0,32,68)}),
+k(fx-2*em,fw,h,'scale(.98,1.02)'+SK,.9,{clipPath:deform(2,24,76)}),
+k(fx,fw,h,'scale(1,1)'+SK,1,{clipPath:shape,borderRadius:'3px 10px 5px 12px'})
+];
+timers.push(setTimeout(()=>animate(pill,flight,{duration:1200,fill:'forwards'}),150));
+const tc=150+.64*1200,O='0% 50%';
+timers.push(setTimeout(()=>{
+animate(ink,[{transform:'scale(1,1)'+SK,easing:'ease-out'},{transform:'scale('+sx+',1.03)'+SK,offset:.16,easing:'ease-in-out'},{transform:'scale('+(1+4*em/Wd)+',.98)'+SK,offset:.32,easing:'ease-in-out'},{transform:'scale(.996,1.01)'+SK,offset:.55},{transform:'scale(1,1)'+SK}],{duration:600});
+animate(hl,[{transform:'translateX(0)'},{transform:'translateX('+shift+'px)'}],{duration:800,fill:'forwards',easing:'cubic-bezier(.34,1.4,.64,1)'});
+},tc));
+timers.push(setTimeout(()=>animate(dot,[{transform:'scale(0,0)',opacity:0},{transform:'scale(1.7,.5)',opacity:1,offset:.35},{transform:'scale(.8,1.2)',opacity:1,offset:.65},{transform:'scale(1,1)',opacity:1}],{duration:480,fill:'forwards',easing:'ease-out'}),tc+170))
+
+
+function nudge(){if(reduced||!active())return;const {er,fx,Wd,em}=geo,O='0% 50%',e='ease-in-out';
+animate(pill,[{left:fx+'px',transform:'scale(1,1)'+SK,clipPath:shape,easing:'ease-in'},{left:(er-3*em)+'px',transform:'scale(.88,1.08)'+SK,clipPath:deform(6,20,80),offset:.3,easing:'ease-out'},{left:(er-3*em)+'px',transform:'scale(.82,1.12)'+SK,clipPath:deform(11,15,85),offset:.42,easing:e},{left:(fx+6*em)+'px',transform:'scale(1.06,.96)'+SK,clipPath:deform(0,32,68),offset:.62,easing:e},{left:(fx-2*em)+'px',transform:'scale(.98,1.02)'+SK,clipPath:deform(2,24,76),offset:.8,easing:e},{left:fx+'px',transform:'scale(1,1)'+SK,clipPath:shape}],{duration:900});
+timers.push(setTimeout(()=>animate(ink,[{transform:'scale(1,1)'+SK},{transform:'scale('+(1-4*em/Wd)+',1.03)'+SK,offset:.35},{transform:'scale(1,1)'+SK}],{duration:420,easing:e}),270));
+timers.push(setTimeout(nudge,900+IDLE))}
+}
+const IDLE=5000;
+function morph(){bootReadyMotion({ink,hl,dot,pill,cover,status,active:()=>page==='boot',onReady:()=>{bootCanContinue=true}})}
+const steps=["probing hardware","scanning wifi adapters","loading firmware","starting borea-worker"];
+let cyc,fill,ready,filled,done;
+function finish(){if(!(ready&&filled)||done)return;done=true;
+const C=cyc.effect.getTiming().duration,p=cyc.effect.getComputedTiming().progress||0,wait=((.75-p+1)%1)*C;
+timers.push(setTimeout(()=>{cyc.pause();ink.style.background=fam[3];cyc.cancel();timers.push(setTimeout(morph,250))},wait))}
+function signal(){if(ready)return;ready=true;note.textContent='ready signalled · click the arrow';finish()}
+function bootWordmarkSize(){const r=document.getElementById('scene').getBoundingClientRect();return Math.round(Math.max(24,Math.min(r.width*.085,r.height*.15,360)))}
+function sceneTypeSize(){
+ const stage=document.getElementById('scene'),scale=Math.min(stage.clientWidth/1920,stage.clientHeight/1080);
+ const font=Math.round(Math.max(14,Math.min(48,24*scale)));
+ stage.style.setProperty('--brand-status-size',Math.max(11,font*.6)+'px');
+ stage.style.setProperty('--brand-status-height',Math.max(16,font/24*16)+'px');
+ stage.style.setProperty('--brand-gap',Math.max(20,font/24*30)+'px');
+ return font;
+}
+function fit(){sceneTypeSize();hl.style.fontSize=bootWordmarkSize()+'px'}
+function run(){flowEpoch++;hidePageHeading();logoInCorner=false;bootCanContinue=false;pill.style.pointerEvents='none';pill.setAttribute('aria-disabled','true');timers.forEach(clearTimeout);T.forEach(clearTimeout);T=[];netOn=false;resetNet();fit();timers=[];ready=filled=done=false;
+[pill,ink,dot,hl,over,cover].forEach(e=>e.getAnimations().forEach(a=>a.cancel()));
+dot.style.transition='none';dot.style.background='#3a4a5c';status.textContent='';status.style.opacity=1;
+const D=3600,C=3600,E='cubic-bezier(.45,.05,.55,.95)',ie='ease-in-out';
+fill=ink.animate([{width:'0%'},{width:'100%'}],{duration:D,delay:500,fill:'both',easing:E});
+over.animate([{clipPath:'inset(0 100% 0 0)'},{clipPath:'inset(0 0% 0 0)',offset:.8},{clipPath:'inset(0 0% 0 0)'}],{duration:D,delay:500,fill:'both',easing:E});
+cyc=ink.animate([{background:fam[0],easing:ie},{background:fam[1],offset:.25,easing:ie},{background:fam[2],offset:.5,easing:ie},{background:fam[3],offset:.75,easing:ie},{background:fam[0]}],{duration:C,delay:500,iterations:Infinity,fill:'backwards'});
+steps.forEach((t,i)=>timers.push(setTimeout(()=>status.textContent=t,500+i*D/4)));
+fill.finished.then(()=>{filled=true;dot.style.transition='background .5s';dot.style.background='#0b0f14';finish()}).catch(()=>{});
+const r=Math.round(3000+Math.random()*9000);note.textContent='--dry-run: simulated hardware ready in '+(r/1000).toFixed(1)+'s';
+timers.push(setTimeout(signal,r))}
+
+
+const ui=$('ui'),W$=$('wired'),F=$('wifi'),S=$('nstatus'),go=$('go'),HI=$('hi'),LIST=$('list');
+function nfit(){const r=$('scene').getBoundingClientRect();ui.style.fontSize=sceneTypeSize()+'px';$('scene').style.setProperty('--ui-font-size',ui.style.fontSize);sizeLogoAnchor();if(logoInCorner)positionCornerLogo(false);updatePageTitle();const installLogo=document.getElementById('install-progress');if(installLogo)installLogo.style.fontSize=bootWordmarkSize()+'px'}
+const SP='cubic-bezier(.34,1.56,.64,1)';
+const NETS=[{s:"Shaddick",sec:"WPA3",b:"5 + 2.4 GHz",q:4},{s:"Hearth Cafe",sec:"open",b:"2.4 GHz",q:2},{s:"Northwind-Guest",sec:"WPA2",b:"5 GHz",q:1}];
+let T=[],st={},sel=-1,hiBox=null;const tm=(f,ms)=>T.push(setTimeout(f,ms));
+const bars=q=>'<span class="bars">'+[1,2,3,4].map(i=>'<i class="'+(i<=q?'on':'')+'" style="height:'+(i*25)+'%"></i>').join('')+'</span>';
+function boxOf(row){const n=row.querySelector('.nm').getBoundingClientRect(),l=LIST.getBoundingClientRect();return{left:n.left-l.left,top:n.top-l.top+n.height*.08,width:n.width,height:n.height*.86}}
+function moveHi(row,anim){if(!row){HI.style.opacity=0;hiBox=null;return}const b=boxOf(row),px=o=>({left:o.left+'px',top:o.top+'px',width:o.width+'px',height:o.height+'px'});
+HI.getAnimations().forEach(a=>a.cancel());Object.assign(HI.style,px(b),{opacity:1});
+if(anim&&hiBox){const dir=Math.sign(b.top-hiBox.top)||1;HI.animate([Object.assign(px(hiBox),{transform:'scale(1,1)'+SK}),Object.assign(px(b),{transform:'scale(.9,1.25)'+SK,offset:.45}),Object.assign(px(b),{transform:'scale(1.06,.88)'+SK,offset:.7}),Object.assign(px(b),{transform:'scale(1,1)'+SK})],{duration:460,easing:'ease-out'})}
+else if(anim)HI.animate([{transform:'scale(0,.6)'+SK},{transform:'scale(1.06,.9)'+SK,offset:.6},{transform:'scale(1,1)'+SK}],{duration:420,easing:'ease-out'});
+hiBox=b}
+function squash(){HI.animate([{transform:'scale(1,1)'+SK},{transform:'scale(1.08,.78)'+SK,offset:.3},{transform:'scale(.97,1.08)'+SK,offset:.65},{transform:'scale(1,1)'+SK}],{duration:420,easing:'ease-out'})}
+function readyGo(on,txt){go.getAnimations().forEach(a=>a.cancel());go.animate([{opacity:getComputedStyle(go).opacity},{opacity:on?1:(netOn?.28:0)}],{duration:450,fill:'forwards',easing:'ease-out'});go.style.pointerEvents=on?'auto':'none';go.setAttribute('aria-disabled',!on);S.textContent=txt||''}
+function wired(){if(st.scen!=='eth'){W$.innerHTML='<div class="row" style="cursor:default"><i class="ti ti-network" aria-hidden="true" style="color:#3a4a5c"></i><span style="color:#8497ab">No cable</span></div>';return}
+const on=st.wired==='online',was=W$.querySelector('.hl');
+W$.innerHTML='<div class="row" style="cursor:default"><i class="ti ti-network" aria-hidden="true"></i><span class="nm" style="'+(on?'color:#0b0f14':'')+'">'+(on?'<span class="hl" id="whl" style="inset:8% -2%;z-index:-1"></span>':'')+'Ethernet</span><span class="mono" style="margin-left:auto">'+({dhcp:'getting address…',check:'checking internet…',online:'online · 12 ms',skip:'connected · not used'}[st.wired]||'')+'</span></div>';
+if(on&&!was)$('whl').animate([{transform:'scale(0,.6)'+SK},{transform:'scale(1.06,.9)'+SK,offset:.6},{transform:'scale(1,1)'+SK}],{duration:420,easing:'ease-out'})}
+function wifi(anim){const s=st.scen;
+if(s==='none'){F.innerHTML='<div class="msg">No Wi-Fi adapter found.<br>Plug in a network cable, or connect your phone by USB and turn on USB tethering.</div>';moveHi(null);return}
+if(s==='unsup'){F.innerHTML='<div class="msg">Wi-Fi driver unavailable.<div class="mono" style="margin:.4em 0">Realtek RTL8188GU · usb 0bda:b711</div>Use Ethernet or USB tethering for now.</div>';moveHi(null);return}
+if(s==='rfkill'&&!st.unblocked){F.innerHTML='<div class="msg">Wi-Fi is switched off on this device.<br>Press your wireless key or flip the switch. This page will notice by itself.</div>';moveHi(null);tm(()=>{st.unblocked=1;S.textContent='wi-fi switched on, scanning…';tm(()=>{S.textContent='';wifi(true)},900)},4000);return}
+if(st.scan){F.innerHTML='<div class="mono" style="padding:.5em .8em">scanning…</div>';moveHi(null);return}
+F.innerHTML=NETS.map((n,i)=>'<div class="row'+(i===sel?' sel':'')+'" tabindex="0" data-i="'+i+'"><span class="nm">'+n.s+'</span>'+(n.sec!=='open'?'<i class="ti ti-lock" aria-label="secured" style="color:#9fb0c2;font-size:.85em"></i>':'')+'<span class="mono" style="margin-left:auto">'+n.b+'</span>'+bars(n.q)+'</div>'+(i===st.open?'<div id="pw" style="padding:.25em .8em .7em;transform-origin:1.2em 0"></div>':'')).join('')+'<div class="row" tabindex="0" data-i="h"><i class="ti ti-plus" aria-hidden="true" style="color:#9fb0c2"></i><span style="color:#9fb0c2;font-size:.9em">Hidden network</span></div>';
+F.querySelectorAll('.row').forEach(r=>{r.onclick=()=>pick(r.dataset.i);r.onfocus=()=>{const i=r.dataset.i;if(i!=='h'&&+i!==sel)select(+i)}});
+moveHi(F.querySelector('.row.sel'),anim);if(st.open!=null)pwbox()}
+function select(i){if(st.open!=null&&st.open!==i){st.open=null;sel=i;wifi(false);moveHi(F.querySelector('.row.sel'),false)}const old=hiBox;sel=i;F.querySelectorAll('.row').forEach(x=>x.classList.toggle('sel',x.dataset.i==i));hiBox=old;moveHi(F.querySelector('.row.sel'),true)}
+function pick(i){if(i==='h'){S.textContent='hidden network: type its name and password';return}
+i=+i;const n=NETS[i];if(st.scen==='eth'&&st.wired==='online')cancelAuto();
+if(sel!==i)select(i);st.open=i;st.err='';st.spring=1;const keep=hiBox;wifi(false);hiBox=keep;moveHi(F.querySelector('.row.sel'),false);squash();if(n.sec==='open')connect('')}
+function pwbox(){const n=NETS[st.open],b=$('pw');if(!b)return;
+if(n.sec==='open')b.innerHTML='<div class="mono" id="pph">'+(st.phase||'')+'</div>';
+else{b.innerHTML='<div style="display:flex;gap:.5em;align-items:center"><div id="fld" style="flex:1;min-width:0;display:flex;align-items:center;background:#121922;border:1px solid #2a3542;border-radius:.3em"><input id="pwi" type="password" placeholder="Password" aria-label="Wi-Fi password" style="flex:1;min-width:0;width:auto !important;height:auto !important;border:0 !important;background:transparent !important;box-shadow:none !important;outline:none;padding:.45em .6em !important;color:#f1f5f9;font-size:.9em"><div id="eye" role="button" tabindex="0" aria-label="Show password" aria-pressed="false" style="flex:none;display:flex;align-items:center;justify-content:center;width:2em;height:1.8em;margin-right:.25em;cursor:pointer;border-radius:.3em"><svg viewBox="0 0 24 24" style="width:1.35em;height:1.35em;display:block;overflow:visible" fill="none" stroke="#9fb0c2" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g id="eo" style="transform-origin:12px 12px;transform:scaleY(.06);opacity:0"><path d="M2 12s3.6-6 10-6 10 6 10 6-3.6 6-10 6S2 12 2 12z"/><circle cx="12" cy="12" r="2.7" fill="#85b7eb" stroke="none"/></g><g id="ec"><path d="M3 11c2.5 3 5.5 4.5 9 4.5s6.5-1.5 9-4.5"/><path d="M6.8 14.3l-1.1 2M12 15.5v2.3M17.2 14.3l1.1 2"/></g></svg></div></div><span class="mono" title="Keyboard layout">UK</span><button class="btn" id="cn">Connect</button></div><div class="mono" id="pph" style="margin-top:.4em;'+(st.err?'color:#f09595':'')+'">'+(st.err||st.phase||'')+'</div>';
+const p=$('pwi');p.focus({preventScroll:true});const eyeT=e=>{e.preventDefault();const show=p.type==='password',eo=$('eo'),ec=$('ec'),btn=$('eye');p.type=show?'text':'password';btn.setAttribute('aria-pressed',show);btn.setAttribute('aria-label',show?'Hide password':'Show password');btn.querySelector('svg').style.stroke=show?'#85b7eb':'#9fb0c2';
+eo.getAnimations().forEach(a=>a.cancel());ec.getAnimations().forEach(a=>a.cancel());
+if(show){eo.animate([{transform:'scaleY(.06)',opacity:1},{transform:'scaleY(1.18)',opacity:1,offset:.55},{transform:'scaleY(.94)',opacity:1,offset:.8},{transform:'scaleY(1)',opacity:1}],{duration:420,fill:'forwards',easing:'ease-out'});ec.animate([{opacity:1},{opacity:0}],{duration:120,fill:'forwards'})}
+else{eo.animate([{transform:'scaleY(1)',opacity:1},{transform:'scaleY(.06)',opacity:1,offset:.7},{transform:'scaleY(.06)',opacity:0}],{duration:240,fill:'forwards',easing:'ease-in'});ec.animate([{opacity:0},{opacity:0,offset:.6},{opacity:1}],{duration:260,fill:'forwards'})}
+p.focus({preventScroll:true})};$('eye').onclick=eyeT;$('eye').onkeydown=e=>{if(e.key==='Enter'||e.key===' ')eyeT(e)};$('eye').onmousedown=e=>e.preventDefault();
+const c=()=>{if(p.value.length<8){$('pph').textContent='Wi-Fi passwords are at least 8 characters.';$('pph').style.color='#f09595';return}connect(p.value)};
+$('cn').onclick=c;p.onkeydown=e=>{if(e.key==='Enter')c();if(e.key==='Escape'){st.open=null;wifi(false)}};p.oninput=()=>{$('pph').textContent='';$('pph').style.color=''};
+if(st.spring)$('fld').animate([{background:'#85b7eb',borderColor:'#85b7eb'},{background:'#85b7eb',borderColor:'#85b7eb',offset:.35},{background:'#121922',borderColor:'#2a3542'}],{duration:700,easing:'ease-out'});
+if(st.err)$('fld').animate([{transform:'translateX(0)'},{transform:'translateX(-.4em) scale(1.02,.94)',offset:.25},{transform:'translateX(.3em)',offset:.55},{transform:'translateX(0)'}],{duration:380,easing:'ease-out'})}
+if(st.spring){st.spring=0;b.animate([{transform:'translateY(-1.3em) scale(.22,.12)',opacity:0},{transform:'translateY(.15em) scale(1.02,1.14)',opacity:1,offset:.5},{transform:'translateY(0) scale(.995,.96)',offset:.75},{transform:'none',opacity:1}],{duration:540,easing:'ease-out'})}}
+function phase(t){st.phase=t;const e=$('pph');if(e){e.textContent=t;e.style.color=''}S.textContent=t}
+function connect(pw){const n=NETS[st.open];readyGo(false);phase('connecting to '+n.s+'…');
+tm(()=>{if(pw==='wrong'){st.err='Wrong password for '+n.s+'. Try again.';st.phase='';pwbox();S.textContent='';return}
+phase('getting address…');tm(()=>{phase('checking internet…');
+tm(()=>{if(n.s==='Hearth Cafe'){st.phase='';$('pw').innerHTML='<div class="msg">Sign in to use this network.<div style="margin-top:.5em;display:flex;gap:.5em"><button class="btn" id="portal">Open sign-in page</button><button class="btn" id="other">Pick another network</button></div></div>';S.textContent='connected, but no internet yet';$('portal').onclick=()=>{S.textContent='sign-in page open…';tm(()=>online(n),1600)};$('other').onclick=()=>{st.open=null;wifi(false)};return}
+online(n)},900)},700)},900)}
+function online(n){phase('online · '+n.s+' · 23 ms');squash();readyGo(true,'online · ready to continue')}
+let autoT;function cancelAuto(){clearInterval(autoT);st.wired='skip';wired();readyGo(false,'')}
+function start(){T.forEach(clearTimeout);T=[];clearInterval(autoT);st={scen:$('scen').value,scan:1};sel=st.scen==='eth'?-1:0;hiBox=null;readyGo(false,'');nfit();wired();wifi(false);
+tm(()=>{st.scan=0;wifi(true)},1100);
+if(st.scen==='eth'){st.wired='dhcp';wired();tm(()=>{st.wired='check';wired();tm(()=>{st.wired='online';wired();let n=3;const m=()=>'continuing in '+n+'… · pick a Wi-Fi network to use it instead';readyGo(true,m());autoT=setInterval(()=>{n--;S.textContent=n>0?m():'continuing…';if(n<=0){clearInterval(autoT);tm(toFamily,300)}},1000)},800)},700)}}
+addEventListener('keydown',e=>{if(e.target.closest('#screen-pager,#demo-tools'))return;if(e.target.closest('#locale-controls'))return;if(!netOn||page!=='net')return;if(e.target.tagName==='INPUT'||e.target.id==='eye')return;const rows=[...F.querySelectorAll('.row')].filter(row=>row.getClientRects().length);if(!rows.length)return;const i=rows.indexOf(document.activeElement);if(e.key==='ArrowDown'){e.preventDefault();(rows[i+1]||rows[0]).focus()}if(e.key==='ArrowUp'){e.preventDefault();(rows[i-1]||rows[rows.length-1]).focus()}if(e.key==='Enter'&&i>=0)pick(rows[i].dataset.i)});
+go.onclick=()=>{if(go.getAttribute('aria-disabled')==='true')return;if(page==='net')toFamily();else if(page==='fam')fnext()};$('scen').onchange=()=>{if(netOn&&page==='net')start()};
+
+function resetNet(){if(typeof clearRestartTransition==='function')clearRestartTransition();document.getElementById('scene').removeAttribute('data-install-cover');page='boot';updatePageTitle();$('fam').getAnimations().forEach(a=>a.cancel());$('fam').style.display='none';$('ncol').style.display='';tint(-1,true);const bw=$('bootwrap');bw.getAnimations().forEach(a=>a.cancel());bw.style.transform='none';bw.style.pointerEvents='';bw.style.visibility='';['clogo','ncol','nstatus'].forEach(i=>{$(i).getAnimations().forEach(a=>a.cancel());$(i).style.opacity=0});ui.style.visibility='hidden';readyGo(false,'')}
+function transition(){if(!bootCanContinue||netOn)return;
+ hidePageHeading();netOn=true;page='net';timers.forEach(clearTimeout);timers=[];
+ ui.style.visibility='visible';nfit();pill.style.pointerEvents='none';
+ pill.animate([{opacity:1},{opacity:0}],{duration:200,fill:'forwards',easing:'ease-out'});
+ const epoch=flowEpoch,flight=positionCornerLogo(true);logoInCorner=true;let arrived=false;
+ const finishArrival=()=>{
+  if(arrived||epoch!==flowEpoch||!netOn||page!=='net')return;arrived=true;
+  headerReady=true;updatePageTitle();
+  T.push(setTimeout(()=>{
+   if(epoch!==flowEpoch||page!=='net')return;
+   [['ncol',0],['nstatus',80]].forEach(([id,delay])=>$(id).animate([{opacity:0,transform:'translateY(.7em)'},{opacity:1,transform:'none'}],{duration:360,delay,fill:'forwards',easing:'ease-out'}));
+   start();
+  },matchMedia('(prefers-reduced-motion: reduce)').matches?0:180));
+ };
+ flight.finished.then(finishArrival).catch(()=>{if(epoch===flowEpoch&&logoInCorner)finishArrival()});
+}
+addEventListener('keydown',e=>{if(e.target.closest('#screen-pager,#demo-tools'))return;if(e.target.closest('#locale-controls'))return;if(page==='boot'&&bootCanContinue&&(e.key==='Enter'||e.key===' '))transition()});
+
+let page='boot',fsel=-1;
+const FAM=[
+{n:'Arch',c:'#1793d1',q:'A lightweight and flexible Linux® distribution that tries to Keep It Simple.',src:'archlinux.org'},
+{n:'Debian',c:'#d70a53',q:'The Universal Operating System.',src:'debian.org'},
+{n:'Fedora',c:'#51a2da',q:'It’s Your Operating System.',src:'fedoraproject.org'},
+{n:'openSUSE',c:'#73ba25',q:'Embrace the chameleon.',src:'opensuse.org'}];
+const CW=$('cards'),wind=c=>'<svg viewBox="0 0 64 64" style="width:2.3em;height:2.3em;display:block"><g fill="none" stroke="'+c+'" stroke-width="4.5" stroke-linecap="round"><path d="M8 24H38a8 8 0 1 0-8-8"/><path d="M8 34H50a7 7 0 1 1-7 7"/><path d="M14 44H30"/></g></svg>';
+const lite=h=>{const n=parseInt(h.slice(1),16),m=v=>Math.round(v+(255-v)*.3);return'rgb('+m(n>>16)+','+m(n>>8&255)+','+m(n&255)+')'},grad=c=>'linear-gradient(90deg,'+lite(c)+' 10%,'+c+' 90%)',BASE='linear-gradient(90deg,#85b7eb 15%,#73ba25 95%)';
+function tint(i,instant){ink.style.transition=instant?'none':'background-color 600ms ease-in-out';ink.style.backgroundColor=i<0?'#85b7eb':FAM[i].c;const ga=$('ga'),gb=$('gb'),g=i<0?BASE:grad(FAM[i].c);gb.getAnimations().forEach(x=>x.cancel());if(instant){ga.style.background=g;return}gb.style.background=g;gb.animate([{opacity:0},{opacity:1}],{duration:600,easing:'ease-in-out',fill:'forwards'}).onfinish=()=>{ga.style.background=g;gb.getAnimations().forEach(x=>x.cancel())}}
+function fcards(){CW.innerHTML=FAM.map((f,i)=>'<div class="fcard" tabindex="0" data-i="'+i+'" role="button" aria-label="'+f.n+'"><span class="acc" style="position:absolute;left:1.3em;right:1.3em;top:0;height:2px;background:'+f.c+';opacity:.3"></span>'+wind(f.c)+'<div class="fnm"><span class="hl nmh" style="inset:10% -2% 6%;background:'+f.c+';opacity:0"></span><b>'+f.n+'</b></div><div class="fq">\u201c'+f.q+'\u201d</div><div class="fsrc">'+f.src+'</div></div>').join('');
+CW.querySelectorAll('.fcard').forEach(c=>{let m=0;c.onmousedown=()=>{m=1};c.onclick=()=>{const i=+c.dataset.i;if(i===fsel)fnext();else fpick(i)};c.onfocus=()=>{if(m){m=0;return}const i=+c.dataset.i;if(i!==fsel)fpick(i)}})}
+function fpick(i){fsel=i;const cs=[...CW.children],c=cs[i],h=c.querySelector('.nmh');
+cs.forEach((x,k)=>{x.classList.toggle('dim',k!==i);x.style.borderColor=k===i?FAM[k].c+'88':'';x.querySelector('.acc').style.opacity=k===i?1:.3;x.querySelector('b').style.color=k===i?'#0b0f14':'';if(k!==i){x.getAnimations().forEach(a=>a.cancel());x.querySelector('.nmh').style.opacity=0}});
+c.animate([{transform:'translateY(0) scale(1,1)'},{transform:'translateY(-.35em) scale(.99,1.04)',offset:.45},{transform:'translateY(-.15em) scale(1.02,.99)',offset:.75},{transform:'translateY(-.2em) scale(1.01,1.01)'}],{duration:480,fill:'forwards',easing:'ease-out'});
+h.style.opacity=1;h.animate([{transform:'scale(0,.6)'+SK},{transform:'scale(1.06,.9)'+SK,offset:.6},{transform:'scale(1,1)'+SK}],{duration:420,easing:'ease-out'});
+tint(i);readyGo(true,FAM[i].n.toLowerCase()+' \u00b7 enter to continue')}
+function fnext(){if(fsel<0)return;const c=CW.children[fsel];c.animate([{transform:'translateY(-.2em) scale(1.01,1.01)'},{transform:'translateY(0) scale(1.05,.94)',offset:.3},{transform:'translateY(-.3em) scale(.99,1.03)',offset:.65},{transform:'translateY(-.2em) scale(1.01,1.01)'}],{duration:420,fill:'forwards',easing:'ease-out'});if(fsel===0)showArch();else S.textContent=FAM[fsel].n+' flavours · not included in this mockup'}
+function toFamily(){if(page!=='net')return;page='fam';updatePageTitle();clearInterval(autoT);T.forEach(clearTimeout);T=[];readyGo(false,'');
+$('ncol').animate([{opacity:1,transform:'none'},{opacity:0,transform:'translateY(-.8em) scale(1.01,.97)'}],{duration:300,easing:'ease-in',fill:'forwards'}).onfinish=()=>{$('ncol').style.display='none';$('ncol').getAnimations().forEach(a=>a.cancel());const fm=$('fam');fm.style.display='';fsel=-1;fcards();tint(-1,true);
+[...CW.children].forEach((c,i)=>c.animate([{opacity:0,transform:'translateY(1.2em) scale(.96,1.05)'},{opacity:1,transform:'translateY(-.2em) scale(1.01,.99)',offset:.6},{opacity:1,transform:'none'}],{duration:520,delay:i*80,easing:'ease-out',fill:'backwards'}));
+fm.animate([{opacity:0},{opacity:1}],{duration:250,fill:'forwards'})}}
+addEventListener('keydown',e=>{if(e.target.closest('#screen-pager,#demo-tools'))return;if(e.target.closest('#locale-controls'))return;if(page!=='fam')return;if(e.key==='ArrowRight'||e.key==='ArrowLeft'){e.preventDefault();const d=e.key==='ArrowRight'?1:-1;focusFitItem(CW.children[((fsel<0?0:fsel+d)+4)%4])}if(e.key==='Enter'){e.preventDefault();fnext()}});
+let rz;$('mon').onchange=e=>{$('scene').style.aspectRatio=e.target.value;size();init();run()};
+size();init();requestAnimationFrame(draw);run();$('replay').onclick=run;$('readyBtn').onclick=signal;pill.onclick=transition;addEventListener('resize',()=>{size();init();if(netOn){nfit();if(page==='net')moveHi(F.querySelector('.row.sel'),false)}else{clearTimeout(rz);rz=setTimeout(()=>{if(!netOn&&page==='boot')run()},250)}});
+</script>
+
+<script>
+// Integrated design mockup. All installation and networking remain simulated.
+const archPage=document.getElementById('arch-page');
+const trimPage=document.getElementById('trim-page');
+const archCards=document.getElementById('arch-cards');
+const ARCH=[
+ {n:'CachyOS',q:'Performance-First Linux, Built on Arch.',src:'cachyos.org',tag:'x86-64-v3 repos · hardware check required'},
+ {n:'Omarchy',q:'The malleable OS for the age of agents.',src:'omarchy.org',tag:'choose which extras to remove'},
+ {n:'Custom Arch',q:'A minimal Arch base with only the shell and apps you choose next.',src:'borea',tag:'composed by Borea',own:true}
+];
+let archSelection=-1;
+function enterFlowPage(next){
+ clearRestartTransition();
+ document.getElementById('scene').toggleAttribute('data-install-cover',next==='done'||(next==='install'&&!installDetailsOpen));
+ const installToggle=document.getElementById('install-view-toggle');if(installToggle)installToggle.hidden=next!=='install';
+ page=next;updatePageTitle();
+ for(const el of document.querySelectorAll('[data-flow-panel]')){
+  el.getAnimations().forEach(a=>a.cancel());el.style.display='none';el.style.opacity='1';
+ }
+ const panel=next==='arch'?archPage:next==='trim'?trimPage:next==='fam'?document.getElementById('fam'):document.getElementById('next-page');
+ panel.style.display='';
+ if(next!=='done')panel.animate([{opacity:0,transform:'translateY(.8em) scale(.98,1.03)'},{opacity:1,transform:'translateY(-.15em) scale(1.01,.99)',offset:.6},{opacity:1,transform:'none'}],{duration:520,easing:'ease-out'});
+ nfit();tint(0,true);S.textContent='';
+}
+function selectArch(i){
+ archSelection=i;
+ [...archCards.children].forEach((card,k)=>{
+  card.classList.toggle('dim',k!==i);card.setAttribute('aria-pressed',String(k===i));
+  card.querySelector('b').style.color=k===i?'#0b0f14':'';
+  const hi=card.querySelector('.nmh');hi.style.opacity=k===i?'1':'0';
+  card.querySelector('.acc').style.opacity=k===i?'1':'.3';
+  card.getAnimations().forEach(a=>a.cancel());
+ });
+ const c=archCards.children[i];
+ c.animate([{transform:'none'},{transform:'translateY(-.35em) scale(.99,1.04)',offset:.45},{transform:'translateY(-.15em) scale(1.02,.99)',offset:.75},{transform:'translateY(-.2em) scale(1.01)'}],{duration:480,fill:'forwards',easing:'ease-out'});
+ c.querySelector('.nmh').animate([{transform:'scale(0,.6)'+SK},{transform:'scale(1.06,.9)'+SK,offset:.6},{transform:'scale(1,1)'+SK}],{duration:420,easing:'ease-out'});
+ readyGo(true,ARCH[i].n+' · enter to continue');
+}
+function showArch(){
+ enterFlowPage('arch');
+ readyGo(archSelection>=0,archSelection>=0?ARCH[archSelection].n+' · enter to continue':'Choose an Arch flavour');
+ document.getElementById('arch-back').focus({preventScroll:true});
+}
+function archNext(){
+ if(archSelection<0)return;
+ if(archSelection===1){
+  enterFlowPage('trim');trimControls.show();readyGo(true,trimControls.status());
+  document.getElementById('trim-back').focus({preventScroll:true});
+ }else{
+  S.textContent=ARCH[archSelection].n+' → '+(archSelection===2?'Make it yours':'Installation choices')+' · next page not included in this mockup';
+ }
+}
+archCards.innerHTML=ARCH.map((f,i)=>'<div class="card" tabindex="0" role="button" aria-label="'+f.n+'" aria-pressed="false" data-i="'+i+'"><span class="acc" style="position:absolute;left:1.3em;right:1.3em;top:0;height:2px;background:#1793d1;opacity:.3"></span>'+wind('#1793d1')+'<div class="nm"><span class="hl nmh" style="inset:10% -2% 6%;background:#1793d1;opacity:0"></span><b>'+f.n+'</b></div><div class="q"'+(f.own?' style="font-style:normal;font-family:var(--font-sans)"':'')+'>'+(f.own?f.q:'“'+f.q+'”')+'</div><div class="src">'+f.src+'</div>'+(f.own?'':'<div class="tg">'+f.tag+'</div>')+'</div>').join('');
+[...archCards.children].forEach((card,i)=>{
+ let pointer=false;
+ card.onpointerdown=()=>{pointer=true};
+ card.onfocus=()=>{if(pointer){pointer=false;return}selectArch(i)};
+ card.onclick=()=>{pointer=false;if(archSelection===i)archNext();else selectArch(i)};
+});
+document.getElementById('arch-back').onclick=()=>{
+ enterFlowPage('fam');fpick(0);CW.children[0].focus({preventScroll:true});
+};
+document.getElementById('trim-back').onclick=()=>{if(reviewEditPage==='trim')showNextPage('review');else showArch()};
+const previousGo=go.onclick;
+go.onclick=()=>{
+ if(go.getAttribute('aria-disabled')==='true')return;
+ if(page==='arch')archNext();else if(page==='trim')trimControls.next();else previousGo();
+};
+go.addEventListener('keydown',e=>{if(e.target.closest('#screen-pager,#demo-tools'))return;if(e.target.closest('#locale-controls'))return;
+ if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();go.click()}
+});
+addEventListener('keydown',e=>{if(e.target.closest('#screen-pager,#demo-tools'))return;if(e.target.closest('#locale-controls'))return;
+ if(e.defaultPrevented||!['arch','trim'].includes(page))return;
+ if(e.key==='Escape'){e.preventDefault();document.getElementById(page==='arch'?'arch-back':'trim-back').click();return}
+ if(page!=='arch'||e.target.closest('button')||e.target===go)return;
+ if(e.key==='ArrowLeft'||e.key==='ArrowRight'){
+  e.preventDefault();const d=e.key==='ArrowRight'?1:-1;
+  focusFitItem(archCards.children[archSelection<0?(d>0?0:2):(archSelection+d+3)%3]);
+ }else if((e.key==='Enter'||e.key===' ')&&e.target.closest('.card')){e.preventDefault();archNext()}
+});
+const trimControls=(()=>{
+ const G=document.getElementById('trim-groups');let statusText='keeping everything';
+ let pending=[];
+ function later(fn,ms){const id=setTimeout(()=>{pending=pending.filter(x=>x!==id);fn()},ms);pending.push(id);return id}
+ function cancelPending(){pending.forEach(clearTimeout);pending=[]}
+ const DATA=[
+{g:'Apps',items:['Chromium','LibreOffice','Obsidian','Kdenlive','OBS Studio','Pinta','Xournal++','Signal','Spotify','Typora','LocalSend','1Password']},
+{g:'Web apps',items:['HEY','Basecamp','WhatsApp','YouTube','X','Zoom','Discord','ChatGPT','Grok','GitHub','Figma','Google Photos','Google Maps','Google Messages','Google Contacts','Fizzy']},
+{g:'Developer tools',items:['Docker','lazydocker','Claude Code','opencode']}];
+const rm=new Set();
+function fit(){const r=$('scene').getBoundingClientRect();ui.style.fontSize=Math.round(Math.max(10,Math.min(r.width*.019,r.height*.03,20)))+'px'}
+function count(){const n=rm.size;statusText=n?n+' to remove · '+(document.getElementById('trim-keep').classList.contains('on')?'kept removed after updates':'may return after updates'):'keeping everything';if(page==='trim')S.textContent=statusText}
+const SKX='skewX(-10deg) rotate(-1deg) ';let openG=-1;
+function strike(bar,on){bar.getAnimations().forEach(a=>a.cancel());bar.animate(on?[{transform:SKX+'scaleX(0)'},{transform:SKX+'scaleX(1.08) scaleY(1.3)',offset:.6},{transform:SKX+'scaleX(1)'}]:[{transform:SKX+'scaleX(1)'},{transform:SKX+'scaleX(0)'}],{duration:on?380:220,fill:'forwards',easing:on?'ease-out':'ease-in'})}
+function grpCount(gi){const g=DATA[gi],n=g.items.filter(x=>rm.has(x)).length,li=G.children[gi];li.querySelector('.gc').textContent=n?n+' of '+g.items.length+' removed':g.items.length+' installed';li.querySelector('[data-all]').textContent=n===g.items.length?'keep all':'remove all';
+const all=n===g.items.length,bx=li.querySelector('.bx');if(all!==(bx.dataset.on==='1')){bx.dataset.on=all?'1':'0';strike(bx,all)}document.getElementById('trim-tot').textContent=DATA.reduce((a,d)=>a+d.items.length,0)+' extras'}
+function render(){G.innerHTML=DATA.map((d,gi)=>'<li data-g="'+gi+'"><div class="bn" tabindex="0" role="treeitem" aria-expanded="false"><span class="car">\u25b8</span><span class="bnm"><span class="bx" data-on="0"></span><span style="position:relative">'+d.g+'</span></span><span class="mono gc"></span><button class="mono lnk" type="button" data-all="'+gi+'" style="margin-left:auto">remove all</button></div><div class="lv" style="display:none">'+d.items.map(x=>'<div class="lf" tabindex="0" role="checkbox" aria-checked="false" data-x="'+x+'" data-g="'+gi+'"><span class="t"><span class="x"></span>'+x+'</span></div>').join('')+'</div></li>').join('');
+G.querySelectorAll('.bn').forEach(b=>{const gi=+b.parentNode.dataset.g;b.onclick=e=>{if(e.target.dataset.all==null)expand(gi)};b.onkeydown=e=>{if(e.target!==b)return;if(e.key==='Enter'||e.key===' '||e.key==='ArrowRight'){e.preventDefault();expand(gi,e.key==='ArrowRight'?true:undefined)}if(e.key==='ArrowLeft'&&openG===gi)expand(gi,false)}});
+G.querySelectorAll('.lf').forEach(c=>{c.onclick=()=>toggle(c);c.onkeydown=e=>{if(e.key===' '||e.key==='Enter'){e.preventDefault();toggle(c)}if(e.key==='ArrowLeft'){expand(+c.dataset.g,false);G.children[c.dataset.g].querySelector('.bn').focus()}}});
+G.querySelectorAll('[data-all]').forEach(l=>l.onclick=e=>{e.stopPropagation();const gi=+l.dataset.all;if(openG!==gi)expand(gi,true);const cs=[...G.querySelectorAll('.lf[data-g="'+gi+'"]')],all=cs.every(c=>rm.has(c.dataset.x));cs.forEach((c,k)=>later(()=>{if(all===rm.has(c.dataset.x))toggle(c)},120+k*35))});
+DATA.forEach((_,i)=>grpCount(i));count()}
+function expand(gi,want){const li=G.children[gi],lv=li.querySelector('.lv'),open=li.classList.contains('open'),go2=want===undefined?!open:want;if(go2===open)return;
+ if(go2&&openG>=0&&openG!==gi)expand(openG,false);
+ li.classList.toggle('open',go2);li.querySelector('.bn').setAttribute('aria-expanded',go2);lv.getAnimations().forEach(a=>a.cancel());
+ if(go2){openG=gi;lv.style.display='grid';lv.animate([{opacity:0},{opacity:1}],{duration:220,easing:'ease-out'});
+  [...lv.children].forEach((c,k)=>c.animate([{opacity:0,transform:'translateX(-.6em)'},{opacity:1,transform:'none'}],{duration:260,delay:60+k*18,easing:'ease-out',fill:'backwards'}));
+ }else{if(openG===gi)openG=-1;lv.style.display='none'}
+}
+function toggle(c){const x=c.dataset.x,on=!rm.has(x);on?rm.add(x):rm.delete(x);c.classList.toggle('rm',on);c.setAttribute('aria-checked',on);strike(c.querySelector('.x'),on);
+c.animate([{transform:'scale(1,1)'},{transform:'scale(1.06,.9)',offset:.35},{transform:'scale(.98,1.04)',offset:.7},{transform:'scale(1,1)'}],{duration:360,easing:'ease-out'});grpCount(+c.dataset.g);count()}
+
+ document.getElementById('trim-none').onclick=()=>{
+  cancelPending();G.querySelectorAll('.lf.rm').forEach(c=>toggle(c));
+ };
+ const keep=document.getElementById('trim-keep');
+ keep.onclick=()=>{keep.classList.toggle('on');keep.setAttribute('aria-checked',String(keep.classList.contains('on')));count()};
+ keep.onkeydown=e=>{if(e.key===' '||e.key==='Enter'){e.preventDefault();e.stopPropagation();keep.click()}};
+ render();
+ return {
+  show(){if(openG<0)expand(0,true);count()},
+  status(){return statusText},
+  plan(){return {removed:[...rm],keepRemoved:keep.classList.contains('on')}},
+  next(){showNextPage('disk')},
+  reset(){cancelPending();rm.clear();openG=-1;keep.classList.add('on');keep.setAttribute('aria-checked','true');render()}
+ };
+})();
+const bootRun=run;
+run=function(){
+ archPage.style.display='none';trimPage.style.display='none';archSelection=-1;
+ [...archCards.children].forEach(c=>{c.getAnimations().forEach(a=>a.cancel());c.classList.remove('dim');c.setAttribute('aria-pressed','false');c.querySelector('b').style.color='';c.querySelector('.nmh').style.opacity='0';c.querySelector('.acc').style.opacity='.3'});
+ trimControls.reset();bootRun();
+};
+document.getElementById('replay').onclick=run;
+note.textContent+=' · design mockup · sample apps · no installation';
+
+</script>
+<script>
+// Interactive design fixture only. No disk, package or system operations.
+const nextPanel=document.getElementById('next-page');
+const nextSteps=['disk','you','review','install','done'];
+function newInstallPlan(){return {disk:'nvme',mode:'',linuxSize:300,encrypt:true,snapshots:true,fullName:'',username:'',password:'',passwordConfirm:'',sudoUseAccount:true,adminPassword:'',hostname:'borea',timezone:'Europe/London',language:'en-GB',keyboard:'gb',confirmed:false}}
+let installPlan=newInstallPlan(),installTimer=null,installDoneTimer=null,installDetailsOpen=false,installPercent=0,installFailure=false,installError=false;
+let reviewEditPage=null;
+const esc=value=>String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const drives={nvme:{name:'NVMe SSD · 1 TB',id:'DEMO-NVME-001',existing:'Windows 11',size:1000},ssd:{name:'SATA SSD · 512 GB',id:'DEMO-SSD-002',existing:'Empty',size:512}};
+const languages=[['en-GB','English (UK)'],['en-US','English (US)'],['de-DE','Deutsch'],['fr-FR','Français']];
+const keyboards=[['gb','UK'],['us','US'],['de','DE'],['fr','FR']];
+const options=(list,value)=>list.map(([v,label])=>`<option value="${v}" ${v===value?'selected':''}>${label}</option>`).join('');
+const field=(label,key,type='text',placeholder='')=>`<label class="next-field">${label}<input data-key="${key}" id="field-${key}" type="${type}" value="${esc(installPlan[key])}" placeholder="${placeholder}" autocomplete="off" ${type==='password'?'spellcheck="false"':''}></label>`;
+const backButton=(label,target)=>`<button class="flow-back next-back" data-back="${reviewEditPage===page?'review':target}">← ${reviewEditPage===page?'One last look':label}</button>`;
+function clearReviewEdit(){
+ reviewEditPage=null;
+ go.setAttribute('aria-label','Continue');
+ const back=document.getElementById('trim-back'),label='← Arch flavours · Omarchy';if(back.textContent!==label)back.textContent=label;
+}
+function beginReviewEdit(target){
+ if(!['trim','disk','you'].includes(target))return;
+ reviewEditPage=target;goBack(target);
+ if(target==='trim')document.getElementById('trim-back').textContent='← One last look';
+ go.setAttribute('aria-label','Return to installation overview');
+}
+
+function stopInstall(){clearInterval(installTimer);clearTimeout(installDoneTimer);installTimer=null;installDoneTimer=null}
+function syncLocaleControls(){document.getElementById('global-language').value=installPlan.language;document.getElementById('global-keyboard').value=installPlan.keyboard}
+function diskErrors(){
+ const s=installPlan,errors=[];
+ if(!['whole','alongside'].includes(s.mode))errors.push('Choose Replace or Install alongside.');
+ if(s.mode==='alongside'&&s.disk!=='nvme')errors.push('Choose the NVMe disk to keep its Windows installation.');
+ return errors;
+}
+// No guessed cross-distro punctuation, length, or complexity policy.
+// NUL cannot be passed through the C-string credential APIs used by Linux auth.
+function passwordError(value,repeat,label){
+ if(value==='')return 'Enter '+label+'.';
+ if(value.includes('\0')||repeat.includes('\0'))return 'NUL characters cannot be used in a password.';
+ if(value!==repeat)return 'The '+label+' entries do not match.';
+ return '';
+}
+function accountErrors(){
+ const s=installPlan,errors=[];
+ if(!s.fullName.trim())errors.push('Enter your name.');
+ if(!/^[a-z_][a-z0-9_-]{0,31}$/.test(s.username))errors.push('Use a lowercase username without spaces.');
+ const passwordIssue=passwordError(s.password,s.passwordConfirm,'account password');if(passwordIssue)errors.push(passwordIssue);
+ if(!s.sudoUseAccount){const issue=passwordError(s.adminPassword,s.adminPassword,'sudo password');if(issue)errors.push(issue)}
+ if(!/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(s.hostname))errors.push('Enter a valid computer name.');
+ try{Intl.DateTimeFormat('en',{timeZone:s.timezone})}catch{errors.push('Choose a valid time zone.');}
+ return errors;
+}
+function nextValidity(){
+ const errors=page==='disk'?diskErrors():page==='you'?accountErrors():[];
+ const hint=document.getElementById('next-hint'),message=errors[0]||'Ready when you are.';if(hint&&hint.textContent!==message)hint.textContent=message;
+ if(['disk','you'].includes(page))readyGo(!errors.length,errors.length?'Complete the details above':'ready to continue');
+}
+function showNextPage(next){
+ if(!nextSteps.includes(next))return;
+ if(page==='install')stopInstall();
+ if(next==='review')clearReviewEdit();
+ enterFlowPage(next);
+ document.getElementById('preview-page').value=next;
+ go.setAttribute('aria-label',reviewEditPage===next?'Return to installation overview':'Continue');
+ if(next==='disk')renderDisk();
+ if(next==='you')renderYou();
+ if(next==='review'){installPlan.confirmed=false;renderReview()}
+ if(next==='install')renderInstall();
+ if(next==='done')renderDone();
+ go.style.visibility=['review','install','done'].includes(next)?'hidden':'';
+ if(['review','install','done'].includes(next))readyGo(false,'');else nextValidity();
+ nextPanel.scrollTop=0;
+ if(next==='install'){nextPanel.tabIndex=-1;nextPanel.focus({preventScroll:true})}else{const focus=nextPanel.querySelector('button,input,select');if(focus)focus.focus({preventScroll:true})}
+}
+function renderDisk(){
+ const s=installPlan,d=drives[s.disk];s.encrypt=true;
+ const modes=[['whole','Replace','A clean start. Everything on this disk is erased.'],['alongside','Install alongside','Make room for Omarchy beside Windows.']];
+ const selected=modes.map(([value,name,description])=>`<button class="next-option" data-mode="${value}" aria-pressed="${s.mode===value}" ${value==='alongside'&&s.disk!=='nvme'?'disabled':''}><span class="pick-name">${name}</span><span class="next-desc">${description}</span></button>`).join('');
+ let layout='';
+ if(s.mode==='whole')layout=`<div class="disk-strip"><span class="borea-space" style="width:100%">Omarchy · Btrfs · ${d.size} GB</span></div><p class="next-warning">Everything on ${d.name}${d.existing==='Windows 11'?', including Windows 11,':''} will be erased by this plan.</p>`;
+ if(s.mode==='alongside')layout=`<label class="next-field">Space for Omarchy · <output id="linux-size">${s.linuxSize} GB</output><input data-key="linuxSize" type="range" min="80" max="500" step="10" value="${s.linuxSize}"></label><div class="disk-strip"><span id="windows-space" style="width:${100-s.linuxSize/10}%">Windows 11</span><span id="linux-space" class="borea-space" style="width:${s.linuxSize/10}%">Omarchy</span></div><p class="next-caption">Preview: shrink Windows and preserve its files and EFI entry. A real installer must first check free space, BitLocker and filesystem health.</p>`;
+ nextPanel.innerHTML=backButton('Trim Omarchy','trim')+`<label class="next-field">Choose a disk<select data-key="disk">${Object.entries(drives).map(([id,d])=>`<option value="${id}" ${s.disk===id?'selected':''}>${d.name} · ${d.existing} · ${d.id}</option>`).join('')}</select></label><div class="next-grid">${selected}</div>${s.mode?`<section class="next-panel next-section"><h2>Your layout</h2>${layout}</section>`:''}<div class="next-two next-section"><section class="next-panel"><label class="next-pick"><input data-key="encrypt" type="checkbox" checked disabled aria-label="Disk encryption required by Omarchy"><span>Encryption is on<small>Required by Omarchy · always enabled.</small></span></label><p class="next-caption">Your account password will also unlock the encrypted disk. You’ll set it on the next step.</p></section><section class="next-panel"><label class="next-pick"><input data-key="snapshots" type="checkbox" ${s.snapshots?'checked':''}><span>Keep system snapshots<small>Btrfs restore points before supported system changes.</small></span></label><p class="next-caption">Snapshots stay on this disk. Keep separate backups of important files.</p></section></div><p id="next-hint" class="next-hint" role="status"></p>`;
+ nextPanel.querySelectorAll('[data-mode]').forEach(button=>button.onclick=()=>{s.mode=button.dataset.mode;s.confirmed=false;renderDisk();nextPanel.querySelector('[data-mode="'+s.mode+'"]').focus({preventScroll:true});nextValidity()});
+ wireFields();wireBack();
+}
+function renderYou(){
+ const s=installPlan;
+ nextPanel.innerHTML=backButton('Disk','disk')+`<div class="next-two"><section class="next-panel"><p class="next-kicker">Your account</p>${field('Your name','fullName','text','Alex Morgan')}${field('Username','username','text','alex')}${field('Password','password','password')}${field('Repeat password','passwordConfirm','password')}<p class="next-caption">This password signs you in and unlocks your encrypted disk.</p><div class="next-pick sudo-choice" data-part-unit><input id="sudo-use-account" data-key="sudoUseAccount" type="checkbox" aria-label="Use account password for sudo" ${s.sudoUseAccount?'checked':''}>${s.sudoUseAccount?'<label for="sudo-use-account">Use as sudo password</label>':`<label class="sr-only" for="field-adminPassword">Separate sudo password</label><input id="field-adminPassword" data-key="adminPassword" type="password" value="${esc(s.adminPassword)}" placeholder="Sudo password" autocomplete="new-password" spellcheck="false">`}</div>${field('Computer name','hostname','text','borea')}</section><section class="next-panel"><p class="next-kicker">At home, wherever you are</p><label class="next-field">Time zone<input data-key="timezone" value="${esc(s.timezone)}" list="timezones"><datalist id="timezones"><option>Europe/London</option><option>Europe/Berlin</option><option>America/New_York</option><option>Asia/Tokyo</option><option>Australia/Sydney</option></datalist></label><label class="next-field">System language<select data-key="language">${options(languages,s.language)}</select></label><label class="next-field">Keyboard layout<select data-key="keyboard">${options(keyboards,s.keyboard)}</select></label><label class="next-field">Try your keyboard<input placeholder="Type a few characters" autocomplete="off"></label><p class="next-caption">Set your language and keyboard here. This preview stays in English and uses your browser’s keyboard layout.</p></section></div><p id="next-hint" class="next-hint" role="status"></p>`;
+ wireFields();wireBack();
+}
+function wireFields(){
+ nextPanel.querySelectorAll('[data-key]').forEach(input=>{
+  input.oninput=()=>{
+   const key=input.dataset.key;installPlan[key]=input.type==='checkbox'?input.checked:input.type==='range'?Number(input.value):input.value;installPlan.confirmed=false;
+   if(key==='linuxSize'){
+    document.getElementById('linux-size').textContent=installPlan.linuxSize+' GB';document.getElementById('linux-space').style.width=installPlan.linuxSize/10+'%';document.getElementById('windows-space').style.width=(100-installPlan.linuxSize/10)+'%';
+   }
+   if(['language','keyboard'].includes(key))syncLocaleControls();
+   if(key==='disk'){
+    if(installPlan.mode==='alongside'&&installPlan.disk!=='nvme')installPlan.mode='';renderDisk();nextPanel.querySelector('[data-key="disk"]').focus({preventScroll:true});
+   }else if(key==='sudoUseAccount'){
+    if(installPlan.sudoUseAccount){installPlan.adminPassword=''}renderYou();
+    document.getElementById(installPlan.sudoUseAccount?'sudo-use-account':'field-adminPassword').focus({preventScroll:true});
+   }
+   nextValidity();
+  };
+ });
+}
+function goBack(target){
+ go.style.visibility='';
+ if(target==='trim'){enterFlowPage('trim');trimControls.show();readyGo(true,trimControls.status());document.getElementById('trim-back').focus({preventScroll:true})}
+ else showNextPage(target);
+}
+function wireBack(){nextPanel.querySelectorAll('[data-back]').forEach(button=>button.onclick=()=>goBack(button.dataset.back))}
+function diskSummary(){const s=installPlan,d=drives[s.disk];return `${d.name} · ${d.id} · ${s.mode==='whole'?'replace · erase whole disk':s.mode==='alongside'?`install alongside Windows · ${s.linuxSize} GB for Omarchy`:'choose an installation option'}`}
+function reviewRows(){
+ const s=installPlan,trim=trimControls.plan();
+ const rows=[['System','Omarchy · Arch family','trim'],['Remove',trim.removed.length>3?trim.removed.length+' extras selected · edit to see the list':trim.removed.length?trim.removed.join(', '):'Keep all included apps','trim'],['After updates',trim.keepRemoved?'Keep selected extras removed':'Allow extras to return','trim'],['Disk',diskSummary(),'disk'],['Protection',`Encryption required · account password · ${s.snapshots?'snapshots on':'snapshots off'}`,'disk'],['Account',`${s.fullName} · ${s.username} on ${s.hostname}`,'you'],['Sudo',s.sudoUseAccount?'Use account password':'Separate administrator password','you'],['Region',`${s.timezone} · ${languages.find(([v])=>v===s.language)[1]} · ${keyboards.find(([v])=>v===s.keyboard)[1]} keyboard`,'you']];
+ return rows.map(([name,value,target])=>`<div class="review-row"><dt>${name}</dt><dd>${esc(value)}</dd><button class="next-edit" data-edit="${target}" aria-label="Edit ${name.toLowerCase()}">edit</button></div>`).join('');
+}
+function renderReview(){
+ const errors=[...diskErrors(),...accountErrors()];
+ nextPanel.innerHTML=backButton('You','you')+`<div class="review-layout"><section class="next-panel"><p class="next-kicker">One last look</p><dl style="margin:0">${reviewRows()}</dl></section><aside class="next-panel"><p class="next-kicker">Before you begin</p><p class="next-warning">${installPlan.mode==='whole'?'Erases the selected disk, including its existing OS.':'Changes partitions on the selected disk. Keep a backup for a real install.'} Preview only: no disk will be changed.</p>${errors.length?`<p class="next-warning">Finish your details before continuing: ${esc(errors[0])}</p>`:''}<label class="next-pick"><input id="confirm-plan" type="checkbox"><span>I have checked the disk and the changes above.</span></label><div class="next-actions"><button id="install-demo" class="next-primary" disabled>Install Omarchy · demo</button><span class="next-caption">Simulated progress. Nothing is downloaded or installed.</span></div></aside></div>`;
+ nextPanel.querySelectorAll('[data-edit]').forEach(button=>button.onclick=()=>beginReviewEdit(button.dataset.edit));
+ document.getElementById('confirm-plan').onchange=e=>{installPlan.confirmed=e.target.checked;document.getElementById('install-demo').disabled=!installPlan.confirmed||errors.length>0};
+ document.getElementById('install-demo').onclick=()=>{if(installPlan.confirmed&&!errors.length)startDemoInstall()};wireBack();
+}
+const installPhases=['Preparing the disk','Installing the Arch foundation','Setting up Omarchy','Applying your choices','Checking the new system'];
+function startDemoInstall(){
+ stopInstall();installDetailsOpen=false;installPercent=0;installError=false;installFailure=document.getElementById('install-outcome').value==='error';showNextPage('install');runProgress();
+}
+function runProgress(){
+ stopInstall();installTimer=setInterval(()=>{
+  installPercent=Math.min(100,installPercent+4);
+  if(installFailure&&installPercent>=44){stopInstall();installError=true;renderInstall();return}
+  if(installPercent===100){stopInstall();updateProgress();installDoneTimer=setTimeout(()=>{installDoneTimer=null;if(page==='install')showNextPage('done')},700);return}
+  updateProgress();
+ },400);
+}
+function createBootWordmark(withArrow=false){
+ // Preserve boot's direct text layers and foreground clipping, including shadows.
+ const logo=document.getElementById('hl').cloneNode(true);
+ logo.id='install-progress';logo.classList.add('install-wordmark','boot-copy-wordmark');
+ logo.style.fontSize=bootWordmarkSize()+'px';logo.style.transform='none';
+ const ids={ink:'install-ink',pill:'restart-preview',cover:'restart-cover',over:withArrow?'restart-over':'install-logo-copy',dot:withArrow?'restart-dot':'install-dot'};
+ for(const [from,to] of Object.entries(ids))logo.querySelector('#'+from).id=to;
+ const highlight=logo.querySelector('#install-ink'),foreground=logo.querySelector('#'+ids.over),period=logo.querySelector('#'+ids.dot);
+ highlight.style.width='100%';highlight.style.background=FAM[Math.max(0,fsel)]?.c||'#1793d1';highlight.style.transition=withArrow?'none':'';
+ foreground.style.clipPath='inset(0 0 0 0)';period.style.background='#0b0f14';period.style.opacity=1;period.style.transition='none';
+ if(!withArrow){logo.querySelector('#restart-preview').remove();highlight.classList.add('install-ink');foreground.classList.add('install-text-progress')}
+ return logo;
+}
+function paintInstallLogo(logo,percent){
+ const highlight=logo.querySelector('#install-ink'),foreground=logo.querySelector('#install-logo-copy'),period=logo.querySelector('#install-dot');
+ highlight.style.width=percent+'%';
+ // The foreground is the boot's text-only layer, not a second full wordmark.
+ const font=parseFloat(logo.style.fontSize),width=logo.offsetWidth,letters=foreground.offsetWidth;
+ const reveal=letters?Math.max(0,Math.min(100,(percent/100*width-font*.25)/letters*100)):Math.min(100,percent*1.25);
+ foreground.style.clipPath='inset(0 '+(100-reveal)+'% 0 0)';
+ const edge=width*percent/100,start=period.offsetParent?.offsetLeft||0;
+ const dotReveal=width?Math.max(0,Math.min(100,(edge-start-period.offsetLeft)/period.offsetWidth*100)):(percent===100?100:0);
+ period.style.background=dotReveal===100?'#0b0f14':dotReveal===0?'#3a4a5c':'linear-gradient(90deg,#0b0f14 '+dotReveal+'%,#3a4a5c '+dotReveal+'%)';
+}
+function installLogo(){
+ const logo=createBootWordmark();
+ logo.setAttribute('role','progressbar');logo.setAttribute('aria-label','Simulated installation progress');
+ logo.setAttribute('aria-valuemin','0');logo.setAttribute('aria-valuemax','100');logo.setAttribute('aria-valuenow',installPercent);
+ paintInstallLogo(logo,installPercent);
+ return `<div class="install-logo-progress" data-fit-chunk="progress">${logo.outerHTML}<div class="install-readout"><span id="install-percent">${installPercent}%</span><h2 id="install-phase" class="install-phase">${installError?'The download was interrupted':installPhases[Math.min(4,Math.floor(installPercent/20))]}</h2></div></div>`;
+}
+function installViewLabel(){return (installError?'':'Tab · ')+(installDetailsOpen?'cover':'output')}
+function applyInstallView(focus=false){
+ const cover=document.getElementById('install-cover'),details=document.getElementById('install-details');if(!cover||!details)return;
+ document.getElementById('scene').toggleAttribute('data-install-cover',!installDetailsOpen);
+ cover.hidden=installDetailsOpen;details.hidden=!installDetailsOpen;
+ cover.removeAttribute('data-fit-hidden');details.removeAttribute('data-fit-hidden');
+ const toggle=document.getElementById('install-view-toggle');toggle.setAttribute('aria-label',installDetailsOpen?'Return to silent cover':'Show installation output');toggle.textContent=installViewLabel();toggle.setAttribute('aria-expanded',String(installDetailsOpen));
+ fitIndices.delete('install');scheduleScreenFit();
+ if(focus){nextPanel.tabIndex=-1;nextPanel.focus({preventScroll:true})}
+}
+function renderInstall(){
+ const phase=Math.min(4,Math.floor(installPercent/20));
+ nextPanel.innerHTML=`<section id="install-cover" class="install-hero" ${installDetailsOpen?'hidden':''}>${installLogo()}</section><section id="install-details" class="install-details" ${installDetailsOpen?'':'hidden'}><p class="next-kicker">Installation output · simulated</p><p class="install-output-total" data-part-unit><span id="install-detail-percent">${installPercent}%</span> · Omarchy</p><div class="install-console" role="log" aria-label="Simulated installation output">${installPhases.map((name,i)=>`<p data-phase="${i}" data-state="${installPercent===100||i<phase?'done':i===phase?'active':'waiting'}">${installPercent===100||i<phase?'[ done ]':i===phase?'[ running ]':'[ waiting ]'} ${name}</p>`).join('')}</div><p class="next-caption">${esc(diskSummary())}</p></section>${installError?'<div class="install-error-actions" data-part-unit><p role="alert">The download was interrupted. Your choices are kept.</p><button id="retry-install" class="next-primary">Retry download · demo</button></div>':''}`;
+ let toggle=document.getElementById('install-view-toggle');if(!toggle){toggle=document.createElement('button');toggle.id='install-view-toggle';toggle.setAttribute('aria-controls','install-details');ui.append(toggle)}
+ toggle.hidden=false;toggle.textContent=installViewLabel();toggle.setAttribute('aria-expanded',String(installDetailsOpen));toggle.setAttribute('aria-label',installDetailsOpen?'Return to silent cover':'Show installation output');
+ toggle.onclick=()=>{installDetailsOpen=!installDetailsOpen;applyInstallView()};
+ paintInstallLogo(document.getElementById('install-progress'),installPercent);
+ if(installError)document.getElementById('retry-install').onclick=()=>{installFailure=false;installError=false;renderInstall();runProgress()};
+}
+addEventListener('keydown',event=>{
+ if(page!=='install'||event.key!=='Tab'||event.shiftKey||event.ctrlKey||event.altKey||event.metaKey||installError)return;
+ if(event.target.id!=='install-view-toggle'&&event.target.closest('button,input,select,textarea,a,summary,[contenteditable="true"],#demo-tools'))return;
+ event.preventDefault();installDetailsOpen=!installDetailsOpen;applyInstallView(true);
+});
+function updateProgress(){
+ const phase=Math.min(4,Math.floor(installPercent/20));
+ document.getElementById('install-percent').textContent=installPercent+'%';document.getElementById('install-phase').textContent=installPhases[phase];
+ document.getElementById('install-progress').setAttribute('aria-valuenow',installPercent);
+ paintInstallLogo(document.getElementById('install-progress'),installPercent);
+ document.getElementById('install-detail-percent').textContent=installPercent+'%';
+ document.querySelectorAll('[data-phase]').forEach((li,i)=>{const done=installPercent===100||i<phase;li.dataset.state=done?'done':i===phase?'active':'waiting';const text=(done?'[ done ]':i===phase?'[ running ]':'[ waiting ]')+' '+installPhases[i];if(li.textContent!==text)li.textContent=text});
+}
+function clearRestartTransition(){
+ document.getElementById('restart-blackout')?.remove();ui.inert=false;
+}
+function beginRestartTransition(button){
+ button.setAttribute('aria-disabled','true');button.style.pointerEvents='none';
+ timers.forEach(clearTimeout);timers=[];
+ const blackout=document.createElement('div');blackout.id='restart-blackout';blackout.tabIndex=-1;blackout.setAttribute('aria-label','Restarting');
+ document.getElementById('scene').append(blackout);ui.inert=true;blackout.focus({preventScroll:true});
+ const reduced=matchMedia('(prefers-reduced-motion:reduce)').matches;
+ blackout.animate([{opacity:0},{opacity:1}],{duration:reduced?1:480,fill:'forwards',easing:ez}).finished.then(()=>{
+  if(!blackout.isConnected)return;
+  timers.push(setTimeout(()=>{if(blackout.isConnected&&page==='done')run()},reduced?0:250));
+ }).catch(()=>{});
+}
+function renderDone(){
+ installPercent=100;installError=false;
+ const logo=createBootWordmark(true);
+ const highlight=logo.querySelector('#install-ink'),period=logo.querySelector('#restart-dot'),button=logo.querySelector('#restart-preview');
+ button.classList.add('restart-symbol');button.tabIndex=0;button.setAttribute('aria-label','Restart');button.setAttribute('aria-disabled','true');button.style.opacity=0;button.style.pointerEvents='none';
+ nextPanel.innerHTML='<section id="install-cover" class="install-hero restart-finish"><div class="install-logo-progress" data-fit-chunk="progress"><div class="install-readout">After restarting, remove the usb</div></div></section>';
+ const stack=nextPanel.querySelector('.install-logo-progress'),readout=stack.firstChild;stack.prepend(logo);readout.style.opacity=0;
+ requestAnimationFrame(()=>requestAnimationFrame(()=>{if(page==='done'&&button.isConnected)bootReadyMotion({ink:highlight,hl:logo,dot:period,pill:button,cover:button.firstChild,status:readout,active:()=>page==='done'&&button.isConnected,onReady:()=>{readout.style.opacity=1}});}));
+ button.onclick=()=>{if(button.getAttribute('aria-disabled')==='false')beginRestartTransition(button)};
+ button.onkeydown=event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();button.click()}};
+}
+
+const beforeNextGo=go.onclick;
+go.onclick=()=>{
+ if(reviewEditPage===page){
+  const errors=page==='disk'?diskErrors():page==='you'?accountErrors():[];
+  if(!errors.length)showNextPage('review');return;
+ }
+ if(page==='disk'){if(!diskErrors().length)showNextPage('you')}
+ else if(page==='you'){if(!accountErrors().length)showNextPage('review')}
+ else if(!nextSteps.includes(page)){go.style.visibility='';beforeNextGo()}
+};
+addEventListener('keydown',e=>{if(e.target.closest('#screen-pager,#demo-tools'))return;if(e.key==='Escape'&&['disk','you','review'].includes(page)){e.preventDefault();goBack(reviewEditPage===page?'review':{disk:'trim',you:'disk',review:'you'}[page])}});
+for(const key of ['language','keyboard'])document.getElementById('global-'+key).onchange=e=>{
+ installPlan[key]=e.target.value;installPlan.confirmed=false;
+ if(page==='you'){const field=nextPanel.querySelector('[data-key="'+key+'"]');field.value=e.target.value;nextValidity()}
+ if(page==='review')renderReview();
+};
+function seedPreview(target){
+ installDetailsOpen=false;clearReviewEdit();stopInstall();clearTimeout(rz);
+ flowEpoch++;hidePageHeading();headerReady=true;
+ if(['review','install','done'].includes(target)){
+ if(!installPlan.mode)installPlan.mode='whole';
+ if(!installPlan.fullName)installPlan.fullName='Alex Morgan';if(!installPlan.username)installPlan.username='alex';
+ if(!installPlan.password){installPlan.password='preview-only';installPlan.passwordConfirm='preview-only'}
+ }
+ timers.forEach(clearTimeout);T.forEach(clearTimeout);timers=[];T=[];clearInterval(autoT);
+ for(const el of [hl,ink,pill,dot,over,cover])el.getAnimations().forEach(a=>a.cancel());
+ ink.style.width='100%';ink.style.background='#1793d1';over.style.clipPath='inset(0 0 0 0)';dot.style.opacity='1';dot.style.background='#0b0f14';hl.style.transform='none';pill.style.opacity='0';pill.style.pointerEvents='none';status.style.opacity='0';
+ netOn=true;logoInCorner=false;ui.style.visibility='visible';S.style.opacity='1';nfit();positionCornerLogo(false);logoInCorner=true;archSelection=1;fsel=0;
+}
+document.getElementById('preview-page').onchange=e=>{
+ const target=e.target.value;if(target==='boot'){run();return}
+ seedPreview(target);
+ if(target==='trim')goBack('trim');else if(target==='install')startDemoInstall();else showNextPage(target);
+ note.textContent='sample details loaded · all operations are simulated';
+};
+const beforeNextRun=run;
+run=function(){const toggle=document.getElementById('install-view-toggle');if(toggle)toggle.hidden=true;installDetailsOpen=false;clearReviewEdit();stopInstall();nextPanel.replaceChildren();nextPanel.style.display='none';installPlan=newInstallPlan();installPercent=0;installError=false;go.style.visibility='';document.getElementById('preview-page').value='boot';syncLocaleControls();beforeNextRun()};
+document.getElementById('replay').onclick=run;
+syncLocaleControls();
+
+</script>
+
+<script>
+// Responsive screen pagination preserves live controls and their state.
+const toolbar=document.createElement('div');toolbar.id='preview-toolbar';
+const oldToolbar=document.getElementById('replay').parentElement;
+const tools=document.createElement('details');tools.id='demo-tools';
+const toolsSummary=document.createElement('summary');toolsSummary.textContent='Preview settings';
+const toolsBody=document.createElement('div');tools.append(toolsSummary,toolsBody);
+const previewLabel=document.getElementById('preview-page').closest('label');
+toolbar.append(document.getElementById('replay'),previewLabel,tools);
+for(const id of ['readyBtn','mon','scen'])toolsBody.append(document.getElementById(id));
+toolsBody.append(document.getElementById('install-outcome').closest('label'),document.getElementById('note'));
+oldToolbar.replaceWith(toolbar);
+const autoMonitor=document.createElement('option');autoMonitor.value='auto';autoMonitor.textContent='Fit window';
+document.getElementById('mon').prepend(autoMonitor);document.getElementById('mon').value='auto';
+const pager=document.createElement('nav');pager.id='screen-pager';pager.hidden=true;pager.setAttribute('aria-label','More choices on this step');
+pager.innerHTML='<button type="button" id="screen-prev" aria-label="Previous panel">←</button><span id="screen-count" aria-live="polite"></span><button type="button" id="screen-next" aria-label="Next panel">→</button>';
+ui.append(pager);
+const screenBackSlot=document.createElement('div');screenBackSlot.id='screen-back-slot';screenBackSlot.hidden=true;ui.append(screenBackSlot);
+const screenBacks=new Map();
+let fitRequest=0,currentFit=null;
+const fitIndices=new Map();
+function scheduleScreenFit(){if(!fitRequest)fitRequest=requestAnimationFrame(()=>{fitRequest=0;fitScreen()})}
+function fitWindow(){
+ const stage=document.getElementById('scene'),spaceW=document.documentElement.clientWidth-16,spaceH=document.documentElement.clientHeight-toolbar.getBoundingClientRect().height-24;
+ const ratioValue=document.getElementById('mon').value;
+ let width=spaceW,height=Math.max(100,spaceH);
+ if(ratioValue!=='auto'){
+  const [a,b]=ratioValue.split('/').map(Number),ratio=a/b;
+  width=Math.min(spaceW,height*ratio);height=width/ratio;
+ }
+ stage.style.width=Math.floor(width)+'px';stage.style.height=Math.floor(height)+'px';stage.style.aspectRatio='auto';
+ if(netOn)nfit();else fit();
+ size();init();scheduleScreenFit();
+}
+function currentPanel(){return page==='net'?document.getElementById('ncol'):page==='fam'?document.getElementById('fam'):page==='arch'?archPage:page==='trim'?trimPage:nextSteps.includes(page)?nextPanel:null}
+function visibleNode(el){return el.getClientRects().length>0&&getComputedStyle(el).display!=='none'}
+function screenUnits(panel){
+ panel.querySelectorAll('[data-fit-hidden]').forEach(el=>el.removeAttribute('data-fit-hidden'));
+ let candidates=[],groups=[];
+ if(page==='fam'){candidates=[...panel.querySelectorAll('.fcard')]}
+ else if(page==='arch'){candidates=[...panel.querySelectorAll('.card')]}
+ else if(page==='trim'){
+  groups=[...panel.querySelectorAll('#trim-groups>li')];
+  for(const group of groups){
+   const open=group.classList.contains('open');
+   candidates.push(...(open?[...group.querySelectorAll('.lf')]:[group.querySelector('.bn')]));
+  }
+  const keep=panel.querySelector('#trim-keep').parentElement;candidates.push(keep);
+ }else if(page==='net'){
+  candidates=[...panel.querySelectorAll('.row,.msg,#pw')];
+ }else{
+  candidates=[...panel.querySelectorAll('[data-part-unit],.next-field,.next-pick,.app-choice,.review-row,.next-warning,.next-caption,.app-caption,.next-actions,.disk-strip,.next-table tbody tr,p:not(.next-kicker):not(.install-number),.next-hint,[data-mode],[data-fit-chunk],.install-steps>li,.install-facts>li,.done-mark,#retry-install')];
+  groups=[...panel.querySelectorAll('.next-panel,.app-group,.next-table,.install-hero,.install-details')];
+ }
+ candidates=candidates.filter(el=>visibleNode(el)&&!candidates.some(parent=>parent!==el&&parent.contains(el)));
+ return {units:candidates,groups};
+}
+function showUnits(data,indices){
+ const wanted=new Set(indices);
+ data.units.forEach((el,i)=>el.toggleAttribute('data-fit-hidden',!wanted.has(i)));
+ data.groups.forEach(group=>{
+  const contained=data.units.filter(el=>group.contains(el));
+  group.toggleAttribute('data-fit-hidden',contained.length>0&&!contained.some(el=>!el.hasAttribute('data-fit-hidden')));
+ });
+}
+function syncNetworkHeadings(panel=currentPanel()){
+ if(page!=='net')return;
+ for(const id of ['wired','list']){
+  const root=panel.querySelector('#'+id),related=[...root.querySelectorAll('.row,#pw,.msg')];
+  const active=related.filter(el=>!el.closest('[data-fit-hidden]'));
+  const portalOnly=id==='list'&&active.length>0&&active.every(el=>el.closest('#pw'))&&root.querySelector('#pw .msg');
+  root.previousElementSibling.toggleAttribute('data-fit-hidden',(related.length>0&&!active.length)||!!portalOnly);
+ }
+}
+function fitsPanel(panel){
+ syncNetworkHeadings(panel);
+ return panel.scrollHeight<=panel.clientHeight+2&&panel.scrollWidth<=panel.clientWidth+2;
+}
+const measureHost=document.createElement('div');
+measureHost.setAttribute('aria-hidden','true');measureHost.inert=true;
+Object.assign(measureHost.style,{position:'fixed',left:'-100000px',top:'0',visibility:'hidden',pointerEvents:'none',contain:'strict'});
+const measureRoot=measureHost.attachShadow({mode:'closed'}),measureStyle=document.createElement('style');
+measureStyle.textContent=[...document.querySelectorAll('style')].map(el=>el.textContent).join('\n');
+const measureStage=document.createElement('div');measureStage.id='scene';
+const measureUI=document.createElement('div');measureUI.id='ui';measureStage.append(measureUI);measureRoot.append(measureStyle,measureStage);document.body.append(measureHost);
+function measurementCopy(panel){
+ const stage=document.getElementById('scene'),stageStyle=getComputedStyle(stage),uiStyle=getComputedStyle(ui);
+ measureStage.toggleAttribute('data-install-cover',stage.hasAttribute('data-install-cover'));
+ for(const el of [measureHost,measureStage]){el.style.width=stage.clientWidth+'px';el.style.height=stage.clientHeight+'px'}
+ Object.assign(measureStage.style,{position:'relative',containerType:'size',fontFamily:stageStyle.fontFamily});
+ for(const name of ['--font-sans','--font-voice','--font-mono'])measureStage.style.setProperty(name,getComputedStyle(document.documentElement).getPropertyValue(name));
+ Object.assign(measureUI.style,{position:'absolute',inset:'0',fontFamily:uiStyle.fontFamily,fontSize:uiStyle.fontSize});
+ const clone=panel.cloneNode(true);
+ Object.assign(clone.style,{position:'absolute',left:'0',right:'auto',top:'0',bottom:'auto',margin:'0',width:panel.offsetWidth+'px',height:panel.offsetHeight+'px',boxSizing:'border-box',maxHeight:'none',transform:'none',opacity:'1'});
+ // Selection paint does not contribute to the space occupied by network rows.
+ const highlight=clone.querySelector('#hi');if(highlight)highlight.hidden=true;
+ const originals=[panel,...panel.querySelectorAll('*')],copies=[clone,...clone.querySelectorAll('*')];
+ const toOriginal=new Map(copies.map((el,i)=>[el,originals[i]]));
+ measureUI.replaceChildren(clone);
+ return {clone,toOriginal};
+}
+function fitScreen(){
+ const panel=currentPanel();
+ if(!panel||!visibleNode(panel)){pager.hidden=true;screenBackSlot.hidden=true;currentFit=null;return}
+ const inlineBack=panel.querySelector(':scope > .flow-back');
+ if(inlineBack){const old=screenBacks.get(page);if(old&&old!==inlineBack)old.remove();screenBacks.set(page,inlineBack);screenBackSlot.append(inlineBack)}
+ screenBackSlot.hidden=!screenBacks.has(page);
+ for(const [key,el] of screenBacks)el.toggleAttribute('data-fit-hidden',key!==page);
+ const {clone,toOriginal}=measurementCopy(panel);
+ const measured=screenUnits(clone);
+ if(!measured.units.length){measureUI.replaceChildren();pager.hidden=true;currentFit=null;return}
+ const pages=[];let indices=[];
+ for(let i=0;i<measured.units.length;i++){
+  const test=[...indices,i];showUnits(measured,test);
+  if(indices.length&&!fitsPanel(clone)){pages.push(indices);indices=[i];showUnits(measured,indices)}else indices=test;
+ }
+ if(indices.length)pages.push(indices);
+ const data={units:measured.units.map(el=>toOriginal.get(el)),groups:measured.groups.map(el=>toOriginal.get(el))};
+ let index=Math.min(fitIndices.get(page)||0,pages.length-1);
+ const focused=data.units.findIndex(el=>el.contains(document.activeElement));
+ if(focused>=0){const focusPage=pages.findIndex(items=>items.includes(focused));if(focusPage>=0)index=focusPage}
+ // Only the final result touches live fields. They are never hidden to measure.
+ currentFit={panel,data,pages,index,key:page};showFitPage(index,false);
+ measureUI.replaceChildren();
+}
+
+function showFitPage(index,focus){
+ const f=currentFit;if(!f)return;
+ f.index=Math.max(0,Math.min(index,f.pages.length-1));fitIndices.set(f.key,f.index);
+ showUnits(f.data,f.pages[f.index]);
+ f.panel.scrollTop=0;f.panel.scrollLeft=0;
+ f.panel.dataset.fitOverflow=String(!fitsPanel(f.panel));
+ pager.hidden=f.pages.length<=1;
+ const counter=document.getElementById('screen-count'),counterText=(f.index+1)+' / '+f.pages.length;if(counter.textContent!==counterText)counter.textContent=counterText;
+ document.getElementById('screen-prev').disabled=f.index===0;
+ document.getElementById('screen-next').disabled=f.index===f.pages.length-1;
+ if(page==='net'){
+  syncNetworkHeadings();
+  const row=document.querySelector('#wifi .row.sel');HI.hidden=!row||!visibleNode(row);
+  if(row&&visibleNode(row))moveHi(row,false);
+ }
+ if(focus){const control=f.data.units.filter(el=>!el.hasAttribute('data-fit-hidden')).flatMap(el=>[...(el.matches('button,input,select,[tabindex]')?[el]:[]),...el.querySelectorAll('button,input,select,[tabindex]')])[0];if(control)control.focus({preventScroll:true})}
+}
+function focusFitItem(el){
+ const f=currentFit;
+ if(f){const unit=f.data.units.findIndex(unit=>unit===el||unit.contains(el));if(unit>=0){const index=f.pages.findIndex(items=>items.includes(unit));if(index>=0)showFitPage(index,false)}}
+ el.focus({preventScroll:true});
+}
+document.getElementById('screen-prev').onclick=()=>showFitPage(currentFit.index-1,false);
+document.getElementById('screen-next').onclick=()=>showFitPage(currentFit.index+1,false);
+const observer=new MutationObserver(records=>{
+ const panel=currentPanel();if(!panel)return;
+ const changed=records.some(record=>{
+  if(!panel.contains(record.target))return false;
+  if(record.type==='attributes')return record.target===panel||record.target.matches('.lv,#pw');
+  return true;
+ });
+ if(changed)scheduleScreenFit();
+});
+observer.observe(ui,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:['style','aria-expanded']});
+window.addEventListener('resize',fitWindow);document.getElementById('mon').addEventListener('change',fitWindow);
+const fitRun=run;run=function(){fitIndices.clear();currentFit=null;pager.hidden=true;fitRun();fitWindow()};document.getElementById('replay').onclick=run;
+fitWindow();
+
+</script>
+</body></html>

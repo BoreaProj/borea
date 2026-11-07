@@ -1,0 +1,62 @@
+<div id="scene" style="background:#0b0f14;border-radius:12px;overflow:hidden;position:relative;width:100%;aspect-ratio:16/9;color:#e3eaf2;font-family:var(--font-sans,sans-serif);-webkit-font-smoothing:antialiased">
+<style>
+#ui .card{position:relative;background:#0f151d;border:1px solid #1f2a36;border-radius:.7em;padding:1.5em 1.3em 1.4em;cursor:pointer;outline:none;transform-origin:50% 100%;transition:opacity .3s,border-color .3s;display:flex;flex-direction:column}
+#ui .card.dim{opacity:.45}
+#ui .card:focus-visible{outline:none}
+#ui .nm{position:relative;display:inline-block;align-self:flex-start;font-family:var(--font-voice,serif);font-size:1.4em;padding:0 .25em;margin:1.1em 0 .9em;margin-left:-.25em}
+#ui .nm b{position:relative;font-weight:400}
+#ui .q{font-family:var(--font-voice,serif);font-style:italic;font-size:.88em;color:#c9d6e3;line-height:1.5;flex:1}
+#ui .src{font-family:var(--font-mono,monospace);font-size:.62em;color:#6f8296;margin-top:1.2em}
+#ui .tg{font-family:var(--font-mono,monospace);font-size:.62em;color:#8497ab;margin-top:.9em;padding-top:.8em;border-top:1px solid #1f2a36}
+#ui .tg.sug{color:#7cc4ec}
+#ui .mono{font-family:var(--font-mono,monospace);font-size:.72em;color:#8497ab}
+.hl{position:absolute;border-radius:2px 6px 3px 7px;transform:skewX(-10deg) rotate(-1deg);transform-origin:0 50%}
+</style>
+<canvas id="c" style="position:absolute;inset:0;width:100%;height:100%"></canvas>
+<div id="ui" style="position:absolute;inset:0;font-size:16px;display:flex;align-items:center;justify-content:center">
+<div style="position:absolute;top:1.4em;left:2em;font-family:var(--font-voice,serif);font-size:1.15em;letter-spacing:.05em;padding:.1em .35em"><span class="hl" style="inset:16% 0 10%;background:#85b7eb"></span><span style="position:relative;color:#0b0f14">borea.</span></div>
+<div style="width:min(44em,84%)">
+<div id="back" role="button" tabindex="0" class="mono" style="cursor:pointer;margin-bottom:.6em;display:inline-flex;align-items:center;gap:.4em"><span style="color:#1793d1">←</span> arch</div>
+<div style="font-family:var(--font-voice,serif);font-size:1.7em;color:#f1f5f9">Choose your Arch flavour</div>
+<div style="font-size:.85em;color:#9fb0c2;margin:.35em 0 2.2em">All three install fresh from Arch’s own sources. Pick how much is done for you.</div>
+<div id="cards" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1.8em"></div>
+</div>
+<div style="position:absolute;left:2em;bottom:1.3em" class="mono" id="status"></div>
+<div id="go" role="button" aria-label="Continue" aria-disabled="true" tabindex="0" style="position:absolute;right:2em;bottom:1.1em;width:3em;height:1.9em;clip-path:polygon(0% 27%,56% 27%,56% -4%,100% 50%,56% 104%,56% 73%,0% 73%);transform:skewX(-10deg);opacity:.28;pointer-events:none;cursor:pointer"><div class="gl" style="position:absolute;inset:0;background:linear-gradient(90deg,#85b7eb 15%,#73ba25 95%);transition:opacity .6s ease"></div></div>
+</div>
+</div>
+<div style="display:flex;gap:8px;margin-top:12px;align-items:center;flex-wrap:wrap">
+<button id="replay"><i class="ti ti-refresh" aria-hidden="true"></i> Replay</button>
+<span style="font-size:13px;color:var(--text-secondary)">--dry-run: ← → to pick, Enter to continue, Esc or ← arch to go back</span>
+</div>
+<script>
+const $=id=>document.getElementById(id),ui=$('ui'),CW=$('cards'),S=$('status'),go=$('go');
+const SK=' skewX(-10deg) rotate(-1deg)';
+const FAM=[
+{n:'CachyOS',c:'#1793d1',q:'Performance-First Linux, Built on Arch.',src:'cachyos.org',tag:'suggested for this PC \u00b7 x86-64-v3 repos',sug:1},
+{n:'Omarchy',c:'#1793d1',q:'The malleable OS for the age of agents.',src:'omarchy.org',tag:'hands over to the Omarchy installer'},
+{n:'Custom Arch',c:'#1793d1',q:'A minimal Arch base with only the shell and apps you choose next.',src:'borea',tag:'composed by Borea',own:1}];
+const wind=c=>'<svg viewBox="0 0 64 64" style="width:2.3em;height:2.3em;display:block"><g fill="none" stroke="'+c+'" stroke-width="4.5" stroke-linecap="round"><path d="M8 24H38a8 8 0 1 0-8-8"/><path d="M8 34H50a7 7 0 1 1-7 7"/><path d="M14 44H30"/></g></svg>';
+let sel=-1,T0;
+function fit(){const r=$('scene').getBoundingClientRect();ui.style.fontSize=Math.round(Math.max(10,Math.min(r.width*.019,r.height*.03,20)))+'px'}
+const lite=h=>{const n=parseInt(h.slice(1),16),m=v=>Math.round(v+(255-v)*.3);return'rgb('+m(n>>16)+','+m(n>>8&255)+','+m(n&255)+')'},grad=c=>'linear-gradient(90deg,'+lite(c)+' 10%,'+c+' 90%)',BASE='linear-gradient(90deg,#85b7eb 15%,#73ba25 95%)';
+function arrowLayers(){go.innerHTML='<div id="ga" style="position:absolute;inset:0;background:'+BASE+'"></div><div id="gb" style="position:absolute;inset:0;opacity:0"></div>'}
+function tint(i){const ga=$('ga'),gb=$('gb'),g=i<0?BASE:grad(FAM[i].c);gb.getAnimations().forEach(x=>x.cancel());gb.style.background=g;gb.animate([{opacity:0},{opacity:1}],{duration:600,easing:'ease-in-out',fill:'forwards'}).onfinish=()=>{ga.style.background=g;gb.getAnimations().forEach(x=>x.cancel())}}
+function cards(){CW.innerHTML=FAM.map((f,i)=>'<div class="card" tabindex="0" data-i="'+i+'" role="button" aria-label="'+f.n+'"><span class="acc" style="position:absolute;left:1.3em;right:1.3em;top:0;height:2px;background:'+f.c+';opacity:.3"></span>'+wind(f.c)+'<div class="nm"><span class="hl nmh" style="inset:10% -2% 6%;background:'+f.c+';opacity:0"></span><b>'+f.n+'</b></div>'+(f.own?'<div class="q" style="font-style:normal;font-family:var(--font-sans,sans-serif)">'+f.q+'</div>':'<div class="q">“'+f.q+'”</div>')+'<div class="src">'+f.src+'</div><div class="tg'+(f.sug?' sug':'')+'">'+f.tag+'</div></div>').join('');
+CW.querySelectorAll('.card').forEach(c=>{let m=0;c.onmousedown=()=>{m=1};c.onclick=()=>{const i=+c.dataset.i;if(i===sel)next();else pick(i)};c.onfocus=()=>{if(m){m=0;return}const i=+c.dataset.i;if(i!==sel)pick(i)}})}
+function pick(i){sel=i;const cs=[...CW.children],c=cs[i],h=c.querySelector('.nmh');
+cs.forEach((x,k)=>{x.classList.toggle('dim',k!==i);x.style.borderColor=k===i?FAM[k].c+'88':'';x.querySelector('.acc').style.opacity=k===i?1:.3;x.querySelector('b').style.color=k===i?'#0b0f14':'';if(k!==i){x.getAnimations().forEach(a=>a.cancel());x.querySelector('.nmh').style.opacity=0}});
+c.animate([{transform:'translateY(0) scale(1,1)'},{transform:'translateY(-.35em) scale(.99,1.04)',offset:.45},{transform:'translateY(-.15em) scale(1.02,.99)',offset:.75},{transform:'translateY(-.2em) scale(1.01,1.01)'}],{duration:480,fill:'forwards',easing:'ease-out'});
+h.style.opacity=1;h.animate([{transform:'scale(0,.6)'+SK},{transform:'scale(1.06,.9)'+SK,offset:.6},{transform:'scale(1,1)'+SK}],{duration:420,easing:'ease-out'});
+tint(i);readyGo(true);S.textContent=FAM[i].n.toLowerCase()+' · enter to continue'}
+function next(){if(sel<0)return;const c=CW.children[sel];c.animate([{transform:'translateY(-.2em) scale(1.01,1.01)'},{transform:'translateY(0) scale(1.05,.94)',offset:.3},{transform:'translateY(-.3em) scale(.99,1.03)',offset:.65},{transform:'translateY(-.2em) scale(1.01,1.01)'}],{duration:420,fill:'forwards',easing:'ease-out'});S.textContent='→ '+FAM[sel].n+(FAM[sel].own?' · make it yours (next page)':FAM[sel].n==='Omarchy'?' · choose apps to remove (next page)':' · apps (next page)')}
+function readyGo(on){go.getAnimations().forEach(a=>a.cancel());go.animate([{opacity:getComputedStyle(go).opacity},{opacity:on?1:.28}],{duration:450,fill:'forwards',easing:'ease-out'});go.style.pointerEvents=on?'auto':'none';go.setAttribute('aria-disabled',!on)}
+addEventListener('keydown',e=>{if(e.key==='ArrowRight'||e.key==='ArrowLeft'){e.preventDefault();const d=e.key==='ArrowRight'?1:-1;CW.children[((sel<0?0:sel+d)+3)%3].focus({preventScroll:true})}if(e.key==='Enter'){e.preventDefault();next()}});
+go.onclick=next;$('back').onclick=()=>{S.textContent='← back to families'};addEventListener('keydown',e=>{if(e.key==='Escape')S.textContent='← back to families'});
+function start(){clearTimeout(T0);fit();sel=-1;arrowLayers();readyGo(false);S.textContent='';cards();
+[...CW.children].forEach((c,i)=>c.animate([{opacity:0,transform:'translateY(1.2em) scale(.96,1.05)'},{opacity:1,transform:'translateY(-.2em) scale(1.01,.99)',offset:.6},{opacity:1,transform:'none'}],{duration:520,delay:i*80,easing:'ease-out',fill:'backwards'}));T0=setTimeout(()=>CW.children[0].focus({preventScroll:true}),650)}
+const cv=$('c'),ctx=cv.getContext('2d');let W,H,L=[];
+function size(){W=cv.width=cv.clientWidth*devicePixelRatio;H=cv.height=cv.clientHeight*devicePixelRatio;L=Array.from({length:26},()=>({x:Math.random()*W,y:Math.random()*H,l:60+Math.random()*160,s:1+Math.random()*2,a:.04+Math.random()*.1,p:Math.random()*6}))}
+function draw(ts){ctx.clearRect(0,0,W,H);L.forEach(o=>{ctx.beginPath();for(let i=0;i<=o.l;i+=8){const x=o.x-i,y=o.y+Math.sin((x+ts*.05+o.p*40)/90)*10*devicePixelRatio;i?ctx.lineTo(x,y):ctx.moveTo(x,y)}ctx.strokeStyle='rgba(133,183,235,'+o.a+')';ctx.lineWidth=devicePixelRatio;ctx.stroke();o.x+=o.s*devicePixelRatio;if(o.x-o.l>W){o.x=-10;o.y=Math.random()*H}});requestAnimationFrame(draw)}
+$('replay').onclick=start;addEventListener('resize',()=>{size();fit()});size();requestAnimationFrame(draw);start();
+</script>
