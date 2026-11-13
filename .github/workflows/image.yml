@@ -13,6 +13,7 @@ jobs:
       fail-fast: false
       matrix:
         fs: [btrfs, ext4]
+        family: [arch, debian, fedora, suse]
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@master
@@ -26,14 +27,14 @@ jobs:
       - name: Build and fetch pinned independent runtime
         run: |
           cargo build --release --locked -p borea-cli -p xtask
-          target/release/borea runtime fetch --family arch --cache "$PWD/target/image-runtime"
+          target/release/borea runtime fetch --family '${{ matrix.family }}' --cache "$PWD/target/image-runtime"
       - name: Real disposable-image execution and repeat probes
         run: |
           mkdir -p target/image-validation
           set -o pipefail
-          sudo env BOREA_RUNTIME_CACHE="$PWD/target/image-runtime" target/release/xtask disk selftest --fs '${{ matrix.fs }}' 2>&1 | tee 'target/image-validation/${{ matrix.fs }}.log'
+          sudo env BOREA_RUNTIME_CACHE="$PWD/target/image-runtime" target/release/xtask disk selftest --fs '${{ matrix.fs }}' --family '${{ matrix.family }}' 2>&1 | tee 'target/image-validation/${{ matrix.fs }}.log'
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: image-storage-${{ matrix.fs }}
+          name: image-storage-${{ matrix.family }}-${{ matrix.fs }}
           path: target/image-validation

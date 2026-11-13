@@ -50,7 +50,10 @@ fn run() -> Result<()> {
         ["plan", "golden", "--update"] => golden(true)?,
         ["secret", "canary"] => canary()?,
         ["disk", "selftest", "--stage", "create"] => disk_create()?,
-        ["disk", "selftest", "--fs", fs] => disk_storage(fs)?,
+        ["disk", "selftest", "--fs", fs] => disk_storage(fs, FamilyId::Arch)?,
+        ["disk", "selftest", "--fs", fs, "--family", family] => {
+            disk_storage(fs, FamilyId::parse(family)?)?
+        }
         ["disk", ..] => {
             return Err(BoreaError::unsupported(
                 "disk mutation selftests are not implemented; only --stage create is available; image/loop validation is pending F01/B02/B03",
@@ -368,7 +371,7 @@ fn envrun(args: &[String]) -> Result<()> {
     Ok(())
 }
 
-fn disk_storage(filesystem: &str) -> Result<()> {
+fn disk_storage(filesystem: &str, family: FamilyId) -> Result<()> {
     let cache = std::env::var_os("BOREA_RUNTIME_CACHE")
         .map(PathBuf::from)
         .ok_or_else(|| {
@@ -381,7 +384,7 @@ fn disk_storage(filesystem: &str) -> Result<()> {
     let manifest = temp.path().join("manifest.json");
     let journal = temp.path().join("journal");
     let lock = borea_core::runtime::RuntimeLock::embedded()?;
-    let spec = lock.get(FamilyId::Arch)?;
+    let spec = lock.get(family)?;
     let plan =
         borea_run::image::create(&image, &manifest, filesystem, 20 * 1024 * 1024 * 1024, spec)?;
     let result = (|| -> Result<()> {
@@ -454,7 +457,7 @@ fn disk_storage(filesystem: &str) -> Result<()> {
     result?;
     println!(
         "{}",
-        serde_json::json!({"schema":1,"filesystem":filesystem,"size_gib":20,"storage":"passed","repeat_probes":"passed","pending_format_resume":"passed","unknown_format":"refused_without_rewrite","exclusive_lock":"passed","stale_identity":"rejected","replacement_image":"rejected","bootable":false})
+        serde_json::json!({"schema":1,"family":family,"filesystem":filesystem,"size_gib":20,"storage":"passed","repeat_probes":"passed","pending_format_resume":"passed","unknown_format":"refused_without_rewrite","exclusive_lock":"passed","stale_identity":"rejected","replacement_image":"rejected","bootable":false})
     );
     Ok(())
 }
