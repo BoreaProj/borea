@@ -1,5 +1,9 @@
 # Architecture
 
+> This document describes the full v0.1 target. Current executable behavior and
+> remaining gates are listed in [IMPLEMENTATION.md](IMPLEMENTATION.md).
+
+
 This document defines the moving parts, the data that crosses between them, and
 the invariants the executor enforces. Read it before changing the plan format,
 the executor, the family trait or the CLI.

@@ -1,5 +1,9 @@
 # Operations runbook
 
+> This document describes the full v0.1 target. Current executable behavior and
+> remaining gates are listed in [IMPLEMENTATION.md](IMPLEMENTATION.md).
+
+
 How to run a real install. This is the operator's view; the design lives in
 [`ARCHITECTURE.md`](ARCHITECTURE.md).
 

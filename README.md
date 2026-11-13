@@ -18,10 +18,14 @@ integration.
 It also carries the Omarchy tools: a **trimmer** for Omarchy defaults and a
 **default manager** that keeps removed defaults from coming back after updates.
 
-**Status: plan stage.** This repository is the build plan and the empty
-workspace it describes. No installer path has run on hardware. See
-[`docs/PLAN.md`](docs/PLAN.md) for the milestone contract and
-[`docs/MATRIX.md`](docs/MATRIX.md) for what is actually supported today.
+**Status: experimental implementation preview.** Config validation, matrix gates,
+deterministic plans, family/session command generation, dry-run, file-only fixture
+execution with resume journals, verification reports and Omarchy policy operations
+are implemented. **Live installs and Omarchy removals are disabled. No VM cell
+has passed.** Third-party/source paths without pins refuse planning.
+See [`docs/IMPLEMENTATION.md`](docs/IMPLEMENTATION.md) for the exact working
+commands, limitations and remaining work. The full v0.1 contract remains in
+[`docs/PLAN.md`](docs/PLAN.md).
 
 ## Why this exists
 
@@ -58,26 +62,25 @@ borea.toml ──> borea plan ──> plan.json ──> borea apply ──> jour
 The plan is the only contract between the CLI, the tests and an agent. If a
 change cannot be expressed as plan steps and checks, it is out of scope.
 
-## Quick start (after D0 of the plan)
+## Try the first implementation
 
 ```sh
-# On a supported live environment or a prepared dev host:
-cargo build --release
-./target/release/borea doctor --family arch
-./target/release/borea catalogue --family debian
-./target/release/borea plan --config borea.toml --out plan.json
-./target/release/borea apply plan.json --dry-run
-sudo ./target/release/borea apply plan.json --yes
-./target/release/borea verify plan.json --ssh root@192.168.122.10
+cargo build --workspace --locked
+cargo run -p borea-cli -- catalogue --family arch --json
+cargo run -p borea-cli -- plan \
+  --config recipes/profiles/minimal.toml \
+  --fixture --identity fixtures/device.json --out /tmp/borea-plan.json
+cargo run -p borea-cli -- apply /tmp/borea-plan.json --dry-run
+cargo run -p borea-cli -- omarchy trim docker whatsapp --dry-run
+cargo xtask matrix check
+cargo xtask recipe lint
+cargo xtask plan golden
 ```
 
-Omarchy tools, on an existing Omarchy install:
-
-```sh
-sudo borea omarchy trim libreoffice docker
-borea omarchy defaults status
-sudo borea omarchy defaults enforce
-```
+Use a fresh output path: `plan` refuses to overwrite files. Fixture identities
+are for inspection only. `apply --yes --device ...` returns an unsupported error
+before any disk access or writes. File-only fixture execution and policy
+examples are documented in [`docs/IMPLEMENTATION.md`](docs/IMPLEMENTATION.md).
 
 ## Repository map
 
@@ -106,9 +109,11 @@ sudo borea omarchy defaults enforce
 | running a real install | [`docs/OPERATIONS.md`](docs/OPERATIONS.md) |
 | an agent (Claude/Codex) | `AGENTS.md` and [`docs/PROMPTS.md`](docs/PROMPTS.md) |
 
-## Coverage at a glance
+## Target packaging coverage
 
-Every family gets minimal, KDE, GNOME, Hyprland, Noctalia and DUX/DMS.
+The v0.1 plan targets minimal, KDE, GNOME, Hyprland, Noctalia and DUX/DMS on every family.
+These are packaging intentions, not working installs. All cells remain untested;
+some third-party recipes are explicitly refused until pins are reviewed.
 Everything else is a documented gate. The full table, evidence and dates are in
 [`docs/MATRIX.md`](docs/MATRIX.md); the short version:
 

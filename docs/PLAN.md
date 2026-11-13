@@ -1,6 +1,8 @@
 # borea build plan
 
-Status: **proposed, ready to execute**. Owner: whoever picks up `D0`.
+Status: **first implementation preview in progress**. See [IMPLEMENTATION.md](IMPLEMENTATION.md)
+for current behavior. Milestone exit criteria below are the full v0.1 target,
+not a claim that the preview has met them.
 Last grounded: 2026-11-13.
 
 This document is the contract for v0.1. If work is not described here or in a

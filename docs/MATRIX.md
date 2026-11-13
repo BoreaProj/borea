@@ -217,3 +217,12 @@ resolved against a live repository during D2–D4, not trusted from this table.
    e2e cell. Attach the artifact path in the PR/commit message.
 5. If demoting, update the reason/remedy and any docs that promise the cell.
 6. Never promote a cell based on a web search alone. The VM run is the evidence.
+
+## First implementation status
+
+The generated packaging table is [MATRIX.generated.md](MATRIX.generated.md),
+checked by `cargo xtask matrix render --check`. Package names are draft inputs
+from this restart plan, not newly verified upstream availability. No cell is
+VM-supported. `native` describes intended packaging, not installer validation.
+Third-party/source cells without reviewed keys/commits refuse planning even when
+the table lists a possible packaging path. See [IMPLEMENTATION.md](IMPLEMENTATION.md).

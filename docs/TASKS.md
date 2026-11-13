@@ -1,5 +1,26 @@
 # Task cards
 
+
+## Implementation checkpoint — 2026-11-13
+
+The first pass is recorded in [IMPLEMENTATION.md](IMPLEMENTATION.md). It adds
+working planning/fixture/policy behavior across the existing cards. It does
+**not** complete the D0 exit contract or any VM milestone. No card whose
+acceptance requires a live disk, package transaction or VM is marked done.
+
+| Cards | Preview state | Blocking evidence / next experiment |
+| --- | --- | --- |
+| A01–A08 | Workspace, validation, matrix, recipes, plan/CLI implemented in draft form | Full intended recipe/plan schemas and golden session installs |
+| A09/A10 | Secret boundary tests and file/SSH verification implemented | Command stdin/capture canary and complete offline/online checks |
+| B01–B11 | Read-only identity parser and storage/boot command planning | Image/loop tests, layout probes, chroot lifecycle and boot validation |
+| C01–C07 | Four native argv adapters and base configuration intent | Live roots, package indexes/repos, family-native boot details |
+| D01–D13 | Selection/package/greeter/autostart planning; unpinned paths refused | Verified pins, seeds, session entries and exact VM cells |
+| E01–E05 | Catalogue preview, documented policy model/operations and process tests | Old source/upstream commit unavailable; verify mapping, update flock and removals |
+| F01–F05 | Sparse image creation, cached container runner, golden/render/release gates | Loop lifecycle, pinned tool images/media, QEMU orchestration and artifact producer |
+
+The exact unsupported errors are documented in IMPLEMENTATION.md. No checks,
+keys or matrix tiers were weakened to make a missing integration report green.
+
 One card = one branch = one reviewable diff. Cards are ordered by dependency.
 Work inside the file boundary; if a card needs a change outside it, add a
 comment to the card and ask the owner rather than reaching across.

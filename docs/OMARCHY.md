@@ -1,5 +1,9 @@
 # Omarchy trim and defaults
 
+> This document describes the full v0.1 target. Current executable behavior and
+> remaining gates are listed in [IMPLEMENTATION.md](IMPLEMENTATION.md).
+
+
 borea keeps two Omarchy tools from the old project:
 
 1. **Trimmer** — remove selected Omarchy defaults (packages and web apps) from an

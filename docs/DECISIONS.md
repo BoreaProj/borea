@@ -252,6 +252,31 @@ config from `blkid` probes during apply.
 **Note:** cloning a disk keeps its UUIDs; re-plan on the new disk to regenerate
 them.
 
+### D-030 — First implementation preview and explicit execution gates
+**Date:** 2026-11-13
+**Decision:** The user requested an initial implementation across the restarted
+project and publication to `BoreaProj/borea`. Preserve the local restart history
+and remote initial commit; this is now the canonical target, superseding the
+repository name in D-001. Work sequentially across the existing task cards on
+one initial integration branch for this user-authorized pass. Later work returns
+to D-023's one-card branches.
+**Contract:** Schema 1 is the first actual JSON/TOML implementation, with the
+implemented subset documented in IMPLEMENTATION.md. The architecture describes
+the full target. No previously implemented public plan schema existed to migrate.
+Future serialized changes must bump the schema and golden fixtures together.
+**Safety:** Draft family/storage/boot commands are inspectable; live apply and
+Omarchy removal remain unsupported until their validation and trust requirements
+are implemented. File-only fixture execution is a separate explicit mode.
+Missing source pins/repository keys refuse planning. Golden refusal cases are
+not passing installations. The release matrix gate stays red.
+**Dependencies:** Use only D-025-approved serde/JSON/TOML/SHA-256/UUID/zeroize and
+tempfile. UUIDv5 enables uuid's SHA-1 implementation as a transitive dependency;
+SHA-1 is used only for standardized UUID derivation, not plan integrity.
+**Why:** Publish reviewable, executable groundwork without presenting untested
+root commands as a working installer. No full milestone acceptance is waived.
+**Rejected:** publishing a fake successful executor, invented fingerprints, or
+marking package availability as a VM pass.
+
 ---
 
 ## Open

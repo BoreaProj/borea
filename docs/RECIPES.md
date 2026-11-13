@@ -1,5 +1,9 @@
 # Recipes
 
+> This document describes the full v0.1 target. Current executable behavior and
+> remaining gates are listed in [IMPLEMENTATION.md](IMPLEMENTATION.md).
+
+
 Recipes are declarative TOML data. They describe **what** a component needs;
 family adapters decide **how** to install it. Adding a distro, desktop,
 compositor, shell or app should be a data change plus a VM run, not a new code

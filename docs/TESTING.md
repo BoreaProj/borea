@@ -1,5 +1,9 @@
 # Testing
 
+> This document describes the full v0.1 target. Current executable behavior and
+> remaining gates are listed in [IMPLEMENTATION.md](IMPLEMENTATION.md).
+
+
 The installer is only as good as its last VM run. Unit tests protect the plan;
 the e2e harness proves the plan installs and boots. Neither alone is enough.
 
