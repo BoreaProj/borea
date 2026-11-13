@@ -112,6 +112,8 @@ openSUSE DMS). No VM artifacts exist. Disk Btrfs/ext4 mutation selftests and
 installation e2e return unsupported, not success. `matrix verify --strict`
 returns the expected release-blocking error.
 
+The recorded results are in [validation/first-pass.md](validation/first-pass.md).
+
 ## Next executable card
 
 B01/B02/B03 and B06 are the next blocking implementation work: a loop-image
