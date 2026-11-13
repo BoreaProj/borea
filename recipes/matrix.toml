@@ -1,0 +1,390 @@
+# Capability matrix — source of truth for what `borea plan` may offer.
+#
+# Revision and evidence dates are part of the review. Do not promote a cell to
+# native/third-party without a passing VM artifact; see docs/MATRIX.md.
+#
+# Tiers: native | third-party | source | unsupported
+# An unsupported cell requires reason, remedy and evidence.
+
+schema = 1
+revision = "matrix-2026-11-13"
+
+# ---------------------------------------------------------------- base
+
+[[cell]]
+family = "arch"
+component = "base.minimal"
+tier = "native"
+evidence = "https://archlinux.org/download/"
+checked = 2026-11-13
+
+[[cell]]
+family = "debian"
+component = "base.minimal"
+tier = "native"
+evidence = "https://www.debian.org/releases/trixie/"
+checked = 2026-11-13
+
+[[cell]]
+family = "fedora"
+component = "base.minimal"
+tier = "native"
+evidence = "https://fedoraproject.org/"
+checked = 2026-11-13
+
+[[cell]]
+family = "suse"
+component = "base.minimal"
+tier = "native"
+evidence = "https://get.opensuse.org/tumbleweed/"
+checked = 2026-11-13
+
+# ---------------------------------------------------------------- desktops
+
+[[cell]]
+family = "arch"
+component = "desktop.kde"
+tier = "native"
+evidence = "https://archlinux.org/groups/extra/plasma/"
+checked = 2026-11-13
+
+[[cell]]
+family = "debian"
+component = "desktop.kde"
+tier = "native"
+evidence = "https://packages.debian.org/trixie/task-kde-desktop"
+checked = 2026-11-13
+
+[[cell]]
+family = "fedora"
+component = "desktop.kde"
+tier = "native"
+evidence = "https://packages.fedoraproject.org/pkgs/kde-settings/kde-desktop-environment/"
+checked = 2026-11-13
+
+[[cell]]
+family = "suse"
+component = "desktop.kde"
+tier = "native"
+evidence = "https://software.opensuse.org/package/patterns-kde-kde_plasma"
+checked = 2026-11-13
+
+[[cell]]
+family = "arch"
+component = "desktop.gnome"
+tier = "native"
+evidence = "https://archlinux.org/groups/extra/gnome/"
+checked = 2026-11-13
+
+[[cell]]
+family = "debian"
+component = "desktop.gnome"
+tier = "native"
+evidence = "https://packages.debian.org/trixie/task-gnome-desktop"
+checked = 2026-11-13
+
+[[cell]]
+family = "fedora"
+component = "desktop.gnome"
+tier = "native"
+evidence = "https://packages.fedoraproject.org/pkgs/gnome-shell/gnome-shell/"
+checked = 2026-11-13
+
+[[cell]]
+family = "suse"
+component = "desktop.gnome"
+tier = "native"
+evidence = "https://software.opensuse.org/package/patterns-gnome-gnome"
+checked = 2026-11-13
+
+[[cell]]
+family = "arch"
+component = "desktop.cosmic"
+tier = "native"
+evidence = "https://archlinux.org/groups/extra/cosmic/"
+checked = 2026-11-13
+
+[[cell]]
+family = "debian"
+component = "desktop.cosmic"
+tier = "unsupported"
+reason = "No COSMIC packages or documented Debian repository found as of 2026-11-13; upstream packaging is not distro-ready"
+remedy = "Use KDE or GNOME; track pop-os/cosmic-epoch packaging (D-013)"
+evidence = "https://packages.debian.org/search?keywords=cosmic-session"
+
+[[cell]]
+family = "fedora"
+component = "desktop.cosmic"
+tier = "native"
+evidence = "https://packages.fedoraproject.org/pkgs/cosmic-session/cosmic-session/"
+checked = 2026-11-13
+
+[[cell]]
+family = "suse"
+component = "desktop.cosmic"
+tier = "third-party"
+evidence = "https://build.opensuse.org/search?search_text=cosmic"
+checked = 2026-11-13
+
+# ---------------------------------------------------------------- compositors
+
+[[cell]]
+family = "arch"
+component = "compositor.hyprland"
+tier = "native"
+evidence = "https://archlinux.org/packages/extra/x86_64/hyprland/"
+checked = 2026-11-13
+
+[[cell]]
+family = "debian"
+component = "compositor.hyprland"
+tier = "native"
+evidence = "https://packages.debian.org/trixie-backports/hyprland"
+checked = 2026-11-13
+
+[[cell]]
+family = "fedora"
+component = "compositor.hyprland"
+tier = "native"
+evidence = "https://packages.fedoraproject.org/pkgs/hyprland/hyprland/"
+checked = 2026-11-13
+
+[[cell]]
+family = "suse"
+component = "compositor.hyprland"
+tier = "native"
+evidence = "https://software.opensuse.org/package/hyprland"
+checked = 2026-11-13
+
+[[cell]]
+family = "arch"
+component = "compositor.niri"
+tier = "native"
+evidence = "https://archlinux.org/packages/extra/x86_64/niri/"
+checked = 2026-11-13
+
+[[cell]]
+family = "debian"
+component = "compositor.niri"
+tier = "unsupported"
+reason = "No niri package in Debian 13 or backports, and no documented third-party repository as of 2026-11-13"
+remedy = "Use Hyprland, or wait for a tracked source build (D-011)"
+evidence = "https://packages.debian.org/search?keywords=niri"
+
+[[cell]]
+family = "fedora"
+component = "compositor.niri"
+tier = "native"
+evidence = "https://packages.fedoraproject.org/pkgs/niri/niri/"
+checked = 2026-11-13
+
+[[cell]]
+family = "suse"
+component = "compositor.niri"
+tier = "native"
+evidence = "https://software.opensuse.org/package/niri"
+checked = 2026-11-13
+
+[[cell]]
+family = "arch"
+component = "compositor.mangowm"
+tier = "native"
+evidence = "https://archlinux.org/packages/extra/x86_64/mangowm/"
+checked = 2026-11-13
+
+[[cell]]
+family = "debian"
+component = "compositor.mangowm"
+tier = "third-party"
+evidence = "https://codeberg.org/justaguylinux/butterrepo"
+checked = 2026-11-13
+
+[[cell]]
+family = "fedora"
+component = "compositor.mangowm"
+tier = "third-party"
+evidence = "https://terra.fyralabs.com/"
+checked = 2026-11-13
+
+[[cell]]
+family = "suse"
+component = "compositor.mangowm"
+tier = "unsupported"
+reason = "No MangoWM package in Tumbleweed or a documented OBS project as of 2026-11-13; upstream targets Arch and Fedora"
+remedy = "Use Hyprland or Niri, or track a source build (D-012)"
+evidence = "https://mangowm.github.io/docs/installation"
+
+# ---------------------------------------------------------------- shells
+
+[[cell]]
+family = "arch"
+component = "shell.noctalia"
+tier = "native"
+evidence = "https://archlinux.org/packages/extra/x86_64/noctalia/"
+checked = 2026-11-13
+
+[[cell]]
+family = "debian"
+component = "shell.noctalia"
+tier = "third-party"
+evidence = "https://docs.noctalia.dev/noctalia/getting-started/installation/"
+checked = 2026-11-13
+
+[[cell]]
+family = "fedora"
+component = "shell.noctalia"
+tier = "native"
+evidence = "https://docs.noctalia.dev/noctalia/getting-started/installation/"
+checked = 2026-11-13
+
+[[cell]]
+family = "suse"
+component = "shell.noctalia"
+tier = "native"
+evidence = "https://software.opensuse.org/package/noctalia"
+checked = 2026-11-13
+
+[[cell]]
+family = "arch"
+component = "shell.dms"
+tier = "native"
+evidence = "https://duxlabs.dev/docs/"
+checked = 2026-11-13
+
+[[cell]]
+family = "debian"
+component = "shell.dms"
+tier = "third-party"
+evidence = "https://duxlabs.dev/docs/"
+checked = 2026-11-13
+
+[[cell]]
+family = "fedora"
+component = "shell.dms"
+tier = "third-party"
+evidence = "https://duxlabs.dev/docs/"
+checked = 2026-11-13
+
+[[cell]]
+family = "suse"
+component = "shell.dms"
+tier = "third-party"
+evidence = "https://duxlabs.dev/docs/"
+checked = 2026-11-13
+
+[[cell]]
+family = "arch"
+component = "shell.end4"
+tier = "source"
+evidence = "https://end-4.github.io/dots-hyprland-wiki/en/ii-qs/01setup/"
+checked = 2026-11-13
+
+[[cell]]
+family = "debian"
+component = "shell.end4"
+tier = "unsupported"
+reason = "Upstream documents Arch and Nix; the Debian path is WIP only as of 2026-11-13"
+remedy = "Use Noctalia or DMS, which are supported on Debian (D-014)"
+evidence = "https://end-4.github.io/dots-hyprland-wiki/en/ii-qs/01setup/"
+
+[[cell]]
+family = "fedora"
+component = "shell.end4"
+tier = "unsupported"
+reason = "Community packaging only; no maintained COPR verified for Fedora 44 as of 2026-11-13"
+remedy = "Use Noctalia or DMS (D-014)"
+evidence = "https://end-4.github.io/dots-hyprland-wiki/en/ii-qs/01setup/"
+
+[[cell]]
+family = "suse"
+component = "shell.end4"
+tier = "unsupported"
+reason = "Upstream fork/WIP only; no maintained openSUSE package as of 2026-11-13"
+remedy = "Use Noctalia or DMS (D-014)"
+evidence = "https://end-4.github.io/dots-hyprland-wiki/en/ii-qs/01setup/"
+
+# ---------------------------------------------------------------- supporting
+
+[[cell]]
+family = "arch"
+component = "greeter.greetd"
+tier = "native"
+evidence = "https://archlinux.org/packages/extra/x86_64/greetd/"
+checked = 2026-11-13
+
+[[cell]]
+family = "debian"
+component = "greeter.greetd"
+tier = "native"
+evidence = "https://packages.debian.org/trixie/greetd"
+checked = 2026-11-13
+
+[[cell]]
+family = "fedora"
+component = "greeter.greetd"
+tier = "native"
+evidence = "https://packages.fedoraproject.org/pkgs/greetd/greetd/"
+checked = 2026-11-13
+
+[[cell]]
+family = "suse"
+component = "greeter.greetd"
+tier = "native"
+evidence = "https://software.opensuse.org/package/greetd"
+checked = 2026-11-13
+
+[[cell]]
+family = "arch"
+component = "apps.flatpak"
+tier = "native"
+evidence = "https://archlinux.org/packages/extra/x86_64/flatpak/"
+checked = 2026-11-13
+
+[[cell]]
+family = "debian"
+component = "apps.flatpak"
+tier = "native"
+evidence = "https://packages.debian.org/trixie/flatpak"
+checked = 2026-11-13
+
+[[cell]]
+family = "fedora"
+component = "apps.flatpak"
+tier = "native"
+evidence = "https://packages.fedoraproject.org/pkgs/flatpak/flatpak/"
+checked = 2026-11-13
+
+[[cell]]
+family = "suse"
+component = "apps.flatpak"
+tier = "native"
+evidence = "https://software.opensuse.org/package/flatpak"
+checked = 2026-11-13
+
+[[cell]]
+family = "arch"
+component = "system.codecs"
+tier = "native"
+evidence = "https://archlinux.org/packages/extra/x86_64/ffmpeg/"
+checked = 2026-11-13
+
+[[cell]]
+family = "debian"
+component = "system.codecs"
+tier = "native"
+evidence = "https://packages.debian.org/trixie/ffmpeg"
+checked = 2026-11-13
+
+[[cell]]
+family = "fedora"
+component = "system.codecs"
+tier = "third-party"
+evidence = "https://rpmfusion.org/"
+checked = 2026-11-13
+
+[[cell]]
+family = "suse"
+component = "system.codecs"
+tier = "third-party"
+evidence = "https://packman.links2linux.org/"
+checked = 2026-11-13

@@ -1,0 +1,39 @@
+# Test profile: minimal, no session, no SSH by default.
+# `family` is overridden by `xtask e2e --family`.
+schema = 1
+
+[target]
+family = "arch"
+hostname = "borea-test"
+timezone = "UTC"
+locale = "en_US.UTF-8"
+keymap = "us"
+
+[disk]
+device = "/dev/vda"
+mode = "replace"
+root_fs = "ext4"
+encrypt = false
+esp_size = "1GiB"
+boot_size = "2GiB"
+swap = "zram"
+
+[boot]
+loader = "grub"
+secure_boot = false
+
+[account]
+username = "tester"
+full_name = "Borea Test"
+password_file = "/run/borea/user.pass"
+sudo = "same"
+ssh_authorized_key_file = "/run/borea/test.pub"
+
+[session]
+type = "minimal"
+greeter = "none"
+
+[apps]
+enable = []
+codecs = true
+flatpak = false

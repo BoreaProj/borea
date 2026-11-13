@@ -1,0 +1,11 @@
+[package]
+name = "borea-session"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Desktop, compositor and shell resolution for borea"
+
+[dependencies]
+borea-core = { path = "../borea-core" }

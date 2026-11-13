@@ -1,0 +1,62 @@
+# Example borea config. Copy it, edit it, keep secrets in files.
+#
+#   borea plan --config borea.toml --out plan.json
+#   borea apply plan.json --dry-run
+#   sudo borea apply plan.json --yes
+#
+# Full schema: docs/ARCHITECTURE.md §3. Recipes and tiers: docs/RECIPES.md,
+# docs/MATRIX.md. Nothing here is installed by default except the base system.
+
+schema = 1
+
+[target]
+family = "arch"              # arch | debian | fedora | suse
+# release = "2026.11.01"     # defaults to the family recipe
+hostname = "borea"
+timezone = "Europe/London"
+locale = "en_GB.UTF-8"
+keymap = "uk"
+
+[disk]
+device = "/dev/vda"          # use a stable /dev/disk/by-id path on real hardware
+mode = "replace"             # only replace in v1
+root_fs = "ext4"             # only ext4 in v1
+encrypt = false
+# luks_password_file = "/run/borea/luks.pass"
+esp_size = "1GiB"
+boot_size = "2GiB"
+swap = "zram"                # none | zram | file
+
+[boot]
+loader = "grub"
+secure_boot = false
+
+[account]
+username = "luke"
+full_name = "Luke Shaddick"
+password_file = "/run/borea/user.pass"
+sudo = "same"                # same | separate
+# sudo_password_file = "/run/borea/sudo.pass"
+# ssh_authorized_key_file = "/run/borea/test.pub"   # enables sshd
+
+[session]
+type = "shell"               # minimal | desktop | shell
+compositor = "hyprland"      # hyprland | niri | mangowm
+shell = "noctalia"           # noctalia | dms | end4 | none
+greeter = "auto"             # auto | sddm | gdm | greetd | none
+
+# For a desktop instead:
+# [session]
+# type = "desktop"
+# desktop = "kde"            # kde | gnome | cosmic
+# greeter = "auto"
+
+[apps]
+enable = ["firefox"]
+codecs = true
+flatpak = true
+
+[omarchy]
+trim = []
+keep_removed_after_updates = true
+default_browser = "chromium"

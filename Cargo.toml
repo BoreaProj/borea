@@ -1,0 +1,24 @@
+[workspace]
+resolver = "3"
+members = [
+  "crates/borea-cli",
+  "crates/borea-core",
+  "crates/borea-defaults",
+  "crates/borea-distro",
+  "crates/borea-run",
+  "crates/borea-session",
+  "crates/xtask",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.99"
+license = "MIT"
+repository = "https://github.com/BoreaProj/borea"
+description = "Cross-distro Linux installer and Omarchy default manager"
+
+[workspace.dependencies]
+# Dependency versions land with the cards that use them. The approved set is
+# recorded in docs/DECISIONS.md (D-025); do not add crates outside it without a
+# decision entry.

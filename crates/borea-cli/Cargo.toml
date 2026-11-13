@@ -1,0 +1,18 @@
+[package]
+name = "borea-cli"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Command-line interface for borea"
+
+[[bin]]
+name = "borea"
+path = "src/main.rs"
+
+[dependencies]
+borea-core = { path = "../borea-core" }
+borea-distro = { path = "../borea-distro" }
+borea-run = { path = "../borea-run" }
+borea-session = { path = "../borea-session" }

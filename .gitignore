@@ -1,0 +1,9 @@
+/target
+**/*.rs.bk
+*.img
+*.qcow2
+*.iso
+.env
+.DS_Store
+.idea/
+.vscode/

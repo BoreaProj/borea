@@ -1,0 +1,11 @@
+[package]
+name = "borea-distro"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Arch, Debian, Fedora and openSUSE adapters for borea"
+
+[dependencies]
+borea-core = { path = "../borea-core" }

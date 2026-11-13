@@ -1,0 +1,15 @@
+[package]
+name = "borea-defaults"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "On-target default manager that keeps Omarchy removals removed"
+
+[[bin]]
+name = "borea-defaults"
+path = "src/main.rs"
+
+[dependencies]
+borea-core = { path = "../borea-core" }
