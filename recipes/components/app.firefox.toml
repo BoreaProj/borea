@@ -1,0 +1,9 @@
+schema = 1
+id = "app.firefox"
+requires = []
+evidence = "https://www.mozilla.org/firefox/"
+[packages]
+arch = ["firefox"]
+debian = ["firefox-esr"]
+fedora = ["firefox"]
+suse = ["MozillaFirefox"]

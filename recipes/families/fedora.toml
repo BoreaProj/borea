@@ -1,0 +1,15 @@
+schema = 1
+id = "family.fedora"
+family = "fedora"
+release = "43"
+bootstrap = "dnf5"
+base_packages = ["@core", "kernel", "btrfs-progs", "NetworkManager", "sudo", "zram-generator", "openssh-server"]
+default_loader = "grub"
+grub_package = "grub2-efi-x64"
+grub_install = "grub2-install"
+grub_mkconfig = "grub2-mkconfig"
+grub_cfg = "/boot/grub2/grub.cfg"
+initramfs = ["dracut", "--regenerate-all", "--force"]
+network_unit = "NetworkManager.service"
+sudo_group = "wheel"
+evidence = "https://fedoraproject.org/"

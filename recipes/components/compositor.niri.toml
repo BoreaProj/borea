@@ -1,0 +1,12 @@
+schema = 1
+id = "compositor.niri"
+requires = []
+evidence = "https://archlinux.org/packages/extra/x86_64/niri/"
+exec = "niri-session"
+session_file = "niri.desktop"
+greeter = "greetd"
+
+[packages]
+arch = ["niri", "kitty"]
+fedora = ["niri", "kitty"]
+suse = ["niri", "kitty"]

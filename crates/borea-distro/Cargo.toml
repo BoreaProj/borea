@@ -9,3 +9,5 @@ description = "Arch, Debian, Fedora and openSUSE adapters for borea"
 
 [dependencies]
 borea-core = { path = "../borea-core" }
+serde_json.workspace = true
+uuid.workspace = true

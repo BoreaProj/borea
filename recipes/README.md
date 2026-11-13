@@ -1,20 +1,14 @@
-# Recipes
+# Embedded recipe inputs
 
-Data, not code. The schema is in [`docs/RECIPES.md`](../docs/RECIPES.md).
+`families/` contains bootstrap and boot defaults for four families.
+`components/` contains draft package maps, session metadata, compatibility and
+upstream evidence URLs. These are compiled into `borea-core`; no plan command
+fetches remote data. `profiles/` contains full config presets, not merge layers.
 
-```text
-matrix.toml       capability cells (source of truth)
-families/         base bootstrap per family
-repos/            third-party repositories and pinned keys
-desktops/         kde, gnome, cosmic
-compositors/      hyprland, niri, mangowm
-shells/           noctalia, dms, end4
-apps/             one file per app
-profiles/         test/config presets
-files/            seeds copied into the target
-```
+The matrix describes packaging intentions. It does not imply a passed install.
+Package maps were transcribed from the restart plan and require upstream and VM
+validation. Missing third-party pins/source commits are hard planning gates.
 
-Only `matrix.toml` and the two profiles exist at plan stage. Component recipes
-land with their task cards in [`docs/TASKS.md`](../docs/TASKS.md), each with an
-`[evidence]` block. Do not add a recipe without matrix cells for all four
-families.
+Run `cargo xtask recipe lint`, `cargo xtask matrix check`, and
+`cargo xtask matrix render --check`. See `docs/IMPLEMENTATION.md` for schema
+limits and `docs/RECIPES.md` for the complete intended v0.1 schema.

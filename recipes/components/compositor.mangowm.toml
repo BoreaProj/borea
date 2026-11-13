@@ -1,0 +1,10 @@
+schema = 1
+id = "compositor.mangowm"
+requires = []
+evidence = "https://archlinux.org/packages/extra/x86_64/mangowm/"
+exec = "mango"
+session_file = "mango.desktop"
+greeter = "greetd"
+
+[packages]
+arch = ["mangowm", "kitty"]

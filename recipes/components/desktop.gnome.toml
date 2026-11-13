@@ -1,0 +1,13 @@
+schema = 1
+id = "desktop.gnome"
+requires = []
+evidence = "https://archlinux.org/groups/extra/gnome/"
+exec = "gnome-session"
+session_file = "gnome.desktop"
+greeter = "gdm"
+
+[packages]
+arch = ["gnome-shell", "gnome-control-center"]
+debian = ["task-gnome-desktop"]
+fedora = ["gnome-shell", "gnome-control-center"]
+suse = ["patterns-gnome-gnome"]

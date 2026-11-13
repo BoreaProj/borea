@@ -1,0 +1,9 @@
+schema = 1
+id = "shell.dms"
+requires = []
+evidence = "https://duxlabs.dev/docs/"
+autostart = "dms run"
+compatible_compositors = ["compositor.hyprland", "compositor.niri", "compositor.mangowm"]
+
+[packages]
+arch = ["dms-shell"]

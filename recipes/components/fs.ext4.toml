@@ -1,0 +1,10 @@
+schema = 1
+id = "fs.ext4"
+requires = []
+evidence = "https://archlinux.org/packages/core/x86_64/e2fsprogs/"
+
+[packages]
+arch = ["e2fsprogs"]
+debian = ["e2fsprogs"]
+fedora = ["e2fsprogs"]
+suse = ["e2fsprogs"]

@@ -1,0 +1,11 @@
+schema = 1
+id = "desktop.cosmic"
+requires = []
+evidence = "https://archlinux.org/groups/extra/cosmic/"
+exec = "start-cosmic"
+session_file = "cosmic.desktop"
+greeter = "cosmic-greeter"
+
+[packages]
+arch = ["cosmic"]
+fedora = ["cosmic-desktop"]

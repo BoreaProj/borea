@@ -1,0 +1,10 @@
+schema = 1
+id = "boot.grub"
+requires = []
+evidence = "https://archlinux.org/packages/extra/x86_64/grub/"
+
+[packages]
+arch = ["grub", "efibootmgr"]
+debian = ["grub-efi-amd64", "efibootmgr"]
+fedora = ["grub2-efi-x64", "grub2-tools", "efibootmgr"]
+suse = ["grub2-x86_64-efi", "efibootmgr"]

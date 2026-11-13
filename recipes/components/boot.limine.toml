@@ -1,0 +1,7 @@
+schema = 1
+id = "boot.limine"
+requires = []
+evidence = "https://archlinux.org/packages/extra/x86_64/limine/"
+
+[packages]
+arch = ["limine", "efibootmgr"]

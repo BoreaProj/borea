@@ -1,0 +1,11 @@
+schema = 1
+id = "shell.noctalia"
+requires = []
+evidence = "https://archlinux.org/packages/extra/x86_64/noctalia/"
+autostart = "noctalia-shell"
+compatible_compositors = ["compositor.hyprland", "compositor.niri", "compositor.mangowm"]
+
+[packages]
+arch = ["noctalia-shell"]
+fedora = ["noctalia-shell"]
+suse = ["noctalia-shell"]

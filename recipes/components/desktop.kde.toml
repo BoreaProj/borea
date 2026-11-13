@@ -1,0 +1,13 @@
+schema = 1
+id = "desktop.kde"
+requires = []
+evidence = "https://archlinux.org/groups/extra/plasma/"
+exec = "startplasma-wayland"
+session_file = "plasmawayland.desktop"
+greeter = "sddm"
+
+[packages]
+arch = ["plasma-meta", "konsole"]
+debian = ["task-kde-desktop"]
+fedora = ["@kde-desktop-environment"]
+suse = ["patterns-kde-kde_plasma"]

@@ -1,0 +1,8 @@
+schema = 1
+id = "system.codecs"
+requires = []
+evidence = "https://archlinux.org/packages/extra/x86_64/ffmpeg/"
+
+[packages]
+arch = ["ffmpeg", "gst-libav"]
+debian = ["ffmpeg", "gstreamer1.0-libav"]

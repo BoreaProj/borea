@@ -1,0 +1,15 @@
+schema = 1
+id = "family.arch"
+family = "arch"
+release = "rolling"
+bootstrap = "pacstrap"
+base_packages = ["base", "linux", "linux-firmware", "btrfs-progs", "networkmanager", "sudo", "zram-generator", "openssh"]
+default_loader = "limine"
+grub_package = "grub"
+grub_install = "grub-install"
+grub_mkconfig = "grub-mkconfig"
+grub_cfg = "/boot/grub/grub.cfg"
+initramfs = ["mkinitcpio", "-P"]
+network_unit = "NetworkManager.service"
+sudo_group = "wheel"
+evidence = "https://archlinux.org/download/"

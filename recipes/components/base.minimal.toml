@@ -1,0 +1,10 @@
+schema = 1
+id = "base.minimal"
+requires = []
+evidence = "https://archlinux.org/download/"
+
+[packages]
+arch = ["base", "linux", "linux-firmware", "btrfs-progs", "networkmanager", "sudo", "zram-generator", "openssh"]
+debian = ["linux-image-amd64", "systemd-sysv", "btrfs-progs", "network-manager", "sudo", "systemd-zram-generator", "openssh-server", "locales"]
+fedora = ["@core", "kernel", "btrfs-progs", "NetworkManager", "sudo", "zram-generator", "openssh-server"]
+suse = ["patterns-base-minimal_base", "kernel-default", "btrfsprogs", "NetworkManager", "sudo", "systemd-zram-service", "openssh"]

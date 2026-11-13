@@ -1,0 +1,15 @@
+schema = 1
+id = "family.debian"
+family = "debian"
+release = "trixie"
+bootstrap = "debootstrap"
+base_packages = ["linux-image-amd64", "systemd-sysv", "btrfs-progs", "network-manager", "sudo", "systemd-zram-generator", "openssh-server", "locales"]
+default_loader = "grub"
+grub_package = "grub-efi-amd64"
+grub_install = "grub-install"
+grub_mkconfig = "update-grub"
+grub_cfg = "/boot/grub/grub.cfg"
+initramfs = ["update-initramfs", "-u", "-k", "all"]
+network_unit = "NetworkManager.service"
+sudo_group = "sudo"
+evidence = "https://www.debian.org/releases/trixie/"

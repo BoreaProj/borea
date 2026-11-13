@@ -1,0 +1,7 @@
+schema = 1
+id = "shell.end4"
+requires = []
+evidence = "https://end-4.github.io/dots-hyprland-wiki/en/ii-qs/01setup/"
+compatible_compositors = ["compositor.hyprland", "compositor.niri", "compositor.mangowm"]
+
+[packages]

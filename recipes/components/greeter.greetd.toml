@@ -1,0 +1,10 @@
+schema = 1
+id = "greeter.greetd"
+requires = []
+evidence = "https://archlinux.org/packages/extra/x86_64/greetd/"
+
+[packages]
+arch = ["greetd", "greetd-tuigreet"]
+debian = ["greetd", "tuigreet"]
+fedora = ["greetd", "tuigreet"]
+suse = ["greetd", "tuigreet"]

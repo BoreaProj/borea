@@ -1,0 +1,10 @@
+schema = 1
+id = "apps.flatpak"
+requires = []
+evidence = "https://archlinux.org/packages/extra/x86_64/flatpak/"
+
+[packages]
+arch = ["flatpak"]
+debian = ["flatpak"]
+fedora = ["flatpak"]
+suse = ["flatpak"]

@@ -1,0 +1,10 @@
+schema = 1
+id = "fs.btrfs"
+requires = []
+evidence = "https://archlinux.org/packages/core/x86_64/btrfs-progs/"
+
+[packages]
+arch = ["btrfs-progs"]
+debian = ["btrfs-progs"]
+fedora = ["btrfs-progs"]
+suse = ["btrfsprogs"]

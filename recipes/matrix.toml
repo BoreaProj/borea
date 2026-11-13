@@ -7,7 +7,7 @@
 # An unsupported cell requires reason, remedy and evidence.
 
 schema = 1
-revision = "matrix-2026-11-13.2"
+revision = "matrix-2026-11-13.3"
 
 # ---------------------------------------------------------------- base
 
@@ -507,4 +507,32 @@ family = "suse"
 component = "boot.grub"
 tier = "native"
 evidence = "https://software.opensuse.org/package/grub2-x86_64-efi"
+checked = 2026-11-13
+
+[[cell]]
+family = "arch"
+component = "app.firefox"
+tier = "native"
+evidence = "https://www.mozilla.org/firefox/"
+checked = 2026-11-13
+
+[[cell]]
+family = "debian"
+component = "app.firefox"
+tier = "native"
+evidence = "https://www.mozilla.org/firefox/"
+checked = 2026-11-13
+
+[[cell]]
+family = "fedora"
+component = "app.firefox"
+tier = "native"
+evidence = "https://www.mozilla.org/firefox/"
+checked = 2026-11-13
+
+[[cell]]
+family = "suse"
+component = "app.firefox"
+tier = "native"
+evidence = "https://www.mozilla.org/firefox/"
 checked = 2026-11-13

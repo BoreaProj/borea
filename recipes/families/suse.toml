@@ -1,0 +1,15 @@
+schema = 1
+id = "family.suse"
+family = "suse"
+release = "tumbleweed"
+bootstrap = "zypper"
+base_packages = ["patterns-base-minimal_base", "kernel-default", "btrfsprogs", "NetworkManager", "sudo", "systemd-zram-service", "openssh"]
+default_loader = "grub"
+grub_package = "grub2-x86_64-efi"
+grub_install = "grub2-install"
+grub_mkconfig = "grub2-mkconfig"
+grub_cfg = "/boot/grub2/grub.cfg"
+initramfs = ["dracut", "--regenerate-all", "--force"]
+network_unit = "NetworkManager.service"
+sudo_group = "wheel"
+evidence = "https://get.opensuse.org/tumbleweed/"

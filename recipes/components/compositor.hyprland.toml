@@ -1,0 +1,13 @@
+schema = 1
+id = "compositor.hyprland"
+requires = []
+evidence = "https://archlinux.org/packages/extra/x86_64/hyprland/"
+exec = "Hyprland"
+session_file = "hyprland.desktop"
+greeter = "greetd"
+
+[packages]
+arch = ["hyprland", "xdg-desktop-portal-hyprland", "kitty"]
+debian = ["hyprland", "xdg-desktop-portal-hyprland", "kitty"]
+fedora = ["hyprland", "xdg-desktop-portal-hyprland", "kitty"]
+suse = ["hyprland", "xdg-desktop-portal-hyprland", "kitty"]
