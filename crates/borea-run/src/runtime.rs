@@ -659,6 +659,23 @@ mod tests {
         (spec, file)
     }
     #[test]
+    fn private_snapshot_ignores_mutable_tree_and_rejects_bad_archive() {
+        let d = tempfile::tempdir().unwrap();
+        let (spec, archive) = fixture(d.path());
+        let cache = d.path().join("cache");
+        let state = fetch(&spec, &cache, Some(&archive), true).unwrap();
+        fs::write(state.root.join("usr/bin/tool"), b"changed").unwrap();
+        let private = d.path().join("private");
+        fs::create_dir(&private).unwrap();
+        let snapshot = private_snapshot(&spec, &cache, &private).unwrap();
+        assert_eq!(fs::read(snapshot.join("usr/bin/tool")).unwrap(), b"fixture");
+        fs::write(&state.archive, vec![0; spec.size as usize]).unwrap();
+        let other = d.path().join("other");
+        fs::create_dir(&other).unwrap();
+        assert!(private_snapshot(&spec, &cache, &other).is_err());
+        assert!(!other.join("rootfs").exists());
+    }
+    #[test]
     fn runtime_offline_import_verify_and_reuse() {
         let d = tempfile::tempdir().unwrap();
         let (s, a) = fixture(d.path());

@@ -307,7 +307,6 @@ pub fn apply(
     cmd.env_clear()
         .args([
             "--die-with-parent",
-            "--new-session",
             "--unshare-pid",
             "--unshare-ipc",
             "--unshare-uts",

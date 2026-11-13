@@ -21,15 +21,18 @@ part() {
 probe_partition() {
     sgdisk --print /dev/borea-disk | grep -qi "Disk identifier (GUID): $disk_uuid"
     part 1 EF00 2048 2099199
+    sgdisk --info=1 /dev/borea-disk | grep -qi "Partition unique GUID: $esp_uuid"
     part 2 8300 2099200 6293503
+    sgdisk --info=2 /dev/borea-disk | grep -qi "Partition unique GUID: $boot_uuid"
     part 3 8300 6293504 "$root_end"
+    sgdisk --info=3 /dev/borea-disk | grep -qi "Partition unique GUID: $root_uuid"
     sgdisk --verify /dev/borea-disk | grep -q 'No problems found'
 }
 do_partition() {
     sgdisk --clear --disk-guid="$disk_uuid" \
-      --new=1:2048:2099199 --typecode=1:ef00 \
-      --new=2:2099200:6293503 --typecode=2:8300 \
-      --new=3:6293504:"$root_end" --typecode=3:8300 /dev/borea-disk
+      --new=1:2048:2099199 --typecode=1:ef00 --partition-guid=1:"$esp_uuid" \
+      --new=2:2099200:6293503 --typecode=2:8300 --partition-guid=2:"$boot_uuid" \
+      --new=3:6293504:"$root_end" --typecode=3:8300 --partition-guid=3:"$root_uuid" /dev/borea-disk
 }
 fat_id=$(printf '%s' "$esp_uuid" | cut -c1-8 | tr 'a-f' 'A-F')
 fat_uuid=$(printf '%s' "$fat_id" | sed 's/\(....\)/\1-/;s/-$//')

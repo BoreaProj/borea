@@ -158,3 +158,8 @@ integration on Arch/Fedora/openSUSE, Fedora signed-boot behavior, Debian package
 index initialization, openSUSE repo initialization, encrypted initramfs hooks,
 account/root-lock and home ownership, true package/layout probes, initramfs and
 SSH postconditions, and EFI entry checks. The live gate is not a VM test substitute.
+
+G02 adds `borea image create|apply` for closed disposable-image storage
+execution. It does not execute draft installation plans or install a target
+system. See [IMAGE-EXECUTION.md](IMAGE-EXECUTION.md) for the separate schema,
+privileged runtime snapshot, destructive-step probes and remaining gates.

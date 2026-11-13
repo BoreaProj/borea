@@ -679,3 +679,7 @@ no GUI toolkit, no Borea snapshot manager or automatic rollback (D-028; the
 optional Omarchy profile retains upstream defaults under D-033), and no
 bootloader outside Limine-on-Arch and GRUB (D-026). The binary is a function
 from config to plan to target.
+
+G02's separate image manifest schema 1 binds a Borea-created regular image and
+the runtime pin. Its closed storage executor does not interpret draft plan
+commands. See [IMAGE-EXECUTION.md](IMAGE-EXECUTION.md) and D-035.
