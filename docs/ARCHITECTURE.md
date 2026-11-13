@@ -12,6 +12,14 @@ the executor, the family trait or the CLI.
 
 ## 1. Crates
 
+Borea is an independent, standalone installer. Its execution host is separate
+from the selected target family. Neither distro live/rescue media nor a
+Borea-specific live environment is required. Borea must supply or provision its
+installation tooling without assuming that the host uses the target package
+manager. Family-native tools may be used as target implementation details.
+Runtime delivery and isolation are tracked in G01; the preview currently only
+checks host PATH and does not yet satisfy that delivery contract.
+
 ```text
 borea-cli ──> borea-core <── borea-distro
     │             ^  ^
@@ -520,7 +528,7 @@ config file and the cmdline content before the plan is allowed to finish.
 `borea-run` provides one `Chroot` helper used by every family:
 
 1. bind-mount `/dev`, `/dev/pts`, `/proc`, `/sys`, `/run` into the target;
-2. copy the live `/etc/resolv.conf` into the target if missing;
+2. copy the execution host's `/etc/resolv.conf` into the target if missing;
 3. run `chroot <root> <argv>` with a clean environment;
 4. unmount in reverse order, tolerating busy mounts by retrying once.
 
@@ -554,8 +562,8 @@ secret refs, the chosen loader and the storage layout. Adapters are stateless.
 `cryptsetup`, then the tools for the *resolved* loader (`limine` and
 `efibootmgr`, or `grub-install`); Debian checks `debootstrap`, `apt-get`,
 `mkfs.btrfs`, `mkfs.ext4`, `sgdisk`, `grub-install`, etc. `doctor` reports
-missing tools with the install command for the live environment, not a generic
-error. A family recipe lists the union of tools its adapters may call; `doctor`
+missing tools with a Borea runtime provisioning remedy, not a request to boot
+the target distro or install its package manager into an unrelated host. A family recipe lists the union of tools its adapters may call; `doctor`
 only requires the subset the current plan will use, so a Limine install does not
 demand `grub-install` and a GRUB fallback does not demand `limine`.
 

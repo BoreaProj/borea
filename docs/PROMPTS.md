@@ -259,7 +259,7 @@ Task: prepare v0.1.0.
    sha256sum target/x86_64-unknown-linux-musl/release/borea
 4. Update README, docs/MATRIX.md and docs/releases/v0.1.0.md with exactly what
    is green and what is gated. No unverified claims.
-5. Run the live lane at least once per family, or record the skip reason.
+5. Run the independent runtime lane at least once per target family, or record the skip reason.
 6. Do not tag or push until I confirm.
 
 Report: matrix summary, missing artifacts, release notes draft, commands run.

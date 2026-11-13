@@ -20,13 +20,14 @@ was needed, and none of it produced a working install.
 
 borea v2 takes the opposite position:
 
-> Use the environment the distro already ships, drive its own tools, express
-> every choice as a plan, and prove each combination in a VM.
+> Borea is an independent, standalone installer. Own the installation workflow
+> and runtime tooling, express every choice as a plan, and prove each target
+> combination in a VM. No distro or Borea-specific live environment is required.
 
 ## 2. Goals
 
-1. **Minimal, reproducible installs** on Arch, Debian, Fedora and openSUSE from
-   the family's live or rescue environment, with Btrfs by default and ext4 only
+1. **Minimal, reproducible installs** of Arch, Debian, Fedora and openSUSE
+   through Borea's independent runtime, with Btrfs by default and ext4 only
    where it is the better tool (the unencrypted `/boot` partition and the
    explicit root fallback).
 2. **One session layer** on top: KDE, GNOME, COSMIC, or Hyprland / Niri /
@@ -46,7 +47,7 @@ borea v2 takes the opposite position:
 | Not doing | Why |
 | --- | --- |
 | GUI, TUI dashboard, animations, recorder | Text + JSON is enough; the old GUI consumed the project |
-| Live ISO, initramfs builder, USB writer, boot menu | Each distro already ships a live/rescue environment; the target builds its own initramfs |
+| Live ISO, custom runtime initramfs, USB writer, boot menu | Standalone runtime delivery does not require bootable media; the installed target builds its own initramfs |
 | Daemon, socket, worker, Varlink, D-Bus service | One process, one plan, one journal |
 | Simulation engine | `--dry-run`, golden plans, VM matrix |
 | Dual-boot / alongside / resize | Large, dangerous, not required for v1 |
@@ -54,7 +55,7 @@ borea v2 takes the opposite position:
 | Snapshot tooling, rollback, boot-into-snapshot | The Btrfs layout is snapshot-ready, but the manager is post-v1 (D-028) |
 | Limine outside Arch | No package on Debian/Fedora; GRUB is better on openSUSE in v1 (D-026) |
 | ARM, RISC-V, BIOS/legacy | x86_64 UEFI only |
-| Wi-Fi setup in the installer | Use the live environment's network tooling |
+| Wi-Fi setup in the installer | Use the execution host's existing network connection; no live environment is required |
 | Installing Omarchy itself | Omarchy has its own ISO; v1 trims/manages an existing install |
 | Immutable distros, NixOS, Alpine (OpenRC) | systemd + package-manager model only |
 | A plugin system or scripting language | Recipes are declarative TOML, not code |

@@ -2,10 +2,11 @@
 
 A small, CLI-first Linux installer and customiser in Rust.
 
-`borea` installs a **minimal system** from a distro's own live environment, then
-adds one session: KDE, GNOME or COSMIC, or a Wayland compositor (Hyprland,
-Niri, MangoWM) with a shell (Noctalia, DUX/Dank Material Shell, end-4). It runs
-on **Arch, Debian, Fedora and openSUSE**, and says plainly which combinations
+`borea` is an **independent, standalone Linux installer**. It installs a
+**minimal system** without requiring a distro live environment or a
+Borea-specific live environment, then adds one session: KDE, GNOME or COSMIC, or a Wayland compositor (Hyprland,
+Niri, MangoWM) with a shell (Noctalia, DUX/Dank Material Shell, end-4). Its targets are
+**Arch, Debian, Fedora and openSUSE**, and says plainly which combinations
 it cannot install yet instead of offering buttons that fail.
 
 The root is **Btrfs by default** (`@`, `@home`, `@snapshots`, `@log`, `@cache`,
@@ -14,6 +15,10 @@ zstd compression), with ext4 where it is the better tool: the small unencrypted
 **Limine on Arch** and **GRUB elsewhere**, because Arch's stable kernel filenames
 suit a static Limine config and the other families have native GRUB/BLS/snapper
 integration.
+
+Borea owns its installation workflow and runtime tooling; the selected distro
+is the installation target, not the environment Borea must run inside. Runtime
+provisioning is still pending in this preview (see task G01).
 
 It also carries the Omarchy tools: a **trimmer** for Omarchy defaults and a
 **default manager** that keeps removed defaults from coming back after updates.

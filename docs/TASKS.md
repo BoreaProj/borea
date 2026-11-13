@@ -30,6 +30,27 @@ the repository root.
 
 ---
 
+## G — Independent runtime
+
+### G01 — Standalone runtime/tool provisioning contract
+- **Status:** pending; required by D-031 before claiming standalone installation.
+- **Files:** `crates/borea-cli/src/main.rs`, `crates/borea-run/src/`,
+  `crates/borea-distro/src/`, `recipes/families/`, `crates/xtask/src/`,
+  `docs/ARCHITECTURE.md`, `docs/OPERATIONS.md`, `docs/TESTING.md`.
+- **Deliverable:** Borea supplies or provisions verified bootstrap, storage and
+  boot tools independently of the target distro and execution host package
+  manager. Define pinned artifacts, runtime paths, isolation and offline/cache
+  behavior before enabling execution; keep `plan` network-free and read-only.
+- **Done when:** each target family installs in a VM from an independent host
+  without distro live media or a Borea-specific live environment; missing or
+  unverified runtime tools fail before mutation; host package state is unchanged.
+- **Verify:** independent runtime lane in `docs/TESTING.md` §8, then each exact
+  family VM cell and the workspace checks. No runtime artifact exists yet.
+- **Out:** assuming target-family live media; silently installing target package
+  managers into the user's host; adding ISO/USB features without a separate card.
+
+---
+
 ## Critical path
 
 | Day | Must finish | Can run in parallel |
@@ -292,7 +313,7 @@ release. Deferred cards stay in this file marked `deferred`.
 - **Deliverable:** the trait from `ARCHITECTURE.md` §9; registry; `doctor`
   requirements per family.
 - **Done when:** selecting an unknown family is a usage error; `doctor` lists
-  missing tools with the live-environment install command.
+  missing tools with a Borea runtime provisioning remedy (G01).
 - **Verify:** `cargo test -p borea-distro registry`
 - **Out:** any concrete adapter.
 
@@ -309,7 +330,7 @@ release. Deferred cards stay in this file marked `deferred`.
 ### C03 — Debian adapter
 - **WS:** C · **Dep:** C02
 - **Files:** `crates/borea-distro/src/debian.rs`, `recipes/families/debian.toml`
-- **Deliverable:** `debootstrap` (install it in the live env if absent),
+- **Deliverable:** `debootstrap` supplied/provisioned by the independent runtime (G01),
   sources.list, backports, apt install/query, initramfs.
 - **Done when:** Debian minimal VM boots and verifies.
 - **Verify:** `cargo xtask e2e --family debian --profile minimal`

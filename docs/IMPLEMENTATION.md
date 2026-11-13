@@ -5,6 +5,19 @@ v0.1 and cannot install a system yet. The original plan remains the acceptance
 contract. The preview deliberately exposes incomplete paths as errors rather
 than reporting an installation or VM pass.
 
+## Independent product contract
+
+Borea is an entirely independent, standalone installer. Neither a distro live
+or rescue environment nor a Borea-specific live environment is a prerequisite.
+The selected distro is the target; Borea must supply or provision its own
+installation tooling. D-031 supersedes the former distro-live requirement.
+
+The current preview does not yet deliver that independent runtime: `doctor`
+checks host PATH, adapters emit native command intent, and installation stays
+gated. G01 tracks verified runtime delivery/isolation and cross-family VM
+validation. A static binary alone does not provide the external installation
+tools. No bootable Borea environment is claimed or required by this correction.
+
 ## Working behavior
 
 | Area | Implemented and tested | Remaining |
@@ -114,9 +127,10 @@ returns the expected release-blocking error.
 
 The recorded results are in [validation/first-pass.md](validation/first-pass.md).
 
-## Next executable card
+## Next executable cards
 
-B01/B02/B03 and B06 are the next blocking implementation work: a loop-image
+G01 defines independent runtime provisioning and isolation. B01/B02/B03 and
+B06 remain blocking execution work: a loop-image
 helper with reliable cleanup, read-only layout/UUID probes, and chroot mount
 lifecycle. The smallest next experiment is the 20 GiB Btrfs/ext4 image lane,
 run twice and interrupted/resumed, with proof that no unrelated mount or real

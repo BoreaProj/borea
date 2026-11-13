@@ -96,7 +96,7 @@ Family fields:
 | `bootstrap` | adapter id: `pacstrap`, `debootstrap`, `dnf5`, `zypper` |
 | `base_packages` | minimum system, before session; includes `btrfs-progs` |
 | `microcode` | CPU-vendor package map |
-| `host.tools` | tools `doctor` may require in the live environment; it checks the subset the resolved plan uses (loader-aware) |
+| `host.tools` | tools Borea must supply or provision in its independent runtime; `doctor` checks the subset the resolved plan uses (loader-aware) |
 | `boot.default_loader` | what `loader = "auto"` resolves to |
 | `boot.loaders` | loaders this family may offer; must match matrix cells |
 | `boot.limine_*` | Arch only: package, EFI source and config path |
@@ -124,7 +124,7 @@ Family recipes add `btrfs-progs` to `base_packages`; they do not list `grub` or
 `limine` in `base_packages` because the bootloader package is chosen by the
 resolved loader in the boot phase. The boot phase adds the loader package plus
 `efibootmgr` (Limine on Arch and GRUB on every family) so the boot entry is
-created in the target, never assumed from the live environment.
+created in the target, never assumed from the execution host.
 
 ## 3. Repository recipe
 

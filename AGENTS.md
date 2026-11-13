@@ -21,9 +21,11 @@ repeat them.
 
 - **No GUI, TUI dashboard, recorder, screenshots or design system.** Output is
   text and JSON.
-- **No live ISO, custom initramfs builder, USB writer, boot splash or release
-  attestation.** Borea runs inside a distro's own live environment and uses the
-  target's initramfs tooling.
+- **Borea is independent and standalone.** Do not require a distro's live or
+  rescue environment, or a Borea-specific live environment. Borea owns its
+  runtime/tool provisioning; family adapters describe the installation target.
+  A bootable ISO, USB writer, boot splash and release attestation are separate
+  features, not prerequisites. The target uses its own initramfs tooling.
 - **No daemon, socket protocol, Varlink, worker process or service supervision.**
   One process runs one plan.
 - **No simulation engine.** `--dry-run`, golden plans and the VM matrix are the

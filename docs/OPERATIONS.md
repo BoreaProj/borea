@@ -18,59 +18,40 @@ You need:
 
 - x86_64 machine, UEFI boot, Secure Boot **off**,
 - one disk you can erase completely,
-- wired or working Wi-Fi in the live environment,
-- the family's live or rescue media,
+- a working network connection on the execution host,
+- Borea's independent runtime and the tools for the selected target family,
 - a `borea` binary matching the release, on a USB stick or reachable over the
   network,
 - the account password and (if encrypting) the LUKS passphrase in files on the
-  live system, mode `0600`.
+  execution host, mode `0600`.
 
 Back up anything you need. `borea` does not detect or preserve other operating
 systems in v1.
 
-## 2. Per-family preparation
+## 2. Independent runtime readiness
 
-### Arch
+Borea is standalone and distro-independent. You do not need to boot Arch,
+Debian, Fedora, openSUSE or a Borea-specific live environment to use it. The
+execution host and the distro being installed are separate concerns.
 
-Boot the Arch ISO. It provides `pacman`, `pacstrap`, `sgdisk`, `mkfs.*`,
-`btrfs`, `cryptsetup`, `limine` and `grub-install`.
+The release must supply or provision the selected family's bootstrap/package
+manager tools through Borea's runtime. Those tools remain native to the target;
+they are not a requirement to run that target distro on the host. Host disk,
+firmware and privilege checks still apply, and the destination disk must be
+unused and unmounted.
 
 ```sh
-pacman -Sy --needed arch-install-scripts btrfs-progs limine
 ./borea doctor --family arch
-```
-
-For the GRUB fallback cell, add `grub`: `pacman -S --needed grub`. `doctor` only
-asks for the loader the plan resolves.
-
-### Debian
-
-Boot Debian 13 live. `debootstrap` may not be installed:
-
-```sh
-sudo apt update && sudo apt install -y debootstrap
 ./borea doctor --family debian
-```
-
-### Fedora
-
-Boot the Fedora Workstation/Everything live image. `dnf5` is the bootstrap
-tool; `--installroot` works from the live environment.
-
-```sh
 ./borea doctor --family fedora
-```
-
-### openSUSE
-
-Boot openSUSE Tumbleweed rescue/live. `zypper --root` is the bootstrap tool.
-
-```sh
 ./borea doctor --family suse
 ```
 
-`doctor` prints every missing tool with the command to install it in that live
-environment. Fix those before planning.
+Run the check for your selected target. Runtime packaging/provisioning is not
+implemented yet (G01); the preview checks the host PATH and reports missing
+tools. Do not treat these checks as proof that an independent installation
+runtime has shipped. Live apply remains disabled. The fixture/dry-run commands
+in [IMPLEMENTATION.md](IMPLEMENTATION.md) are usable now.
 
 ## 3. Write the config
 
@@ -131,7 +112,7 @@ The executor:
 5. installs the session,
 6. installs and configures the bootloader (Limine on Arch, GRUB elsewhere) and
    the initramfs,
-7. writes the journal under `/mnt/var/log/borea/` and on the live system.
+7. writes the journal under `/mnt/var/log/borea/` and on the execution host.
 
 If it fails, it stops, keeps mounts and prints:
 
@@ -163,7 +144,7 @@ sudo umount -R /mnt
 sudo reboot
 ```
 
-Remove the live media. The target should reach the greeter (desktop/shell) or a
+Start the installed target. It should reach the greeter (desktop/shell) or a
 login prompt (minimal). Then, if SSH is enabled in the profile:
 
 ```sh
@@ -189,8 +170,8 @@ Production profiles do not enable SSH. Use the console for the first login.
 
 | Symptom | Likely cause | Action |
 | --- | --- | --- |
-| Limine prompt/menu but no boot | wrong `guid(...)` or kernel path | boot live, `blkid` the `/boot` partition, compare with `/boot/efi/EFI/BOOT/limine.conf`, re-run the Limine steps |
-| GRUB prompt, no menu | `grub.cfg` not generated or wrong path | boot live, `borea verify --root /mnt`, re-run the boot steps |
+| Limine prompt/menu but no boot | wrong `guid(...)` or kernel path | run Borea from a separate execution host, `blkid` the `/boot` partition, compare with `/boot/efi/EFI/BOOT/limine.conf`, re-run the Limine steps |
+| GRUB prompt, no menu | `grub.cfg` not generated or wrong path | run Borea from a separate execution host, `borea verify --root /mnt`, re-run the boot steps |
 | Kernel panic, no root | wrong `root=`/UUID, missing `rootflags=subvol=@`, or missing initramfs | check `fstab`, `crypttab`, cmdline and initramfs command in the journal |
 | `mount: unknown filesystem type 'btrfs'` | initramfs lacks the Btrfs module | chroot, add `btrfs` to the initramfs config, regenerate, re-verify |
 | LUKS prompt loops | wrong key slot or crypttab UUID | open manually with `cryptsetup open`, compare UUIDs |
@@ -198,7 +179,7 @@ Production profiles do not enable SSH. Use the console for the first login.
 | Shell starts then exits | compositor/shell version mismatch | check the pair in `MATRIX.md`; use a supported pair |
 | Network missing | NetworkManager not enabled | `systemctl enable --now NetworkManager` in a chroot |
 
-To mount a Btrfs target manually from the live environment:
+To mount a Btrfs target manually from an independent execution host:
 
 ```sh
 cryptsetup open /dev/<root-part> cryptroot      # only when encrypt = true

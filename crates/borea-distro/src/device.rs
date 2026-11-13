@@ -53,7 +53,7 @@ pub fn parse(bytes: &[u8], path: &Path) -> Result<DeviceIdentity> {
     if mounted(d) {
         return Err(BoreaError::new(
             "E_DISK_MOUNTED",
-            "target or descendant is mounted; use an unused disk from a separate live environment",
+            "target or descendant is mounted; select an unused, unmounted disk from an independent execution host",
         ));
     }
     fn number(v: &Value) -> Option<u64> {

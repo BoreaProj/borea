@@ -19,7 +19,7 @@ the e2e harness proves the plan installs and boots. Neither alone is enough.
 | Disk selftest | partition/format/mount/LUKS on a loop image | seconds | `cargo xtask disk selftest` |
 | Family env | `borea` runs inside each family's toolchain | minutes | `cargo xtask env` |
 | VM cell | the installed disk boots and verifies | minutes | `cargo xtask e2e` |
-| Live lane | the real family live ISO can drive one cell | tens of minutes | manual/nightly |
+| Independent runtime lane | Borea can install a target without its distro live media or a Borea live environment | tens of minutes | manual/nightly |
 
 The rule: a behaviour change needs a unit or fixture test. A matrix promotion
 needs a VM artifact. A bootloader, kernel or encryption change needs both.
@@ -108,8 +108,9 @@ already attached.
 
 ## 5. Family environments
 
-The real installer runs inside a distro live environment. For fast iteration we
-reproduce that environment in a container with the same tools:
+Borea runs independently of the target distro. For fast adapter iteration,
+family containers provide native tools as test fixtures; they are not a product
+requirement to boot or run the target family:
 
 | Family | Container base | Tools |
 | --- | --- | --- |
@@ -129,9 +130,9 @@ The container is privileged only for loop devices and mounts. It mounts:
 - the disk image at `/disk` (read-write),
 - a scratch directory at `/scratch`.
 
-Limits: a container is not a live ISO. It does not prove udev, firmware,
-network setup, or that the live environment ships the tools. Those are covered
-by the live lane in §8.
+Limits: family containers alone do not prove standalone runtime delivery,
+udev, firmware or network setup. The independent runtime lane in §8 must
+validate those requirements on a host separate from the selected target family.
 
 ## 6. VM e2e
 
@@ -231,18 +232,19 @@ green without a `pass: true` result newer than the last recipe change.
 A cell that cannot assert its session is not green. "Package installed" alone is
 not enough for a shell: the session entry and autostart must be present.
 
-## 8. Live lane
+## 8. Independent runtime lane
 
-Once per release, run at least one cell from each family's actual live media:
+Once per release, use Borea's independent runtime to install at least one cell
+for each target family. The execution host must not be required to match the
+target family, and the test must not require distro live/rescue media or a
+Borea-specific live environment.
 
-- Arch ISO: `pacstrap` present, network via `systemd-networkd`/`iwd`.
-- Debian live: `debootstrap` may need installing; network via NetworkManager.
-- Fedora live: `dnf5` present; SELinux permissive during bootstrap if needed.
-- openSUSE live/rescue: `zypper` present; snapshot pin.
-
-Record the media checksum, boot mode (UEFI), and the exact commands in
-`docs/releases/<version>.md`. This lane catches "works in container, missing in
-live ISO" failures that the container lane cannot.
+Record host details, Borea/runtime versions and checksums, target release,
+UEFI mode, exact commands and VM artifacts in `docs/releases/<version>.md`.
+Prove that Borea supplies/provisions its required tools, keeps target package
+manager state separate from the host, and fails before disk mutation when a
+runtime dependency cannot be verified. G01 defines the implementation work;
+this lane is not implemented yet.
 
 ## 9. CI
 

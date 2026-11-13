@@ -26,6 +26,7 @@ and operators can drive a CLI; screenshots cannot install a system.
 **Rejected:** iced/Slint GUI, ratatui dashboard, web UI.
 
 ### D-003 — Run inside the distro's own live/rescue environment
+**Superseded by:** D-031 (independent standalone Borea runtime).
 **Decision:** No live ISO, initramfs, USB writer or boot menu. The user boots
 the family's media (or a prepared environment) and runs `borea`.
 **Why:** Every family already ships a tested environment with its bootstrap
@@ -164,8 +165,9 @@ the reason and the alternative considered.
 **Decision:** Build `borea` and `borea-defaults` for
 `x86_64-unknown-linux-musl`, plus a `.sha256`. No installer script that pipes
 the network into a shell.
-**Why:** The binary must run in any of the four live environments without
-matching glibc.
+**Why:** The standalone binary must run independently of the selected target
+family without matching its glibc. Runtime tool provisioning is tracked in G01
+and D-031; static linking alone does not supply external tools.
 **Rejected:** distro packages first, curl-to-shell, container-only distribution.
 
 ### D-023 — One card, one branch, one owner
@@ -277,6 +279,25 @@ root commands as a working installer. No full milestone acceptance is waived.
 **Rejected:** publishing a fake successful executor, invented fingerprints, or
 marking package availability as a VM pass.
 
+### D-031 — Borea is entirely independent and standalone
+**Date:** 2026-11-13
+**Decision:** Borea owns its installer workflow and runtime/tool provisioning.
+It does not require a target distro's live/rescue environment or a
+Borea-specific live environment. The selected family is the installation
+target, not a required execution host. Supersedes D-003 and the corresponding
+live-environment prerequisite in the plan, operations and agent guidance.
+**Tooling:** Family-native bootstrap/package/initramfs tools may remain adapter
+implementation details, but Borea must supply or provision the installation
+runtime instead of assuming that the user booted media containing those tools.
+No target package-manager state may be confused with the execution host's state.
+**Delivery:** This correction does not add a bootable ISO, USB writer or custom
+runtime initramfs requirement. These would be separate delivery decisions.
+**Status:** G01 tracks runtime delivery. The preview still checks host PATH;
+this documentation change does not claim external tools are bundled or that
+standalone installs have passed. Existing apply gates remain in place.
+**Why:** Explicit user correction: Borea is an entirely independent project and
+installer, not dependent on a distro or its live environment.
+
 ---
 
 ## Open
@@ -331,7 +352,7 @@ restore UX, per-family differences (openSUSE expects `@/.snapshots`).
 ### O-09 — SSH in production images
 **Default:** no SSH server unless a test profile adds it.
 **Trigger:** remote verification needs it.
-**Alternative:** verify offline from the live environment before first boot.
+**Alternative:** verify offline from an independent execution host before first boot.
 
 ### O-10 — SELinux during Fedora bootstrap
 **Default:** leave Fedora's default policy; relabel at first boot if needed.

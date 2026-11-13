@@ -176,12 +176,13 @@ is offered.
 
 ## 6. Family bootstrap evidence
 
-These are the native tools each family's environment must provide. `doctor`
-checks them; the adapter uses them.
+These are the target-family tools Borea must supply or provision in its own
+independent runtime. They do not impose a host distro or live-media requirement.
+`doctor` checks runtime readiness; adapters use the target's native tooling.
 
 | Family | Bootstrap | Base packages | Root FS | Default bootloader |
 | --- | --- | --- | --- | --- |
-| Arch | `pacstrap -K -P /mnt` from the Arch ISO | `base linux linux-firmware btrfs-progs` + microcode | Btrfs | Limine (`limine` in extra) |
+| Arch | `pacstrap -K -P /mnt` supplied by Borea's runtime | `base linux linux-firmware btrfs-progs` + microcode | Btrfs | Limine (`limine` in extra) |
 | Debian | `debootstrap --variant=minbase trixie /mnt` | `apt` base + `linux-image-amd64` + `btrfs-progs` | Btrfs | GRUB (`grub-efi-amd64`) |
 | Fedora | `dnf5 --installroot=/mnt --releasever=<n>` | `fedora-release glibc systemd kernel btrfs-progs` | Btrfs | GRUB (`grub2-efi-x64`) |
 | openSUSE | `zypper --root /mnt` (Tumbleweed) | `openSUSE-release systemd kernel-default btrfs-progs` | Btrfs | GRUB (`grub2-x86_64-efi`) |

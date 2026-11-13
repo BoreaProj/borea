@@ -165,7 +165,7 @@ fn run() -> Result<()> {
             )?;
             if !passed {
                 return Err(BoreaError::unsupported(
-                    "host preflight incomplete; use the distro's UEFI live environment",
+                    "host preflight incomplete; provide the required Borea runtime tools and UEFI boot; independent runtime provisioning is pending G01",
                 ));
             }
         }
