@@ -16,3 +16,7 @@ borea-core = { path = "../borea-core" }
 borea-distro = { path = "../borea-distro" }
 borea-run = { path = "../borea-run" }
 borea-session = { path = "../borea-session" }
+serde_json.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

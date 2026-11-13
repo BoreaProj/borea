@@ -9,3 +9,9 @@ description = "Plan executor, journal, probes and verification for borea"
 
 [dependencies]
 borea-core = { path = "../borea-core" }
+serde.workspace = true
+serde_json.workspace = true
+zeroize.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
