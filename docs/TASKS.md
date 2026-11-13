@@ -499,13 +499,15 @@ release. Deferred cards stay in this file marked `deferred`.
 - **Verify:** `cargo xtask e2e --family arch --profile minimal`
 - **Out:** parallel scheduler, cloud runners.
 
-### F05 — Matrix runner and nightly CI
+### F05 — Matrix runner, render and nightly CI
 - **WS:** F · **Dep:** F04
 - **Files:** `crates/xtask/src/matrix.rs`, `.github/workflows/nightly.yml`
-- **Deliverable:** run the required cells, compare against `MATRIX.md`, refuse a
-  green cell without an artifact, upload artifacts.
-- **Done when:** a missing artifact fails the release gate.
-- **Verify:** `cargo xtask matrix verify --strict`
+- **Deliverable:** `matrix check`, `matrix render` (regenerate `MATRIX.md`
+  tables), `matrix verify --strict` (run required cells, compare artifacts,
+  refuse a green cell without one); nightly rotation; artifact upload.
+- **Done when:** a missing artifact fails the release gate and `matrix render`
+  leaves the docs unchanged on a clean tree.
+- **Verify:** `cargo xtask matrix render --check && cargo xtask matrix verify --strict`
 - **Out:** paid runners for all 24 cells nightly (start with a subset).
 
 ---

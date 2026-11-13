@@ -1,8 +1,9 @@
 # Capability matrix
 
 This is the source of truth for what `borea plan` may offer. It is data:
-`recipes/matrix.toml`. The tables below are generated from it by
-`cargo xtask matrix render`; if they disagree, the TOML wins and CI fails.
+`recipes/matrix.toml`. The tables below mirror it; `cargo xtask matrix render`
+will generate them once card F05 lands. If they disagree, the TOML wins and CI
+fails. Until then, a matrix change updates both the TOML and this file.
 
 **Revision:** `matrix-2026-11-13`
 **Evidence last checked:** 2026-11-13

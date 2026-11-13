@@ -212,10 +212,17 @@ notes. No artifact, no green.
 
 ## 8. Milestones
 
-Days are focused engineering days for one agent. With two or three agents on
-parallel workstreams, calendar time compresses to roughly half. The critical
-path is **D0 → D1 → D2 → D3 → D5 → D6 → D8**; Omarchy (E) and sessions can run
-in parallel once the core API freezes at the end of D1.
+Days are focused engineering days for one agent. The full v0.1 set is about
+10–14 working days for one agent; two or three agents on parallel workstreams
+compress calendar time to roughly a week, because most cards are independent
+once the core interfaces freeze. The milestone labels below are dependency
+stages, not calendar dates.
+
+The longest dependency chain is **D0 → D1 → D2 → D3 → D5 → D6 → D8**. D4
+(openSUSE, encryption, resume) and D7 (Omarchy, COSMIC, end-4) run alongside it
+and must also land before release; they are not optional. Omarchy (E) can start
+once the core plan model is frozen at the end of D0, and sessions once the base
+config lands in D2.
 
 ### D0 — Skeleton, schema, matrix (critical)
 
@@ -334,6 +341,9 @@ A release is acceptable when all of these are true:
    available) a real Omarchy VM.
 7. CI is green: fmt, clippy `-D warnings`, tests, matrix check, golden plans.
 8. Docs match reality; nothing in README claims an untested cell.
+9. If a required cell cannot pass, the release either waits or records a
+   decision that demotes it to a gate. It never ships a smaller contract
+   silently.
 
 ## 11. Risks and mitigations
 
