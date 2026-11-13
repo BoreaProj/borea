@@ -37,7 +37,7 @@ fn hash(bytes: &[u8]) -> String {
 fn uuid(seed: &str, name: &str) -> String {
     let h = hash(format!("{seed}:{name}").as_bytes());
     format!(
-        "{}-{}-5{}-a{}-{}",
+        "{}-{}-8{}-a{}-{}",
         &h[..8],
         &h[8..12],
         &h[13..16],

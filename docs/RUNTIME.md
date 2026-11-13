@@ -5,7 +5,7 @@ and openSUSE. A family can be selected independently of the host distro. Borea
 does not require a distro live image, a Borea live environment, a Docker daemon,
 or the target package manager installed on the host.
 
-This milestone supplies and executes the tools. Privileged disk-image execution,
+This milestone supplies and executes the tools. The separate G02 image storage executor is documented in [IMAGE-EXECUTION.md](IMAGE-EXECUTION.md). Full installation execution,
 installation/resume and bootable target acceptance are the next milestone. The
 runtime commands deliberately have no disk/target mounts; `apply` stays gated.
 
@@ -132,10 +132,9 @@ exposes no host disks or package state. Inherited credentials, proxy variables,
 LD_* overrides and SSH-agent environment are not passed into the runtime.
 
 These commands are for inspection and tool execution. They cannot install to a
-host disk: no target is bound, and mount/chroot privileges are dropped. The next
-executor card must explicitly add an approved image target, narrowly scoped
-privileges, transient package state, device identity rechecks and cleanup. It
-must not turn `runtime exec` into an unrestricted privileged host shell.
+host disk: no target is bound, and mount/chroot privileges are dropped. G02 adds a separate closed image-storage entry point with a root-private
+verified runtime snapshot, bounded loop targets and cleanup. `runtime exec`
+retains its unprivileged boundary; see [IMAGE-EXECUTION.md](IMAGE-EXECUTION.md).
 
 ## Build and validation
 

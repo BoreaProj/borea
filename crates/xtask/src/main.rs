@@ -439,6 +439,59 @@ fn disk_storage(filesystem: &str, family: FamilyId) -> Result<()> {
             return Err(BoreaError::new("E_TEST", "concurrent image lock accepted"));
         }
         drop(held);
+        // Execute two independent images concurrently in separate foreground CLI runs.
+        let second = temp.path().join("parallel.img");
+        let second_manifest = temp.path().join("parallel.json");
+        let second_journal = temp.path().join("parallel.journal");
+        borea_run::image::create(&second, &second_manifest, filesystem, plan.bytes, spec)?;
+        let exe = std::env::current_exe()?.with_file_name("borea");
+        let spawn =
+            |manifest: &Path, journal: &Path, resume: bool| -> Result<std::process::Child> {
+                let mut cmd = std::process::Command::new(&exe);
+                cmd.args(["image", "apply", "--family", family.as_str(), "--manifest"])
+                    .arg(manifest)
+                    .arg("--cache")
+                    .arg(&cache)
+                    .arg("--journal")
+                    .arg(journal)
+                    .arg("--yes");
+                if resume {
+                    cmd.arg("--resume");
+                }
+                Ok(cmd.spawn()?)
+            };
+        let mut first = spawn(&manifest, &journal, true)?;
+        let second = spawn(&second_manifest, &second_journal, false);
+        let first_status = first.wait()?;
+        let second_status = second?.wait()?;
+        if !first_status.success() || !second_status.success() {
+            return Err(BoreaError::new("E_TEST", "parallel images failed"));
+        }
+        let prefix = temp.path().to_string_lossy();
+        for attempt in 0..20 {
+            let mut leaked = false;
+            for entry in fs::read_dir("/sys/block")? {
+                let entry = entry?;
+                if !entry.file_name().to_string_lossy().starts_with("loop") {
+                    continue;
+                }
+                match fs::read_to_string(entry.path().join("loop/backing_file")) {
+                    Ok(backing) => leaked |= backing.contains(prefix.as_ref()),
+                    Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
+                    Err(e) => return Err(e.into()),
+                }
+            }
+            if !leaked {
+                break;
+            }
+            if attempt == 19 {
+                return Err(BoreaError::new(
+                    "E_TEST",
+                    "loop mapping leaked after image execution",
+                ));
+            }
+            std::thread::sleep(std::time::Duration::from_millis(100));
+        }
         let mut stale = plan.clone();
         stale.inode += 1;
         if borea_run::image::apply(&stale, spec, &cache, &journal, true, true).is_ok() {
@@ -457,7 +510,7 @@ fn disk_storage(filesystem: &str, family: FamilyId) -> Result<()> {
     result?;
     println!(
         "{}",
-        serde_json::json!({"schema":1,"family":family,"filesystem":filesystem,"size_gib":20,"storage":"passed","repeat_probes":"passed","pending_format_resume":"passed","unknown_format":"refused_without_rewrite","exclusive_lock":"passed","stale_identity":"rejected","replacement_image":"rejected","bootable":false})
+        serde_json::json!({"schema":1,"family":family,"filesystem":filesystem,"size_gib":20,"storage":"passed","repeat_probes":"passed","pending_format_resume":"passed","unknown_format":"refused_without_rewrite","exclusive_lock":"passed","parallel_images":"passed","loop_cleanup":"passed","stale_identity":"rejected","replacement_image":"rejected","bootable":false})
     );
     Ok(())
 }
