@@ -8,3 +8,11 @@ repository.workspace = true
 description = "Config, recipes, matrix, plan and check model for borea"
 
 [dependencies]
+serde.workspace = true
+serde_json.workspace = true
+toml.workspace = true
+sha2.workspace = true
+uuid.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

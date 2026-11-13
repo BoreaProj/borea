@@ -22,3 +22,11 @@ description = "Cross-distro Linux installer and Omarchy default manager"
 # Dependency versions land with the cards that use them. The approved set is
 # recorded in docs/DECISIONS.md (D-025); do not add crates outside it without a
 # decision entry.
+
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+toml = "0.9"
+sha2 = "0.10"
+uuid = { version = "1", features = ["v5", "serde"] }
+zeroize = "1"
+tempfile = "3"

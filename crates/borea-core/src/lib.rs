@@ -1,14 +1,13 @@
-//! Shared model for borea.
-//!
-//! This crate owns the config, recipe, matrix, plan and check types. It never
-//! runs a command and never reads a block device. Modules land with the task
-//! cards in `docs/TASKS.md`; the version constants exist so the workspace and
-//! the CLI can agree on a schema from day zero.
-
-/// Plan schema version. Bump when the public JSON changes.
-pub const SCHEMA_VERSION: u16 = 1;
-
-/// The borea release that produced this build.
+//! Shared, side-effect-free installer contracts.
+pub mod config;
+pub mod defaults;
+pub mod error;
+pub mod matrix;
+pub mod plan;
+pub mod recipe;
+pub use config::*;
+pub use error::{BoreaError, Result};
+pub use plan::*;
 pub fn version() -> &'static str {
     env!("CARGO_PKG_VERSION")
 }
