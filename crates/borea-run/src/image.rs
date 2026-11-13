@@ -16,11 +16,61 @@ use std::{
     process::{Command, Stdio},
     time::{Duration, Instant},
 };
+use zeroize::Zeroizing;
 
 const GIB: u64 = 1024 * 1024 * 1024;
 const MIB: u64 = 1024 * 1024;
 fn fail(message: impl Into<String>) -> BoreaError {
     BoreaError::new("E_IMAGE", message)
+}
+pub fn read_bootstrap_password(path: &Path) -> Result<Zeroizing<String>> {
+    const MAX_PASSWORD_BYTES: u64 = 4096;
+    let file = OpenOptions::new()
+        .read(true)
+        .custom_flags(libc::O_NOFOLLOW | libc::O_NONBLOCK)
+        .open(path)?;
+    let metadata = file.metadata()?;
+    if !metadata.is_file()
+        || metadata.nlink() != 1
+        || metadata.mode() & 0o077 != 0
+        || metadata.len() == 0
+        || metadata.len() > MAX_PASSWORD_BYTES + 1
+    {
+        return Err(fail(
+            "bootstrap password must be a private, single-link regular file of at most 4096 bytes",
+        ));
+    }
+    let mut bytes = Zeroizing::new(Vec::new());
+    file.take(MAX_PASSWORD_BYTES + 1).read_to_end(&mut bytes)?;
+    if bytes.len() as u64 > MAX_PASSWORD_BYTES + 1 {
+        return Err(fail("bootstrap password file exceeds 4096 bytes"));
+    }
+    if bytes.last() == Some(&b'\n') {
+        bytes.pop();
+        if bytes.last() == Some(&b'\r') {
+            bytes.pop();
+        }
+    }
+    if bytes.len() as u64 > MAX_PASSWORD_BYTES
+        || bytes.is_empty()
+        || bytes.iter().any(|b| matches!(b, b'\0' | b'\n' | b'\r'))
+    {
+        return Err(fail(
+            "bootstrap password must be one nonempty line without NUL",
+        ));
+    }
+    let password = match String::from_utf8(std::mem::take(&mut *bytes)) {
+        Ok(password) => password,
+        Err(error) => {
+            drop(Zeroizing::new(error.into_bytes()));
+            return Err(fail("bootstrap password file must contain UTF-8"));
+        }
+    };
+    Ok(Zeroizing::new(password))
+}
+fn redacted_bootstrap_diagnostics(diagnostics: &[u8], password: &Zeroizing<String>) -> String {
+    let text = Zeroizing::new(String::from_utf8_lossy(diagnostics).into_owned());
+    crate::redact(&text, std::slice::from_ref(password))
 }
 fn root() -> Result<()> {
     // SAFETY: geteuid takes no pointers and has no preconditions.
@@ -468,15 +518,20 @@ pub fn apply(
     Ok(())
 }
 
+pub struct BootstrapOptions<'a> {
+    pub password_file: &'a Path,
+    pub resume: bool,
+    pub yes: bool,
+    pub pacman_cache: Option<&'a Path>,
+}
+
 /// Execute target Arch bootstrap, base configuration and Limine bootloader on the prepared image layout.
 pub fn bootstrap(
     plan: &ImagePlan,
     spec: &RuntimeSpec,
     cache: &Path,
     journal: &Path,
-    resume: bool,
-    yes: bool,
-    pacman_cache: Option<&Path>,
+    options: BootstrapOptions<'_>,
 ) -> Result<()> {
     root()?;
     plan.validate(spec)?;
@@ -485,7 +540,7 @@ pub fn bootstrap(
             "bootstrap executor is currently supported for Arch only; other families remain gated",
         ));
     }
-    if !yes {
+    if !options.yes {
         return Err(fail("image bootstrap requires --yes"));
     }
     let image = locked(&plan.image, false)?;
@@ -493,8 +548,9 @@ pub fn bootstrap(
     if (m.dev(), m.ino(), m.len()) != (plan.device, plan.inode, plan.bytes) {
         return Err(fail("image identity changed; recreate/replan"));
     }
-    let mut receipt = locked(journal, !resume)?;
-    if !resume {
+    let password = read_bootstrap_password(options.password_file)?;
+    let mut receipt = locked(journal, !options.resume)?;
+    if !options.resume {
         File::open(
             journal
                 .parent()
@@ -502,7 +558,7 @@ pub fn bootstrap(
         )?
         .sync_all()?;
     }
-    if resume {
+    if options.resume {
         let mut text = String::new();
         (&mut receipt).take(65537).read_to_string(&mut text)?;
         validate_bootstrap_journal(&text, &plan.digest)?;
@@ -579,7 +635,7 @@ pub fn bootstrap(
     if let Ok(resolv) = fs::canonicalize("/etc/resolv.conf") {
         cmd.arg("--ro-bind").arg(resolv).arg("/etc/resolv.conf");
     }
-    if let Some(pkg_cache) = pacman_cache.filter(|p| p.is_dir()) {
+    if let Some(pkg_cache) = options.pacman_cache.filter(|p| p.is_dir()) {
         cmd.arg("--bind")
             .arg(pkg_cache)
             .arg("/var/cache/pacman/pkg");
@@ -624,13 +680,27 @@ pub fn bootstrap(
         .arg(uuid(&plan.seed, "root"))
         .arg(uuid(&plan.seed, "disk"))
         .arg(((plan.bytes - MIB) / 512 - 1).to_string())
-        .arg(if resume { "resume" } else { "new" })
-        .stdin(Stdio::null())
+        .arg(if options.resume { "resume" } else { "new" })
+        .stdin(Stdio::piped())
         .stdout(Stdio::null())
         .stderr(Stdio::piped());
     cmd.process_group(0);
+    let mut process = cmd.spawn()?;
+    let mut stdin = process
+        .stdin
+        .take()
+        .ok_or_else(|| fail("missing bootstrap password pipe"))?;
+    let write_result = stdin
+        .write_all(password.as_bytes())
+        .and_then(|()| stdin.write_all(b"\n"));
+    drop(stdin);
+    if let Err(error) = write_result {
+        let _ = process.kill();
+        let _ = process.wait();
+        return Err(error.into());
+    }
     let mut child = RunningChild {
-        child: cmd.spawn()?,
+        child: process,
         running: true,
     };
     let stderr = child
@@ -671,18 +741,20 @@ pub fn bootstrap(
         }
         std::thread::sleep(Duration::from_millis(100));
     };
-    let diagnostics = reader
-        .join()
-        .map_err(|_| fail("diagnostic reader failed"))?;
+    let diagnostics = Zeroizing::new(
+        reader
+            .join()
+            .map_err(|_| fail("diagnostic reader failed"))?,
+    );
     image.sync_all()?;
     receipt.seek(SeekFrom::Start(0))?;
     let mut text = String::new();
     (&mut receipt).take(65537).read_to_string(&mut text)?;
     validate_bootstrap_journal(&text, &plan.digest)?;
-    if !status.success() || !text.ends_with("verified-bootable\n") {
+    if !status.success() || !text.ends_with("bootstrap-complete\n") {
         return Err(fail(format!(
             "image bootstrap execution failed; inspect receipt before resume: {}",
-            String::from_utf8_lossy(&diagnostics)
+            redacted_bootstrap_diagnostics(&diagnostics, &password)
         )));
     }
     Ok(())
@@ -742,21 +814,71 @@ pub fn validate_bootstrap_journal(text: &str, digest: &str) -> Result<()> {
             "initramfs",
             "bootloader",
         ],
-        "verified-bootable",
+        "bootstrap-complete",
     )
 }
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::os::unix::fs::PermissionsExt;
+
+    #[test]
+    fn bootstrap_password_requires_private_single_line_file() {
+        let dir = tempfile::tempdir().unwrap();
+        let password_path = dir.path().join("password");
+        fs::write(&password_path, "test-password\n").unwrap();
+        fs::set_permissions(&password_path, fs::Permissions::from_mode(0o600)).unwrap();
+        assert_eq!(
+            read_bootstrap_password(&password_path).unwrap().as_str(),
+            "test-password"
+        );
+
+        fs::set_permissions(&password_path, fs::Permissions::from_mode(0o644)).unwrap();
+        assert!(read_bootstrap_password(&password_path).is_err());
+        fs::set_permissions(&password_path, fs::Permissions::from_mode(0o600)).unwrap();
+        fs::write(&password_path, "first\nsecond\n").unwrap();
+        assert!(read_bootstrap_password(&password_path).is_err());
+        fs::write(&password_path, vec![b'a'; 4097]).unwrap();
+        assert!(read_bootstrap_password(&password_path).is_err());
+        fs::remove_file(&password_path).unwrap();
+        std::os::unix::fs::symlink(dir.path().join("missing"), &password_path).unwrap();
+        assert!(read_bootstrap_password(&password_path).is_err());
+    }
+
+    #[test]
+    fn bootstrap_diagnostics_redact_the_password() {
+        let password = Zeroizing::new("bootstrap-canary".to_string());
+        assert_eq!(
+            redacted_bootstrap_diagnostics(b"failure: bootstrap-canary", &password),
+            "failure: <redacted>"
+        );
+    }
+
+    #[test]
+    fn bootstrap_script_has_no_default_credentials_or_passwordless_sudo() {
+        let script = include_str!("image-bootstrap.sh");
+        assert!(!script.contains("NOPASSWD"));
+        assert!(script.contains("read -r account_password"));
+        assert!(script.contains("printf 'borea:%s\\n' \"$account_password\""));
+        assert!(script.contains("passwd --lock root"));
+    }
+
     #[test]
     fn bootstrap_journals_validate() {
-        let valid = "abc\nstart:storage_probe\nok:storage_probe\nstart:pacstrap\nok:pacstrap\nstart:system_config\nok:system_config\nstart:initramfs\nok:initramfs\nstart:bootloader\nok:bootloader\nverified-bootable\n";
+        let valid = "abc\nstart:storage_probe\nok:storage_probe\nstart:pacstrap\nok:pacstrap\nstart:system_config\nok:system_config\nstart:initramfs\nok:initramfs\nstart:bootloader\nok:bootloader\nbootstrap-complete\n";
         assert!(validate_bootstrap_journal(valid, "abc").is_ok());
+        assert!(
+            validate_bootstrap_journal(
+                &valid.replace("bootstrap-complete", "verified-bootable"),
+                "abc"
+            )
+            .is_err()
+        );
         assert!(validate_bootstrap_journal("abc\nstart:storage_probe\n", "abc").is_ok());
         for bad in [
             "abc",
             "wrong_digest\n",
-            "abc\nstart:storage_probe\nok:storage_probe\nverified-bootable\n",
+            "abc\nstart:storage_probe\nok:storage_probe\nbootstrap-complete\n",
             "abc\nstart:unknown\n",
             "abc\nok:bootloader\n",
         ] {

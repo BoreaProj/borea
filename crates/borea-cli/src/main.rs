@@ -89,7 +89,7 @@ fn run() -> Result<()> {
     let mut raw = std::env::args().skip(1).collect::<Vec<_>>();
     if raw.is_empty() || raw == ["--help"] || raw == ["help"] {
         println!(
-            "borea {} — experimental installer planning, family runtimes and fixture tools\n\nCommands:\n  doctor --family FAMILY [--cache DIR] [--json]\n  image create|apply|bootstrap --family FAMILY --manifest FILE\n  runtime list|fetch|verify|probe|exec [--family FAMILY] [--cache DIR]\n  catalogue --family FAMILY [--json]\n  explain COMPONENT --family FAMILY\n  plan --config FILE --out FILE [--dry-run] [--fixture --identity FILE]\n  apply PLAN --dry-run\n  apply PLAN --yes --device DEVICE (live execution gated)\n  apply PLAN --fixture-root DIR --journal FILE [--resume]\n  verify PLAN --root DIR | --ssh USER@HOST [--json]\n  status --journal FILE\n  omarchy configure --config FILE [--json]\n  omarchy trim --list | ID... --dry-run\n  omarchy defaults status --policy FILE\n\nNo VM cells are supported yet. See docs/IMPLEMENTATION.md.",
+            "borea {} — experimental installer planning, family runtimes and fixture tools\n\nCommands:\n  doctor --family FAMILY [--cache DIR] [--json]\n  image create|apply|bootstrap --family FAMILY --manifest FILE\n  image bootstrap --family arch --manifest FILE --password-file PRIVATE_FILE --journal FILE --yes\n  runtime list|fetch|verify|probe|exec [--family FAMILY] [--cache DIR]\n  catalogue --family FAMILY [--json]\n  explain COMPONENT --family FAMILY\n  plan --config FILE --out FILE [--dry-run] [--fixture --identity FILE]\n  apply PLAN --dry-run\n  apply PLAN --yes --device DEVICE (live execution gated)\n  apply PLAN --fixture-root DIR --journal FILE [--resume]\n  verify PLAN --root DIR | --ssh USER@HOST [--json]\n  status --journal FILE\n  omarchy configure --config FILE [--json]\n  omarchy trim --list | ID... --dry-run\n  omarchy defaults status --policy FILE\n\nNo VM cells are supported yet. See docs/IMPLEMENTATION.md.",
             version()
         );
         return Ok(());
@@ -449,20 +449,20 @@ fn image(mut raw: Vec<String>) -> Result<()> {
         return Err(BoreaError::invalid("image create|apply|bootstrap required"));
     }
     let cmd = raw.remove(0);
-    let a = Args::parse(
-        raw,
-        &[
-            "image",
-            "manifest",
-            "fs",
-            "size-gib",
-            "family",
-            "cache",
-            "journal",
-            "pacman-cache",
-        ],
-        &["yes", "resume", "json"],
-    )?;
+    let mut values = vec![
+        "image",
+        "manifest",
+        "fs",
+        "size-gib",
+        "family",
+        "cache",
+        "journal",
+        "pacman-cache",
+    ];
+    if cmd == "bootstrap" {
+        values.push("password-file");
+    }
+    let a = Args::parse(raw, &values, &["yes", "resume", "json"])?;
     a.no_positionals()?;
     let lock = borea_core::runtime::RuntimeLock::embedded()?;
     let family = FamilyId::parse(a.required("family")?)?;
@@ -509,6 +509,7 @@ fn image(mut raw: Vec<String>) -> Result<()> {
             )
         }
         "bootstrap" => {
+            let password_file = Path::new(a.required("password-file")?);
             let plan = serde_json::from_slice::<borea_run::image::ImagePlan>(&std::fs::read(
                 a.required("manifest")?,
             )?)?;
@@ -523,12 +524,15 @@ fn image(mut raw: Vec<String>) -> Result<()> {
                 spec,
                 &cache,
                 Path::new(a.required("journal")?),
-                a.flag("resume"),
-                a.flag("yes"),
-                pacman_cache,
+                borea_run::image::BootstrapOptions {
+                    password_file,
+                    resume: a.flag("resume"),
+                    yes: a.flag("yes"),
+                    pacman_cache,
+                },
             )?;
             output(
-                &serde_json::json!({"schema":1,"storage_verified":true,"bootable":true,"release":borea_core::RELEASE}),
+                &serde_json::json!({"schema":1,"storage_verified":true,"bootloader_configured":true,"bootable":false,"vm_boot_verified":false,"release":borea_core::RELEASE}),
                 true,
             )
         }

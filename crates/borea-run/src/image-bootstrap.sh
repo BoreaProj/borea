@@ -5,17 +5,29 @@ fs=$1 esp_uuid=$2 boot_uuid=$3 root_uuid=$4 disk_uuid=$5 root_end=$6
 for tool in mount umount findmnt pacstrap chroot blkid sgdisk grep sed awk cut tr sync mkdir chmod cp rm mv; do
     command -v "$tool" >/dev/null || { printf 'Missing runtime image tool: %s\n' "$tool" >&2; exit 1; }
 done
+IFS= read -r account_password || { printf 'Missing bootstrap account password\n' >&2; exit 1; }
+test -n "$account_password" || { printf 'Bootstrap account password is empty\n' >&2; exit 1; }
 record() { printf '%s\n' "$1" >> /receipt; sync -f /receipt; }
 step() {
     id=$1
-    if grep -q "^ok:$id$" /receipt; then probe_$id; return; fi
-    if grep -q "^start:$id$" /receipt; then probe_$id; record "ok:$id"; return; fi
+    if grep -q "^ok:$id$" /receipt; then
+        if probe_$id; then return; fi
+        printf 'Completed bootstrap step %s failed verification; recreate the disposable image\n' "$id" >&2
+        exit 1
+    fi
+    if grep -q "^start:$id$" /receipt; then
+        if probe_$id; then record "ok:$id"; return; fi
+        printf 'Interrupted bootstrap step %s is incomplete; recreate the disposable image\n' "$id" >&2
+        exit 1
+    fi
     record "start:$id"
     do_$id >&2
     probe_$id >&2
     record "ok:$id"
 }
 cleanup() {
+    account_password=
+    unset account_password
     umount /target/boot/efi 2>/dev/null || :
     umount /target/boot 2>/dev/null || :
     umount /target/dev/pts 2>/dev/null || :
@@ -102,7 +114,9 @@ probe_system_config() {
     test -f /target/etc/hostname
     grep -q 'borea' /target/etc/hostname
     test -f /target/etc/locale.conf
-    test -f /target/etc/sudoers.d/10-borea
+    grep -qx 'borea ALL=(ALL:ALL) ALL' /target/etc/sudoers.d/10-borea
+    awk -F: '$1 == "borea" && $2 !~ /^[!*]/ {found=1} END {exit !found}' /target/etc/shadow
+    awk -F: '$1 == "root" && $2 ~ /^[!*]/ {found=1} END {exit !found}' /target/etc/shadow
     test -d /target/home/borea
 }
 do_system_config() {
@@ -128,10 +142,12 @@ EOF
     if ! chroot /target id -u borea >/dev/null 2>&1; then
         chroot /target useradd -m -g users -G wheel -s /bin/bash borea
     fi
-    printf 'borea:borea\nroot:root\n' | chroot /target chpasswd
+    printf 'borea:%s\n' "$account_password" | chroot /target chpasswd
+    chroot /target passwd --lock root
     mkdir -p /target/etc/sudoers.d
-    printf 'borea ALL=(ALL:ALL) NOPASSWD: ALL\n' > /target/etc/sudoers.d/10-borea
+    printf 'borea ALL=(ALL:ALL) ALL\n' > /target/etc/sudoers.d/10-borea
     chmod 0440 /target/etc/sudoers.d/10-borea
+    chroot /target visudo -cf /etc/sudoers.d/10-borea
 
     chroot /target systemctl enable NetworkManager.service || :
     chroot /target systemctl enable sshd.service || :
@@ -189,10 +205,11 @@ EOF
 step storage_probe
 step pacstrap
 step system_config
+unset account_password
 step initramfs
 step bootloader
 
 sync
 cleanup
 trap - EXIT
-record verified-bootable
+record bootstrap-complete

@@ -74,14 +74,30 @@ retrieve upstream packages into `/target` and installs `base`, `linux`,
 
 ```sh
 sudo borea image bootstrap --family arch --manifest /absolute/test.image.json \
-  --cache /absolute/runtime-cache --journal /absolute/test.bootstrap.journal --yes
+  --cache /absolute/runtime-cache --password-file /absolute/private-password-file \
+  --journal /absolute/test.bootstrap.journal --yes
 ```
 
 Target configuration sets hostname, hosts, locale generation, default user,
-sudoers drop-in, NetworkManager/sshd service activation, `mkinitcpio -P` initramfs
-build and Limine EFI/config setup. Receipts sync `storage_probe`, `pacstrap`,
-`system_config`, `initramfs`, `bootloader` and `verified-bootable`.
-Repeat execution probes target files before skipping completed steps.
+password, sudoers drop-in, NetworkManager/sshd service activation, `mkinitcpio -P`
+initramfs build and Limine EFI/config setup. The password file must be a regular,
+single-link file with no group/world permissions; symlinks, empty passwords and
+multi-line passwords are refused. Its contents are sent to the bootstrap process
+over stdin and are not written to argv, environment, receipts or diagnostics.
+Root is locked and sudo requires the account password. Receipts sync
+`storage_probe`, `pacstrap`, `system_config`, `initramfs`, `bootloader` and
+`bootstrap-complete`; the final receipt means the on-disk boot configuration
+probes passed, not that a VM boot was tested. G04 rejects B-0.3 journals using
+the old `verified-bootable` final marker.
+Repeat execution probes target files before skipping completed steps. Supply
+the same password file when resuming an incomplete bootstrap; secrets are
+intentionally not bound into the image manifest or journal.
+Images bootstrapped before G04 used fixed credentials and must be treated as
+compromised: do not boot or resume them; create a fresh image instead.
 
 Validation: `sudo env BOREA_RUNTIME_CACHE=/absolute/runtime-cache \
   target/release/xtask disk bootstrap --fs btrfs` (repeat for `ext4`).
+The selftest uses a canary password and refuses to report success if that canary
+appears in the bootstrap receipt. Bootstrap success reports
+`bootloader_configured: true`, `bootable: false`, and
+`vm_boot_verified: false`; QEMU/SSH boot acceptance is a separate card.

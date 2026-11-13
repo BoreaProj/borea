@@ -5,6 +5,8 @@ use borea_core::{
 use std::{
     collections::BTreeMap,
     fs,
+    io::Write,
+    os::unix::fs::OpenOptionsExt,
     path::{Path, PathBuf},
 };
 fn main() {
@@ -560,6 +562,16 @@ fn disk_bootstrap_cached(filesystem: &str, pacman_cache: Option<&Path>) -> Resul
     let manifest = temp.path().join("manifest.json");
     let storage_journal = temp.path().join("storage.journal");
     let bootstrap_journal = temp.path().join("bootstrap.journal");
+    let password_path = temp.path().join("bootstrap.password");
+    let mut password_file = fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .mode(0o600)
+        .open(&password_path)?;
+    let canary = "borea-bootstrap-ci-canary-not-a-real-password";
+    password_file.write_all(canary.as_bytes())?;
+    password_file.write_all(b"\n")?;
+    password_file.sync_all()?;
     let lock = borea_core::runtime::RuntimeLock::embedded()?;
     let spec = lock.get(FamilyId::Arch)?;
     let plan =
@@ -570,39 +582,56 @@ fn disk_bootstrap_cached(filesystem: &str, pacman_cache: Option<&Path>) -> Resul
         spec,
         &cache,
         &bootstrap_journal,
-        false,
-        true,
-        pacman_cache,
+        borea_run::image::BootstrapOptions {
+            password_file: &password_path,
+            resume: false,
+            yes: true,
+            pacman_cache,
+        },
     )?;
     borea_run::image::bootstrap(
         &plan,
         spec,
         &cache,
         &bootstrap_journal,
-        true,
-        true,
-        pacman_cache,
+        borea_run::image::BootstrapOptions {
+            password_file: &password_path,
+            resume: true,
+            yes: true,
+            pacman_cache,
+        },
     )?;
-    if let Ok(receipts) = fs::read_to_string(&bootstrap_journal) {
-        println!("bootstrap receipts:\n{receipts}");
+    let receipts = fs::read_to_string(&bootstrap_journal)?;
+    if receipts.contains(canary) {
+        return Err(BoreaError::new(
+            "E_SECRET",
+            "bootstrap password appeared in the image receipt",
+        ));
     }
-    println!(
-        "{}",
-        serde_json::json!({
-            "schema": 1,
-            "family": "arch",
-            "filesystem": filesystem,
-            "size_gib": 20,
-            "storage": "passed",
-            "bootstrap": "passed",
-            "system_config": "passed",
-            "initramfs": "passed",
-            "limine_bootloader": "passed",
-            "repeat_probes": "passed",
-            "bootable": true,
-            "release": borea_core::RELEASE
-        })
-    );
+    let report = serde_json::to_string(&serde_json::json!({
+        "schema": 1,
+        "family": "arch",
+        "filesystem": filesystem,
+        "size_gib": 20,
+        "storage": "passed",
+        "bootstrap": "passed",
+        "system_config": "passed",
+        "initramfs": "passed",
+        "limine_bootloader": "passed",
+        "repeat_probes": "passed",
+        "bootloader_configured": true,
+        "bootable": false,
+        "vm_boot_verified": false,
+        "release": borea_core::RELEASE
+    }))?;
+    if report.contains(canary) {
+        return Err(BoreaError::new(
+            "E_SECRET",
+            "bootstrap password appeared in the selftest report",
+        ));
+    }
+    println!("bootstrap receipts:\n{receipts}");
+    println!("{report}");
     Ok(())
 }
 

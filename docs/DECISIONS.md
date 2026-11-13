@@ -458,8 +458,8 @@ requires `--yes`; `--deny-third-party` refuses them.
 ### O-14 — sudo model
 **Default:** the account user is in `wheel`/`sudo`; `sudo = "same"` reuses the
 account password; `separate` requires a second secret slot. No passwordless sudo.
-**Trigger:** first VM login test.
-**Open:** whether root login is locked by default (proposed: yes).
+**Trigger:** first VM login test; the Arch image bootstrap applies this in G04.
+**Decision:** root login is locked by default for the Arch image bootstrap (G04).
 
 ### O-15 — Swap default
 **Default:** zram, no swap partition.
@@ -555,3 +555,19 @@ tags use the canonical `B-` prefix (e.g. `B-0.3`).
 **Why:** Unambiguously distinguishes standalone Borea installer releases from
 distro release versions and generic library versions while keeping Cargo's
 package semver valid.
+
+### D-037 — Arch image bootstrap credentials
+
+**Date:** 2026-11-13
+**Decision:** Arch image bootstrap requires a private password file, passes the
+account password through stdin only, locks the root account, and configures
+password-required sudo. Passwords never enter argv, environment, receipts or
+reported diagnostics. Bootstrap output reports bootloader configuration but
+does not claim a VM boot. Images bootstrapped before this change used fixed
+credentials and are considered compromised; recreate them rather than reusing
+or booting them.
+**Why:** The former fixed account/root passwords and passwordless sudo made
+every generated image immediately compromisable; filesystem and config probes
+alone do not prove that an image boots.
+**Rejected:** default credentials, passwordless sudo, credentials in command
+arguments/environment, treating a configured Limine entry as boot evidence.
