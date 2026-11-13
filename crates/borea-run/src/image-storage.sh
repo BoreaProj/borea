@@ -8,23 +8,24 @@ step() {
     if grep -q "^ok:$id$" /receipt; then probe_$id; return; fi
     if grep -q "^start:$id$" /receipt; then probe_$id; record "ok:$id"; return; fi
     record "start:$id"
-    do_$id
-    probe_$id
+    do_$id >&2
+    probe_$id >&2
     record "ok:$id"
 }
 part() {
     info=$(sgdisk --info="$1" /dev/borea-disk)
+    printf '%s\n' "$info" >&2
     printf '%s\n' "$info" | grep -qi "Partition GUID code: $2"
     printf '%s\n' "$info" | grep -q "First sector: $3 "
     printf '%s\n' "$info" | grep -q "Last sector: $4 "
 }
 probe_partition() {
     sgdisk --print /dev/borea-disk | grep -qi "Disk identifier (GUID): $disk_uuid"
-    part 1 EF00 2048 2099199
+    part 1 C12A7328-F81F-11D2-BA4B-00A0C93EC93B 2048 2099199
     sgdisk --info=1 /dev/borea-disk | grep -qi "Partition unique GUID: $esp_uuid"
-    part 2 8300 2099200 6293503
+    part 2 0FC63DAF-8483-4772-8E79-3D69D8477DE4 2099200 6293503
     sgdisk --info=2 /dev/borea-disk | grep -qi "Partition unique GUID: $boot_uuid"
-    part 3 8300 6293504 "$root_end"
+    part 3 0FC63DAF-8483-4772-8E79-3D69D8477DE4 6293504 "$root_end"
     sgdisk --info=3 /dev/borea-disk | grep -qi "Partition unique GUID: $root_uuid"
     sgdisk --verify /dev/borea-disk | grep -q 'No problems found'
 }
