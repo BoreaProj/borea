@@ -467,20 +467,44 @@ fn disk_storage(filesystem: &str, family: FamilyId) -> Result<()> {
         if !first_status.success() || !second_status.success() {
             return Err(BoreaError::new("E_TEST", "parallel images failed"));
         }
-        let prefix = temp.path().to_string_lossy();
-        for attempt in 0..20 {
-            let mut leaked = false;
-            for entry in fs::read_dir("/sys/block")? {
-                let entry = entry?;
-                if !entry.file_name().to_string_lossy().starts_with("loop") {
-                    continue;
-                }
-                match fs::read_to_string(entry.path().join("loop/backing_file")) {
-                    Ok(backing) => leaked |= backing.contains(prefix.as_ref()),
-                    Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
-                    Err(e) => return Err(e.into()),
-                }
+        // SIGKILL the real CLI after it has allocated an image loop mapping.
+        let mut interrupted = spawn(&second_manifest, &second_journal, true)?;
+        let interrupted_pid = interrupted.id();
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(120);
+        loop {
+            if !image_loops(temp.path())?.is_empty() {
+                interrupted.kill()?;
+                interrupted.wait()?;
+                break;
             }
+            if interrupted.try_wait()?.is_some() {
+                return Err(BoreaError::new("E_TEST", "missed image crash window"));
+            }
+            if std::time::Instant::now() > deadline {
+                interrupted.kill()?;
+                interrupted.wait()?;
+                return Err(BoreaError::new(
+                    "E_TEST",
+                    "timed out waiting for image crash window",
+                ));
+            }
+            std::thread::sleep(std::time::Duration::from_millis(5));
+        }
+        // SIGKILL cannot run user-space temporary-directory destructors. Reclaim
+        // only this test child's root-private runtime staging on the ephemeral runner.
+        let stage_prefix = format!("borea-image-{interrupted_pid}-");
+        for entry in fs::read_dir("/tmp")? {
+            let entry = entry?;
+            if entry
+                .file_name()
+                .to_string_lossy()
+                .starts_with(&stage_prefix)
+            {
+                fs::remove_dir_all(entry.path())?;
+            }
+        }
+        for attempt in 0..20 {
+            let leaked = !image_loops(temp.path())?.is_empty();
             if !leaked {
                 break;
             }
@@ -510,7 +534,25 @@ fn disk_storage(filesystem: &str, family: FamilyId) -> Result<()> {
     result?;
     println!(
         "{}",
-        serde_json::json!({"schema":1,"family":family,"filesystem":filesystem,"size_gib":20,"storage":"passed","repeat_probes":"passed","pending_format_resume":"passed","unknown_format":"refused_without_rewrite","exclusive_lock":"passed","parallel_images":"passed","loop_cleanup":"passed","stale_identity":"rejected","replacement_image":"rejected","bootable":false})
+        serde_json::json!({"schema":1,"family":family,"filesystem":filesystem,"size_gib":20,"storage":"passed","repeat_probes":"passed","pending_format_resume":"passed","unknown_format":"refused_without_rewrite","exclusive_lock":"passed","parallel_images":"passed","loop_cleanup":"passed","sigkill_loop_cleanup":"passed","stale_identity":"rejected","replacement_image":"rejected","bootable":false})
     );
     Ok(())
+}
+
+fn image_loops(root: &Path) -> Result<Vec<PathBuf>> {
+    let prefix = root.to_string_lossy();
+    let mut loops = Vec::new();
+    for entry in fs::read_dir("/sys/block")? {
+        let entry = entry?;
+        if !entry.file_name().to_string_lossy().starts_with("loop") {
+            continue;
+        }
+        match fs::read_to_string(entry.path().join("loop/backing_file")) {
+            Ok(backing) if backing.contains(prefix.as_ref()) => loops.push(entry.path()),
+            Ok(_) => {}
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
+            Err(e) => return Err(e.into()),
+        }
+    }
+    Ok(loops)
 }

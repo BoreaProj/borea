@@ -33,7 +33,7 @@ archive is copied from the cache; the private copy must match the compiled
 SHA-256 before extraction. The cache's extracted tree is never elevated.
 Bubblewrap exposes only the four allocated loop mappings and the held journal,
 with private mounts, PID namespace, temporary paths and no network. It retains
-mount/chroot capabilities for native storage tools. This boundary depends on
+the mount capability for native storage tools. This boundary depends on
 the host kernel and trusted, pinned runtime tools; it is not a kernel sandbox
 for hostile filesystem images or arbitrary programs.
 
@@ -59,5 +59,7 @@ The `disposable-image-storage` GitHub workflow runs these real filesystem tests
 on ephemeral runners and uploads receipts and results. Tests include pending
 format receipts, a corrupted ESP whose failed probe must not trigger formatting,
 exclusive locking, two parallel images, loop cleanup and stale image rejection.
-These receipt fault tests do not yet prove recovery from power loss or every
-possible signal timing.
+A real SIGKILL test checks that image loop mappings disappear. Power-loss
+recovery and every possible signal timing are not yet proven. SIGKILL can leave
+root-private runtime staging under `/tmp/borea-image-PID-*`; ordinary temporary
+file cleanup reclaims it. The ephemeral test runner reclaims its own staging.

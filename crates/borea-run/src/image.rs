@@ -315,7 +315,7 @@ pub fn apply(
         receipt.sync_all()?;
     }
     let private = tempfile::Builder::new()
-        .prefix("borea-image-")
+        .prefix(format!("borea-image-{}-", std::process::id()))
         .tempdir_in("/tmp")?;
     fs::set_permissions(private.path(), fs::Permissions::from_mode(0o700))?;
     let runtime = crate::runtime::private_snapshot(spec, cache, private.path())?;
@@ -340,8 +340,6 @@ pub fn apply(
             "ALL",
             "--cap-add",
             "CAP_SYS_ADMIN",
-            "--cap-add",
-            "CAP_SYS_CHROOT",
             "--ro-bind",
         ])
         .arg(runtime)

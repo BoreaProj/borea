@@ -532,7 +532,7 @@ plan. Images must be created by Borea as root-owned mode-0600 regular files.
 The executor retains an exclusive image lock and configures auto-clearing loop
 devices directly from that descriptor, including bounded partition slices.
 Only these loops enter a foreground Bubblewrap mount namespace. The namespace
-keeps the capabilities needed to mount, with no network, host filesystem or
+keeps only the capability needed to mount, with no network, host filesystem or
 physical disk access. It runs one reviewed fixed storage program, not a daemon
 or generic worker. Native family tools still come from the pinned runtime.
 
