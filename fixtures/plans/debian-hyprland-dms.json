@@ -1,0 +1,6 @@
+{
+  "code": "E_UNSUPPORTED",
+  "reason": "shell.dms: repository fingerprint/source commit is not pinned for debian; remedy: omit this component until its recipe is reviewed",
+  "schema": 1,
+  "status": "refused"
+}

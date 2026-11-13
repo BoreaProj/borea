@@ -1,16 +1,14 @@
 # Fixtures
 
-Test data only. Nothing here is shipped at runtime.
+`device.json` is an invented 20 GiB `/dev/vda` identity for planning only.
+`plans/` has one JSON golden for each of the 29 required v0.1 cases: 25 draft
+plans and four explicit unsupported results for unpinned third-party paths.
+A refusal fixture prevents silently inventing repository trust. It does not
+count as a successful plan or a passing VM cell.
 
-```text
-config/    valid and invalid borea.toml files
-plans/     golden plan JSON
-roots/     fake target roots (etc, var, usr, home)
-pkg/       fake pacman/apt/dnf/zypper scripts
-sysfs/     device identity fixtures
-omarchy/   fake Omarchy install
-images/    tiny prebuilt disk images for VM boot tests
-```
+`cargo xtask plan golden` compares bytes and replans to check determinism.
+Use `--update` only after reviewing the underlying change.
 
-Fixtures land with the cards that need them. See
-[`docs/TESTING.md`](../docs/TESTING.md) for how each is used.
+The CLI process tests create temporary roots, journals and policy files. They
+never execute target binaries, package managers or host disk commands.
+No bootable image or VM result exists yet.

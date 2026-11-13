@@ -1,0 +1,15 @@
+name: release evidence gate
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  required-vm-evidence:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.99.1
+      - name: Refuse release without validated VM cells
+        run: cargo xtask matrix verify --strict

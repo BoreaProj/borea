@@ -30,6 +30,19 @@ jobs:
       - name: test
         run: cargo test --workspace --all-features --locked
 
-      # Matrix, recipe lint, golden plans and the secret canary are enabled by
-      # cards A01, A05, A06 and A09. Until then this workflow only guards the
-      # workspace. Do not add steps that cannot pass yet.
+      - name: matrix and recipes
+        run: |
+          cargo xtask matrix check
+          cargo xtask recipe lint
+          cargo xtask matrix render --check
+
+      - name: golden plans and refusals
+        run: cargo xtask plan golden
+
+      - name: secret boundary canary
+        run: cargo xtask secret canary
+
+      - name: image and Omarchy preview fixtures
+        run: |
+          cargo xtask disk selftest --stage create
+          cargo xtask e2e --profile omarchy-trim

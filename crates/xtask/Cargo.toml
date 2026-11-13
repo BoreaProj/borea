@@ -12,3 +12,8 @@ name = "xtask"
 path = "src/main.rs"
 
 [dependencies]
+serde_json.workspace = true
+borea-core = { path = "../borea-core" }
+borea-distro = { path = "../borea-distro" }
+borea-session = { path = "../borea-session" }
+borea-run = { path = "../borea-run" }
