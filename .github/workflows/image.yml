@@ -27,12 +27,12 @@ jobs:
       - name: Build and fetch pinned independent runtime
         run: |
           cargo build --release --locked -p borea-cli -p xtask
-          target/release/borea runtime fetch --family '${{ matrix.family }}' --cache "$PWD/target/image-runtime"
+          target/release/borea runtime fetch --family '${{ matrix.family }}' --cache "$RUNNER_TEMP/borea-image-runtime"
       - name: Real disposable-image execution and repeat probes
         run: |
           mkdir -p target/image-validation
           set -o pipefail
-          sudo env BOREA_RUNTIME_CACHE="$PWD/target/image-runtime" target/release/xtask disk selftest --fs '${{ matrix.fs }}' --family '${{ matrix.family }}' 2>&1 | tee 'target/image-validation/${{ matrix.fs }}.log'
+          sudo env BOREA_RUNTIME_CACHE="$RUNNER_TEMP/borea-image-runtime" target/release/xtask disk selftest --fs '${{ matrix.fs }}' --family '${{ matrix.family }}' 2>&1 | tee 'target/image-validation/${{ matrix.fs }}.log'
       - uses: actions/upload-artifact@v4
         if: always()
         with:

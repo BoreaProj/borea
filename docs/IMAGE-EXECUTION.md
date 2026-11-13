@@ -53,5 +53,11 @@ Nothing here marks any installation matrix cell supported.
 
 Validation: `sudo env BOREA_RUNTIME_CACHE=/absolute/runtime-cache \
   target/release/xtask disk selftest --fs btrfs` (repeat for `ext4`).
+Add `--family debian`, `--family fedora` or `--family suse` to select another
+family bundle; Arch is the default test bundle.
 The `disposable-image-storage` GitHub workflow runs these real filesystem tests
-on ephemeral runners and uploads receipts and results.
+on ephemeral runners and uploads receipts and results. Tests include pending
+format receipts, a corrupted ESP whose failed probe must not trigger formatting,
+exclusive locking, two parallel images, loop cleanup and stale image rejection.
+These receipt fault tests do not yet prove recovery from power loss or every
+possible signal timing.

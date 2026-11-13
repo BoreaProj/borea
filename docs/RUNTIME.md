@@ -5,9 +5,10 @@ and openSUSE. A family can be selected independently of the host distro. Borea
 does not require a distro live image, a Borea live environment, a Docker daemon,
 or the target package manager installed on the host.
 
-This milestone supplies and executes the tools. The separate G02 image storage executor is documented in [IMAGE-EXECUTION.md](IMAGE-EXECUTION.md). Full installation execution,
-installation/resume and bootable target acceptance are the next milestone. The
-runtime commands deliberately have no disk/target mounts; `apply` stays gated.
+This milestone supplies and executes the tools. G02 image storage execution is
+separate; see [IMAGE-EXECUTION.md](IMAGE-EXECUTION.md). Target bootstrap and boot
+acceptance are the next milestone. The runtime commands have no disk/target
+mounts; general installation `apply` stays gated.
 
 ## Requirements
 
