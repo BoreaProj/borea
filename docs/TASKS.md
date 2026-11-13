@@ -685,5 +685,31 @@ release. Deferred cards stay in this file marked `deferred`.
   `limine.conf` config generation; ordered durable receipts and complete unmount cleanup.
 - **Out:** non-Arch distro bootstraps (Debian/Fedora/openSUSE image bootstrap remain
   subsequent cards), physical disks, encrypted root, Omarchy script runner.
-- **Verify:** privileged disposable-image bootstrap CI producing a bootable Arch raw
-  image; repeat execution probes; existing workspace checks.
+- **Verify:** privileged disposable-image bootstrap CI validates the target and
+  bootloader configuration with repeat probes. This is not a VM boot result;
+  QEMU/SSH acceptance remains separate.
+
+### G04 — Secure Arch image bootstrap credentials
+- **Release intent:** B-0.4; keep the workspace at 0.3.0 until this milestone
+  and its release checks are complete.
+- **Dep:** G03.
+- **Files:** `crates/borea-cli/src/main.rs`,
+  `crates/borea-run/src/image.rs`, `crates/borea-run/src/image-bootstrap.sh`,
+  `crates/xtask/src/main.rs`, `crates/borea-cli/tests/cli.rs`,
+  `docs/{DECISIONS,IMAGE-EXECUTION,IMPLEMENTATION,RUNTIME,TASKS}.md`.
+- **Deliverable:** require a bounded, private, non-symlink password file for
+  the Arch bootstrap account; transport its contents only over stdin; never
+  include the value in argv, environment, receipts or diagnostics. Lock root,
+  require a password for sudo, and report bootloader configuration separately
+  from VM boot verification.
+- **Done when:** hard-coded credentials and `NOPASSWD` are absent; targeted
+  tests cover password-file validation, redaction and the mandatory CLI option;
+  privileged disposable-image CI exercises both filesystems with a canary that
+  is absent from receipts and output. Legacy G03 receipts are refused, so old
+  images cannot be resumed as if they were secured. No VM boot is claimed by
+  this card.
+- **Verify:** `cargo test -p borea-run image::tests`,
+  `cargo test -p borea-cli --test cli image_bootstrap_requires_a_password_file`,
+  `sudo env BOREA_RUNTIME_CACHE=/absolute/runtime-cache target/release/xtask disk bootstrap --fs btrfs`
+  and the same command with `--fs ext4`; existing workspace checks.
+- **Out:** QEMU/SSH boot acceptance, LUKS2, and non-Arch image bootstrap.

@@ -3,6 +3,23 @@ use std::{fs, process::Command};
 fn borea() -> Command {
     Command::new(env!("CARGO_BIN_EXE_borea"))
 }
+#[test]
+fn image_bootstrap_requires_a_password_file() {
+    let output = borea()
+        .args([
+            "image",
+            "bootstrap",
+            "--family",
+            "arch",
+            "--journal",
+            "/tmp/borea-bootstrap-test.journal",
+            "--yes",
+        ])
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(2));
+    assert!(String::from_utf8_lossy(&output.stderr).contains("--password-file required"));
+}
 fn fixture_plan() -> Plan {
     let mut p = Plan {
         schema: 2,
