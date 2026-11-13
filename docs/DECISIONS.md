@@ -356,7 +356,9 @@ family images using native signed package managers on CI builders. Publish new,
 versioned gzip/tar assets and SHA-256 manifests; never overwrite pinned assets.
 The runtime consumer uses reviewed SHA-256/size pins before extraction, supports
 an offline cache, and executes tools through a read-only Bubblewrap filesystem
-and private namespaces. No host distro package manager or Docker daemon is
+and private namespaces with transient log/cache directories. Cache extraction
+normalizes owner access for root-only files and strips privileged metadata.
+No host distro package manager or Docker daemon is
 required for runtime consumption. Host kernel, curl/TLS and Bubblewrap are
 explicit prerequisites; inability to isolate is a hard failure.
 **Build-only tooling:** Docker and Python on GitHub-hosted runners. Native

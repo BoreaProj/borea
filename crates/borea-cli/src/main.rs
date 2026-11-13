@@ -89,7 +89,7 @@ fn run() -> Result<()> {
     let mut raw = std::env::args().skip(1).collect::<Vec<_>>();
     if raw.is_empty() || raw == ["--help"] || raw == ["help"] {
         println!(
-            "borea {} — experimental installer planning and fixture tools\n\nCommands:\n  doctor --family FAMILY [--json]\n  catalogue --family FAMILY [--json]\n  explain COMPONENT --family FAMILY\n  plan --config FILE --out FILE [--dry-run] [--fixture --identity FILE]\n  apply PLAN --dry-run\n  apply PLAN --yes --device DEVICE (live execution gated)\n  apply PLAN --fixture-root DIR --journal FILE [--resume]\n  verify PLAN --root DIR | --ssh USER@HOST [--json]\n  status --journal FILE\n  omarchy configure --config FILE [--json]\n  omarchy trim --list | ID... --dry-run\n  omarchy defaults status --policy FILE\n\nNo VM cells are supported yet. See docs/IMPLEMENTATION.md.",
+            "borea {} — experimental installer planning, family runtimes and fixture tools\n\nCommands:\n  doctor --family FAMILY [--cache DIR] [--json]\n  runtime list|fetch|verify|probe|exec [--family FAMILY] [--cache DIR]\n  catalogue --family FAMILY [--json]\n  explain COMPONENT --family FAMILY\n  plan --config FILE --out FILE [--dry-run] [--fixture --identity FILE]\n  apply PLAN --dry-run\n  apply PLAN --yes --device DEVICE (live execution gated)\n  apply PLAN --fixture-root DIR --journal FILE [--resume]\n  verify PLAN --root DIR | --ssh USER@HOST [--json]\n  status --journal FILE\n  omarchy configure --config FILE [--json]\n  omarchy trim --list | ID... --dry-run\n  omarchy defaults status --policy FILE\n\nNo VM cells are supported yet. See docs/IMPLEMENTATION.md.",
             version()
         );
         return Ok(());
@@ -99,11 +99,15 @@ fn run() -> Result<()> {
         return Ok(());
     }
     let cmd = raw.remove(0);
+    if cmd == "runtime" {
+        return runtime(raw);
+    }
     if cmd == "omarchy" {
         return omarchy(raw);
     }
     let (values, flags): (&[&str], &[&str]) = match cmd.as_str() {
-        "doctor" | "catalogue" | "explain" => (&["family"], &["json"]),
+        "doctor" => (&["family", "cache"], &["json"]),
+        "catalogue" | "explain" => (&["family"], &["json"]),
         "plan" => (
             &["config", "out", "identity"],
             &[
@@ -128,44 +132,29 @@ fn run() -> Result<()> {
         "doctor" => {
             a.no_positionals()?;
             let f = FamilyId::parse(a.required("family")?)?;
-            let r = recipe::family(f)?;
-            let mut tools = vec![
-                r.bootstrap,
-                "sgdisk".into(),
-                "mkfs.ext4".into(),
-                "mkfs.btrfs".into(),
-                "mkfs.fat".into(),
-                "btrfs".into(),
-                "lsblk".into(),
-                "cryptsetup".into(),
-                "mount".into(),
-                "udevadm".into(),
-            ];
-            tools.sort();
-            tools.dedup();
-            let tools = tools
-                .into_iter()
-                .map(|t| {
-                    let available = std::env::split_paths(
-                        &std::env::var_os("PATH").unwrap_or_default(),
-                    )
-                    .any(|dir| {
-                        use std::os::unix::fs::PermissionsExt;
-                        std::fs::metadata(dir.join(&t))
-                            .is_ok_and(|m| m.is_file() && m.permissions().mode() & 0o111 != 0)
-                    });
-                    serde_json::json!({"tool":t,"available":available})
-                })
-                .collect::<Vec<_>>();
+            let cache = a
+                .value("cache")
+                .map(PathBuf::from)
+                .map(Ok)
+                .unwrap_or_else(borea_run::runtime::default_cache)?;
+            let lock = borea_core::runtime::RuntimeLock::embedded()?;
+            let spec = lock.get(f)?;
+            let result = borea_run::runtime::probe(spec, &cache);
             let uefi = Path::new("/sys/firmware/efi").is_dir();
-            let passed = uefi && tools.iter().all(|t| t["available"] == true);
+            let runtime = match &result {
+                Ok(s) => serde_json::to_value(s)?,
+                Err(e) => {
+                    serde_json::json!({"verified":false,"error":e.to_string(),"remedy":format!("borea runtime fetch --family {} --cache {}",f.as_str(),cache.display())})
+                }
+            };
+            let passed = uefi && result.is_ok();
             output(
-                &serde_json::json!({"schema":1,"family":f,"uefi":uefi,"tools":tools,"passed":passed,"live_apply_enabled":false}),
+                &serde_json::json!({"schema":2,"family":f,"uefi":uefi,"runtime":runtime,"passed":passed,"live_apply_enabled":false}),
                 json,
             )?;
             if !passed {
                 return Err(BoreaError::unsupported(
-                    "host preflight incomplete; provide the required Borea runtime tools and UEFI boot; independent runtime provisioning is pending G01",
+                    "preflight incomplete; fetch/probe the Borea runtime and use UEFI for installation; disk execution remains a separate milestone",
                 ));
             }
         }
@@ -390,4 +379,64 @@ fn omarchy(mut raw: Vec<String>) -> Result<()> {
         borea_run::omarchy::enforce_gate()?;
     }
     output(&serde_json::json!(preview), a.flag("json"))
+}
+
+fn runtime(mut raw: Vec<String>) -> Result<()> {
+    if raw.is_empty() || raw == ["--help"] {
+        println!(
+            "borea runtime list [--json]\nborea runtime fetch --family FAMILY [--cache DIR] [--archive FILE] [--offline] [--json]\nborea runtime verify|probe --family FAMILY [--cache DIR] [--json]\nborea runtime exec --family FAMILY [--cache DIR] [--network] -- COMMAND [ARGS...]\nRuntime execution is read-only and has no host disk/home/package-state mounts."
+        );
+        return Ok(());
+    }
+    let sub = raw.remove(0);
+    let trailing = if let Some(i) = raw.iter().position(|s| s == "--") {
+        let cmd = raw.split_off(i + 1);
+        raw.pop();
+        cmd
+    } else {
+        Vec::new()
+    };
+    let (values, flags): (&[&str], &[&str]) = match sub.as_str() {
+        "list" => (&[], &["json"]),
+        "fetch" => (&["family", "cache", "archive"], &["json", "offline"]),
+        "verify" | "probe" => (&["family", "cache"], &["json"]),
+        "exec" => (&["family", "cache"], &["network"]),
+        _ => {
+            return Err(BoreaError::invalid(
+                "unknown runtime command; use runtime --help",
+            ));
+        }
+    };
+    let a = Args::parse(raw, values, flags)?;
+    a.no_positionals()?;
+    if sub != "exec" && !trailing.is_empty() {
+        return Err(BoreaError::invalid("only runtime exec accepts a command"));
+    }
+    let lock = borea_core::runtime::RuntimeLock::embedded()?;
+    if sub == "list" {
+        return output(&serde_json::to_value(&lock)?, a.flag("json"));
+    }
+    let f = FamilyId::parse(a.required("family")?)?;
+    let spec = lock.get(f)?;
+    let cache = a
+        .value("cache")
+        .map(PathBuf::from)
+        .map(Ok)
+        .unwrap_or_else(borea_run::runtime::default_cache)?;
+    if sub == "exec" {
+        borea_run::runtime::run(spec, &cache, &trailing, a.flag("network"))?;
+        return Ok(());
+    }
+    let state = match sub.as_str() {
+        "fetch" => borea_run::runtime::fetch(
+            spec,
+            &cache,
+            a.value("archive").map(Path::new),
+            a.flag("offline"),
+        )?,
+        "verify" => borea_run::runtime::verify(spec, &cache)?,
+        "probe" => borea_run::runtime::probe(spec, &cache)?,
+        _ => unreachable!(),
+    };
+    output(&serde_json::to_value(state)?, a.flag("json"))
 }

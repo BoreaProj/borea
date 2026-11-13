@@ -406,3 +406,49 @@ fn omarchy_configure_is_read_only_and_shows_preserved_apps() {
     assert_eq!(v["selection"]["chromium_preserved"], true);
     assert_eq!(fs::read_dir(d.path()).unwrap().count(), 1);
 }
+
+#[test]
+fn runtime_list_and_offline_miss() {
+    let o = borea()
+        .args(["runtime", "list", "--json"])
+        .output()
+        .unwrap();
+    assert!(o.status.success());
+    let v: serde_json::Value = serde_json::from_slice(&o.stdout).unwrap();
+    assert_eq!(v["runtimes"].as_array().unwrap().len(), 4);
+    let d = tempfile::tempdir().unwrap();
+    let o = borea()
+        .args([
+            "runtime",
+            "fetch",
+            "--family",
+            "debian",
+            "--offline",
+            "--cache",
+        ])
+        .arg(d.path())
+        .output()
+        .unwrap();
+    assert_eq!(o.status.code(), Some(3));
+    assert!(String::from_utf8_lossy(&o.stderr).contains("E_RUNTIME_OFFLINE"));
+}
+#[test]
+fn doctor_reports_missing_runtime_without_host_package_manager_fallback() {
+    let d = tempfile::tempdir().unwrap();
+    let o = borea()
+        .args(["doctor", "--family", "arch", "--cache"])
+        .arg(d.path())
+        .arg("--json")
+        .output()
+        .unwrap();
+    assert_eq!(o.status.code(), Some(3));
+    let v: serde_json::Value = serde_json::from_slice(&o.stdout).unwrap();
+    assert_eq!(v["schema"], 2);
+    assert_eq!(v["runtime"]["verified"], false);
+    assert!(
+        v["runtime"]["remedy"]
+            .as_str()
+            .unwrap()
+            .contains("runtime fetch")
+    );
+}

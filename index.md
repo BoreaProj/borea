@@ -10,11 +10,12 @@ Arch, Debian, Fedora and openSUSE. Borea does not require a distro live
 environment or a Borea-specific live environment.
 
 **Experimental implementation preview.** Planning, validation, dry-run and
-fixture tools are available. System installation, independent runtime
-provisioning and Omarchy removals are not ready; no VM install cell has passed.
+fixture tools are available. Independent tool runtimes are available. System installation
+and Omarchy removals are not ready; no VM install cell has passed.
 
 - [Current implementation and commands](docs/IMPLEMENTATION.md)
 - [Build plan](docs/PLAN.md)
+- [Independent family runtimes](docs/RUNTIME.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Capability matrix](docs/MATRIX.md)
 - [Arch Omarchy app controls](docs/OMARCHY.md)

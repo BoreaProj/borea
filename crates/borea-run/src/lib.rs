@@ -1,6 +1,7 @@
 //! Execution boundaries, append-only journals and offline verification.
 pub mod journal;
 pub mod omarchy;
+pub mod runtime;
 pub mod verify;
 use borea_core::*;
 use std::{

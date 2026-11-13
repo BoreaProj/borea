@@ -71,9 +71,11 @@ the repository root.
 ## G — Independent runtime
 
 ### G01 — Standalone runtime/tool provisioning contract
-- **Status:** pending; required by D-031 before claiming standalone installation.
-- **Files:** `crates/borea-cli/src/main.rs`, `crates/borea-run/src/`,
-  `crates/borea-distro/src/`, `recipes/families/`, `crates/xtask/src/`,
+- **Status:** runtime delivery implemented; four bundles published and tool
+  execution smoke-tested. Full installation acceptance still depends on B/F cards.
+- **Files:** `crates/borea-cli/`, `crates/borea-core/src/{runtime,error,lib}.rs`,
+  `crates/borea-run/`, `runtime/`, `.github/workflows/`, `Cargo.toml`, `Cargo.lock`,
+  `recipes/families/`, `crates/xtask/src/`,
   `docs/ARCHITECTURE.md`, `docs/OPERATIONS.md`, `docs/TESTING.md`.
 - **Deliverable:** Borea supplies or provisions verified bootstrap, storage and
   boot tools independently of the target distro and execution host package
@@ -83,7 +85,11 @@ the repository root.
   without distro live media or a Borea-specific live environment; missing or
   unverified runtime tools fail before mutation; host package state is unchanged.
 - **Verify:** independent runtime lane in `docs/TESTING.md` §8, then each exact
-  family VM cell and the workspace checks. No runtime artifact exists yet.
+  family VM cell and the workspace checks. Runtime artifacts are published under
+  `runtime-2026-11-13.1`; see `docs/RUNTIME.md` and the runtime validation report.
+- **Remaining:** integrate the runtime with the image executor, define precise
+  target/device mounts and privileges, then prove each family installs/boots in
+  a VM. Tool probes do not satisfy the VM installation acceptance condition.
 - **Out:** assuming target-family live media; silently installing target package
   managers into the user's host; adding ISO/USB features without a separate card.
 

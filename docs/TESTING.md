@@ -244,7 +244,8 @@ UEFI mode, exact commands and VM artifacts in `docs/releases/<version>.md`.
 Prove that Borea supplies/provisions its required tools, keeps target package
 manager state separate from the host, and fails before disk mutation when a
 runtime dependency cannot be verified. G01 defines the implementation work;
-this lane is not implemented yet.
+the runtime tool smoke lane is implemented; full VM installation acceptance
+remains pending. See [RUNTIME.md](RUNTIME.md).
 
 ## 9. CI
 
@@ -312,3 +313,11 @@ index, implementation and plan pages before uploading a Pages artifact.
 Pull requests build documentation without deploying. Main and manual runs
 publish through the `github-pages` environment. Confirm both build/deploy jobs
 and the separate Rust CI; a successful Rust run alone does not verify Pages.
+
+## 13. Runtime delivery smoke tests
+
+Run the offline/unit checks in normal CI, including `cargo xtask runtime check`.
+The real runtime smoke lane uses `runtime/smoke.py` on an x86_64 Linux host with
+Bubblewrap, the release binary and four cached bundles. It executes only help/
+version and isolation probes; it mounts no target disks and counts no VM cells.
+Results and build-run links are recorded in [validation/runtime.md](validation/runtime.md).

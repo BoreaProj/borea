@@ -47,11 +47,12 @@ unused and unmounted.
 ./borea doctor --family suse
 ```
 
-Run the check for your selected target. Runtime packaging/provisioning is not
-implemented yet (G01); the preview checks the host PATH and reports missing
-tools. Do not treat these checks as proof that an independent installation
-runtime has shipped. Live apply remains disabled. The fixture/dry-run commands
-in [IMPLEMENTATION.md](IMPLEMENTATION.md) are usable now.
+First fetch the selected family with `borea runtime fetch --family FAMILY`.
+The runtime supplies the native tools and shared libraries independently of
+the host distro. `doctor` verifies and probes the cached bundle. See
+[RUNTIME.md](RUNTIME.md) for requirements and offline import. Tool delivery
+is implemented; privileged image/disk execution and boot validation are still
+pending, so live apply remains disabled.
 
 ## 3. Write the config
 

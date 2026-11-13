@@ -6,6 +6,7 @@ pub mod matrix;
 pub mod omarchy;
 pub mod plan;
 pub mod recipe;
+pub mod runtime;
 pub use config::*;
 pub use error::{BoreaError, Result};
 pub use plan::*;

@@ -27,8 +27,11 @@ from the selected target family. Neither distro live/rescue media nor a
 Borea-specific live environment is required. Borea must supply or provision its
 installation tooling without assuming that the host uses the target package
 manager. Family-native tools may be used as target implementation details.
-Runtime delivery and isolation are tracked in G01; the preview currently only
-checks host PATH and does not yet satisfy that delivery contract.
+G01 now delivers checksum-pinned family tool bundles with offline caching and
+Bubblewrap execution. `doctor` probes those bundles, not host PATH. See
+[RUNTIME.md](RUNTIME.md) for isolation, prerequisites, transient filesystem paths
+and the boundary before privileged image execution. No host container daemon is
+required by the runtime consumer.
 
 ```text
 borea-cli ──> borea-core <── borea-distro

@@ -12,11 +12,12 @@ or rescue environment nor a Borea-specific live environment is a prerequisite.
 The selected distro is the target; Borea must supply or provision its own
 installation tooling. D-031 supersedes the former distro-live requirement.
 
-The current preview does not yet deliver that independent runtime: `doctor`
-checks host PATH, adapters emit native command intent, and installation stays
-gated. G01 tracks verified runtime delivery/isolation and cross-family VM
-validation. A static binary alone does not provide the external installation
-tools. No bootable Borea environment is claimed or required by this correction.
+G01 now delivers verified runtime bundles for Arch, Debian, Fedora and openSUSE.
+`doctor` probes those independent bundles rather than host PATH. Fetch, offline
+verification, tool execution and namespace isolation are implemented; see
+[RUNTIME.md](RUNTIME.md). Privileged image execution and cross-family VM
+installation validation remain pending. No bootable Borea environment is
+required or created.
 
 ## Arch Omarchy profile
 
@@ -28,6 +29,8 @@ Config/plan schema 2 is emitted; basic schema 1 configs remain readable, but old
 plans require regeneration. The defaults policy and recipe/matrix schemas stay 1.
 The typed upstream install stage is not executable yet; live apply remains gated.
 
+Runtime delivery results are recorded in [validation/runtime.md](validation/runtime.md).
+
 ## Working behavior
 
 | Area | Implemented and tested | Remaining |
@@ -38,7 +41,7 @@ The typed upstream install stage is not executable yet; live apply remains gated
 | Recipes | Embedded family/component data, package maps, dependency sort/cycle detection, compatibility | Full repository/key/source/seed schemas |
 | Plans | Canonical SHA-256, digest validation, UUIDv5 storage IDs, stable ordered phases, config/matrix fingerprints | Full typed action/probe model from architecture |
 | Storage | Draft GPT/FAT/ext4/Btrfs/LUKS command generation, subvolumes, UUID fstab/crypttab | Layout/UUID probes, loop attachment, mount/resume safety |
-| Families | Draft pacstrap/debootstrap/dnf5/zypper argv, base files, account and package intent | Real bootstrap repository setup and chroot lifecycle |
+| Families | Verified independent tool bundles plus draft native argv, base files, account/package intent | Real bootstrap repository setup and chroot lifecycle |
 | Boot | Auto policy, Arch Limine/fallback configs, family GRUB/initramfs intent | Encryption hooks, native GRUB/BLS details, EFI entries, VM boot checks |
 | Sessions/apps | KDE/GNOME/COSMIC, compositor/shell selection, greetd/greeter intent, Firefox/Flatpak/codec package maps | Shell seeds/ownership and upstream package validation; unpinned paths refuse |
 | Execution | Dry-run; confined file-only fixture writes/copies/directories; append-only fsynced journal with lock and stale-plan rejection | Live commands, stdin secrets, signal/timeout handling, cleanup |
@@ -123,6 +126,7 @@ cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
 cargo test --workspace --all-features --locked
 cargo xtask matrix check
 cargo xtask recipe lint
+cargo xtask runtime check
 cargo xtask matrix render --check
 cargo xtask plan golden
 cargo xtask secret canary
@@ -141,7 +145,7 @@ The Arch Omarchy addition is recorded in [validation/omarchy-profile.md](validat
 
 ## Next executable cards
 
-G01 defines independent runtime provisioning and isolation. B01/B02/B03 and
+G01 runtime provisioning and isolation are delivered. B01/B02/B03 and
 B06 remain blocking execution work: a loop-image
 helper with reliable cleanup, read-only layout/UUID probes, and chroot mount
 lifecycle. The smallest next experiment is the 20 GiB Btrfs/ext4 image lane,

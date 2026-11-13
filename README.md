@@ -17,8 +17,9 @@ suit a static Limine config and the other families have native GRUB/BLS/snapper
 integration.
 
 Borea owns its installation workflow and runtime tooling; the selected distro
-is the installation target, not the environment Borea must run inside. Runtime
-provisioning is still pending in this preview (see task G01).
+is the installation target, not the environment Borea must run inside. Verified tool bundles are delivered for all four families; see
+[Independent runtimes](docs/RUNTIME.md). Disk execution and boot validation
+remain separate milestones.
 
 The Arch family also offers an experimental **Omarchy profile**, following
 Linutil/upstream defaults with explicit `keep`, `remove`, replacement and browser
@@ -76,6 +77,7 @@ change cannot be expressed as plan steps and checks, it is out of scope.
 
 ```sh
 cargo build --workspace --locked
+cargo run -p borea-cli -- runtime list --json
 cargo run -p borea-cli -- catalogue --family arch --json
 cargo run -p borea-cli -- plan \
   --config recipes/profiles/minimal.toml \

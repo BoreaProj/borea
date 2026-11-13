@@ -27,6 +27,10 @@ fn run() -> Result<()> {
                 "matrix: complete cells, unique keys, evidence and native package mappings checked; 0 VM-supported cells"
             );
         }
+        ["runtime", "check"] => {
+            borea_core::runtime::RuntimeLock::embedded()?.validate()?;
+            println!("runtime manifest: four content-pinned x86_64 family tool bundles");
+        }
         ["recipe", "lint"] => {
             recipe::lint()?;
             for entry in fs::read_dir(workspace().join("recipes/profiles"))? {
@@ -75,7 +79,7 @@ fn run() -> Result<()> {
             ));
         }
         [] | ["--help"] => println!(
-            "cargo xtask matrix check|render [--check]|verify --strict\ncargo xtask recipe lint\ncargo xtask plan golden [--update]\ncargo xtask secret canary\ncargo xtask disk selftest --stage create\ncargo xtask env --family FAMILY -- COMMAND...\nDisk mutation, VM and installation e2e lanes remain gated; see docs/IMPLEMENTATION.md."
+            "cargo xtask runtime check\ncargo xtask matrix check|render [--check]|verify --strict\ncargo xtask recipe lint\ncargo xtask plan golden [--update]\ncargo xtask secret canary\ncargo xtask disk selftest --stage create\ncargo xtask env --family FAMILY -- COMMAND...\nDisk mutation, VM and installation e2e lanes remain gated; see docs/IMPLEMENTATION.md."
         ),
         _ => {
             return Err(BoreaError::invalid(

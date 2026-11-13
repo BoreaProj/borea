@@ -20,8 +20,9 @@ impl BoreaError {
     pub fn exit_code(&self) -> i32 {
         match self.code {
             "E_UNSUPPORTED" => 3,
-            "E_STEP" | "E_IO" => 4,
+            "E_STEP" | "E_IO" | "E_RUNTIME_EXEC" => 4,
             "E_VERIFY" => 5,
+            code if code.starts_with("E_RUNTIME") => 3,
             _ => 2,
         }
     }
