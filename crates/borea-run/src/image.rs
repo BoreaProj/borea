@@ -315,7 +315,7 @@ pub fn apply(
         receipt.sync_all()?;
     }
     let private = tempfile::Builder::new()
-        .prefix(format!("borea-image-{}-", std::process::id()))
+        .prefix(&format!("borea-image-{}-", std::process::id()))
         .tempdir_in("/tmp")?;
     fs::set_permissions(private.path(), fs::Permissions::from_mode(0o700))?;
     let runtime = crate::runtime::private_snapshot(spec, cache, private.path())?;
