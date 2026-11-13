@@ -1,0 +1,22 @@
+{
+  "arch": {
+    "image": "docker.io/library/archlinux@sha256:fcee73ea1b96e236248f53a213f71276cc9072d9025b58bce9915e32f19963ae",
+    "tag_observed": "base",
+    "checked": "2026-11-13"
+  },
+  "debian": {
+    "image": "docker.io/library/debian@sha256:7378260c0a098d27ac206225db5e7d92b8c7c84ea7afccc86eeb513756bbd392",
+    "tag_observed": "trixie-slim",
+    "checked": "2026-11-13"
+  },
+  "fedora": {
+    "image": "registry.fedoraproject.org/fedora@sha256:1075c0fe0a090c01c03fe5c71cc8ecce6d9b565772ad271e150232aacab39632",
+    "tag_observed": "43",
+    "checked": "2026-11-13"
+  },
+  "suse": {
+    "image": "registry.opensuse.org/opensuse/tumbleweed@sha256:206dc8ac56167e1b900154ade89cf052a7454b00b49c0414a8ad0aa2d341dc7f",
+    "tag_observed": "latest",
+    "checked": "2026-11-13"
+  }
+}

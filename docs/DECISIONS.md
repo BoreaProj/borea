@@ -349,6 +349,30 @@ repository trust, independent runtime and exact VM evidence are still required.
 Live apply and mutation gates stay in place; no supported cell is claimed.
 **References:** pinned files under `recipes/omarchy/upstream.toml`; no new dependency.
 
+### D-034 — Independent family tool bundles with namespace isolation
+**Date:** 2026-11-13
+**Decision:** Build x86_64 root filesystem tool bundles from digest-pinned
+family images using native signed package managers on CI builders. Publish new,
+versioned gzip/tar assets and SHA-256 manifests; never overwrite pinned assets.
+The runtime consumer uses reviewed SHA-256/size pins before extraction, supports
+an offline cache, and executes tools through a read-only Bubblewrap filesystem
+and private namespaces. No host distro package manager or Docker daemon is
+required for runtime consumption. Host kernel, curl/TLS and Bubblewrap are
+explicit prerequisites; inability to isolate is a hard failure.
+**Build-only tooling:** Docker and Python on GitHub-hosted runners. Native
+package repository results are recorded in each resulting content-pinned bundle;
+the build is not claimed reproducible solely from a mutable package mirror.
+**New dependencies approved:** `tar` (default features disabled) and `flate2`
+for bounded, path-confined extraction/verification of runtime archives;
+`sha2` already approved for integrity. `curl` handles HTTPS transport without
+adding an HTTP stack; Bubblewrap supplies maintained namespace isolation.
+**Separation:** This delivers runtime tools; privileged disk execution, image
+installation and VM acceptance remain separate cards. No host disks, home
+folders, package databases or container-engine sockets are mounted by runtime
+inspection/probe commands. Networking is disabled unless explicitly requested.
+**References:** https://github.com/containers/bubblewrap and
+https://docs.rs/tar/latest/tar/struct.Entry.html#method.unpack_in
+
 ---
 
 ## Open

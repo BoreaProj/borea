@@ -1,0 +1,46 @@
+name: Build independent runtimes
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: New runtime release version (never reuse a published version)
+        required: true
+        default: runtime-2026-11-13.1
+permissions:
+  contents: read
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        family: [arch, debian, fedora, suse]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and verify native tools
+        env:
+          RUNTIME_VERSION: ${{ inputs.version }}
+          RUNTIME_FAMILY: ${{ matrix.family }}
+        run: python3 runtime/build.py --family "$RUNTIME_FAMILY" --version "$RUNTIME_VERSION" --out target/runtime-build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: runtime-${{ matrix.family }}
+          path: target/runtime-build/
+          compression-level: 0
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: runtime-*
+          merge-multiple: true
+          path: target/runtime-release
+      - name: Publish checksummed family tool bundles
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUNTIME_VERSION: ${{ inputs.version }}
+        run: python3 runtime/publish.py target/runtime-release "$RUNTIME_VERSION"

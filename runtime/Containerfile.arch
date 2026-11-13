@@ -1,0 +1,3 @@
+ARG BASE_IMAGE
+FROM ${BASE_IMAGE}
+RUN pacman -Syu --noconfirm --needed arch-install-scripts btrfs-progs e2fsprogs dosfstools gptfdisk cryptsetup util-linux systemd git curl tar gzip ca-certificates && pacman -Scc --noconfirm
