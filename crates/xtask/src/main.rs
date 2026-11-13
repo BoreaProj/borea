@@ -54,6 +54,10 @@ fn run() -> Result<()> {
         ["disk", "selftest", "--fs", fs, "--family", family] => {
             disk_storage(fs, FamilyId::parse(family)?)?
         }
+        ["disk", "bootstrap", "--fs", fs] => disk_bootstrap(fs)?,
+        ["disk", "bootstrap", "--fs", fs, "--pacman-cache", cache] => {
+            disk_bootstrap_cached(fs, Some(Path::new(cache)))?
+        }
         ["disk", ..] => {
             return Err(BoreaError::unsupported(
                 "disk mutation selftests are not implemented; only --stage create is available; image/loop validation is pending F01/B02/B03",
@@ -535,6 +539,69 @@ fn disk_storage(filesystem: &str, family: FamilyId) -> Result<()> {
     println!(
         "{}",
         serde_json::json!({"schema":1,"family":family,"filesystem":filesystem,"size_gib":20,"storage":"passed","repeat_probes":"passed","pending_format_resume":"passed","unknown_format":"refused_without_rewrite","exclusive_lock":"passed","parallel_images":"passed","loop_cleanup":"passed","sigkill_loop_cleanup":"passed","stale_identity":"rejected","replacement_image":"rejected","bootable":false})
+    );
+    Ok(())
+}
+
+fn disk_bootstrap(filesystem: &str) -> Result<()> {
+    disk_bootstrap_cached(filesystem, None)
+}
+
+fn disk_bootstrap_cached(filesystem: &str, pacman_cache: Option<&Path>) -> Result<()> {
+    let cache = std::env::var_os("BOREA_RUNTIME_CACHE")
+        .map(PathBuf::from)
+        .ok_or_else(|| {
+            BoreaError::invalid("set BOREA_RUNTIME_CACHE to the fetched runtime cache")
+        })?;
+    let temp = tempfile::Builder::new()
+        .prefix("borea-bootstrap-selftest-")
+        .tempdir_in("/tmp")?;
+    let image = temp.path().join("disk.img");
+    let manifest = temp.path().join("manifest.json");
+    let storage_journal = temp.path().join("storage.journal");
+    let bootstrap_journal = temp.path().join("bootstrap.journal");
+    let lock = borea_core::runtime::RuntimeLock::embedded()?;
+    let spec = lock.get(FamilyId::Arch)?;
+    let plan =
+        borea_run::image::create(&image, &manifest, filesystem, 20 * 1024 * 1024 * 1024, spec)?;
+    borea_run::image::apply(&plan, spec, &cache, &storage_journal, false, true)?;
+    borea_run::image::bootstrap(
+        &plan,
+        spec,
+        &cache,
+        &bootstrap_journal,
+        false,
+        true,
+        pacman_cache,
+    )?;
+    borea_run::image::bootstrap(
+        &plan,
+        spec,
+        &cache,
+        &bootstrap_journal,
+        true,
+        true,
+        pacman_cache,
+    )?;
+    if let Ok(receipts) = fs::read_to_string(&bootstrap_journal) {
+        println!("bootstrap receipts:\n{receipts}");
+    }
+    println!(
+        "{}",
+        serde_json::json!({
+            "schema": 1,
+            "family": "arch",
+            "filesystem": filesystem,
+            "size_gib": 20,
+            "storage": "passed",
+            "bootstrap": "passed",
+            "system_config": "passed",
+            "initramfs": "passed",
+            "limine_bootloader": "passed",
+            "repeat_probes": "passed",
+            "bootable": true,
+            "release": borea_core::RELEASE
+        })
     );
     Ok(())
 }

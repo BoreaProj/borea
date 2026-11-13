@@ -1,9 +1,9 @@
 {
   "schema": 2,
-  "id": "630b5f818860da875943ae628a298e8a",
+  "id": "615ada403c7467f2aa256dfcd12a1f78",
   "created": "1970-01-01T00:00:00Z",
-  "borea_version": "0.1.0",
-  "digest": "630b5f818860da875943ae628a298e8a3d6ebb27f5464827ca323d4b91d5b07d",
+  "borea_version": "B-0.3",
+  "digest": "615ada403c7467f2aa256dfcd12a1f781b589b4a9c7b1d6b699cc2d4ec29e8e8",
   "config_digest": "dcb406c9c64223e93fc31b1af81e72717d2e4e4b55f1a88fa23c0437397300d9",
   "matrix_digest": "2c8e72b621a2407f672a030615d9fd7f732adb37cb06ae7dacfeaca926f5b593",
   "family": "suse",

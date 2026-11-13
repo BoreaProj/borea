@@ -1,9 +1,9 @@
-# First implementation preview
+# Implementation preview (B-0.3)
 
-This is the first executable version of the restarted Borea project. It is not
-v0.1 and cannot install a system yet. The original plan remains the acceptance
-contract. The preview deliberately exposes incomplete paths as errors rather
-than reporting an installation or VM pass.
+This is the B-0.3 version of the restarted Borea project. The project release
+naming follows `B-<major>.<minor>` (D-036) with Cargo workspace version `0.3.0`.
+The original plan remains the acceptance contract. The preview deliberately exposes
+incomplete paths as errors rather than reporting an unverified installation or VM pass.
 
 ## Independent product contract
 
@@ -12,10 +12,12 @@ or rescue environment nor a Borea-specific live environment is a prerequisite.
 The selected distro is the target; Borea must supply or provision its own
 installation tooling. D-031 supersedes the former distro-live requirement.
 
-G01 now delivers verified runtime bundles for Arch, Debian, Fedora and openSUSE.
+G01 delivers verified runtime bundles for Arch, Debian, Fedora and openSUSE.
 `doctor` probes those independent bundles rather than host PATH. Fetch, offline
 verification, tool execution and namespace isolation are implemented; see
-[RUNTIME.md](RUNTIME.md). G02 adds closed disposable-image storage execution. Cross-family VM
+[RUNTIME.md](RUNTIME.md). G02 adds closed disposable-image storage execution.
+G03 adds closed Arch target bootstrap and Limine bootloader installation on
+disposable images; see [IMAGE-EXECUTION.md](IMAGE-EXECUTION.md). Cross-family VM
 installation validation remains pending. No bootable Borea environment is
 required or created.
 

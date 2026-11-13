@@ -467,8 +467,233 @@ pub fn apply(
     }
     Ok(())
 }
-fn validate_journal(text: &str, digest: &str) -> Result<()> {
-    let steps = ["partition", "esp", "boot", "root"];
+
+/// Execute target Arch bootstrap, base configuration and Limine bootloader on the prepared image layout.
+pub fn bootstrap(
+    plan: &ImagePlan,
+    spec: &RuntimeSpec,
+    cache: &Path,
+    journal: &Path,
+    resume: bool,
+    yes: bool,
+    pacman_cache: Option<&Path>,
+) -> Result<()> {
+    root()?;
+    plan.validate(spec)?;
+    if spec.family != FamilyId::Arch {
+        return Err(fail(
+            "bootstrap executor is currently supported for Arch only; other families remain gated",
+        ));
+    }
+    if !yes {
+        return Err(fail("image bootstrap requires --yes"));
+    }
+    let image = locked(&plan.image, false)?;
+    let m = image.metadata()?;
+    if (m.dev(), m.ino(), m.len()) != (plan.device, plan.inode, plan.bytes) {
+        return Err(fail("image identity changed; recreate/replan"));
+    }
+    let mut receipt = locked(journal, !resume)?;
+    if !resume {
+        File::open(
+            journal
+                .parent()
+                .ok_or_else(|| fail("journal needs a parent"))?,
+        )?
+        .sync_all()?;
+    }
+    if resume {
+        let mut text = String::new();
+        (&mut receipt).take(65537).read_to_string(&mut text)?;
+        validate_bootstrap_journal(&text, &plan.digest)?;
+    } else {
+        writeln!(receipt, "{}", plan.digest)?;
+        receipt.sync_all()?;
+    }
+    let private = tempfile::Builder::new()
+        .prefix(&format!("borea-bootstrap-{}-", std::process::id()))
+        .tempdir_in("/tmp")?;
+    fs::set_permissions(private.path(), fs::Permissions::from_mode(0o700))?;
+    let runtime = crate::runtime::private_snapshot(spec, cache, private.path())?;
+    fs::create_dir(runtime.join("target"))?;
+    fs::write(runtime.join("receipt"), [])?;
+    fs::write(runtime.join("bootstrap.sh"), [])?;
+    let script = private.path().join("bootstrap.sh");
+    fs::write(&script, include_bytes!("image-bootstrap.sh"))?;
+    let whole = Loop::attach(&image, 0, 0)?;
+    let esp = Loop::attach(&image, MIB, GIB)?;
+    let boot = Loop::attach(&image, MIB + GIB, 2 * GIB)?;
+    let rootdev = Loop::attach(&image, MIB + 3 * GIB, plan.bytes - 2 * MIB - 3 * GIB)?;
+    let mut cmd = Command::new("/usr/bin/bwrap");
+    cmd.env_clear()
+        .args([
+            "--die-with-parent",
+            "--unshare-pid",
+            "--unshare-ipc",
+            "--unshare-uts",
+            "--share-net",
+            "--cap-drop",
+            "ALL",
+            "--cap-add",
+            "CAP_SYS_ADMIN",
+            "--cap-add",
+            "CAP_SYS_CHROOT",
+            "--cap-add",
+            "CAP_MKNOD",
+            "--cap-add",
+            "CAP_CHOWN",
+            "--cap-add",
+            "CAP_FOWNER",
+            "--cap-add",
+            "CAP_DAC_OVERRIDE",
+            "--cap-add",
+            "CAP_SETUID",
+            "--cap-add",
+            "CAP_SETGID",
+            "--cap-add",
+            "CAP_FSETID",
+            "--cap-add",
+            "CAP_SETFCAP",
+            "--ro-bind",
+        ])
+        .arg(runtime)
+        .arg("/")
+        .args([
+            "--proc",
+            "/proc",
+            "--dev",
+            "/dev",
+            "--tmpfs",
+            "/tmp",
+            "--tmpfs",
+            "/run",
+            "--tmpfs",
+            "/var/tmp",
+            "--tmpfs",
+            "/var/log",
+            "--tmpfs",
+            "/var/cache",
+            "--dir",
+            "/target",
+        ]);
+    if let Ok(resolv) = fs::canonicalize("/etc/resolv.conf") {
+        cmd.arg("--ro-bind").arg(resolv).arg("/etc/resolv.conf");
+    }
+    if let Some(pkg_cache) = pacman_cache.filter(|p| p.is_dir()) {
+        cmd.arg("--bind")
+            .arg(pkg_cache)
+            .arg("/var/cache/pacman/pkg");
+    }
+    for (l, name) in [
+        (&whole, "disk"),
+        (&esp, "esp"),
+        (&boot, "boot"),
+        (&rootdev, "root"),
+    ] {
+        cmd.arg("--dev-bind")
+            .arg(&l.path)
+            .arg(format!("/dev/borea-{name}"));
+    }
+    cmd.arg("--bind")
+        .arg(format!(
+            "/proc/{}/fd/{}",
+            std::process::id(),
+            receipt.as_raw_fd()
+        ))
+        .arg("/receipt")
+        .arg("--ro-bind")
+        .arg(script)
+        .arg("/bootstrap.sh")
+        .args([
+            "--chdir",
+            "/",
+            "--clearenv",
+            "--setenv",
+            "PATH",
+            "/usr/sbin:/usr/bin:/sbin:/bin",
+            "--setenv",
+            "LC_ALL",
+            "C",
+            "--",
+            "/bin/sh",
+            "/bootstrap.sh",
+        ])
+        .arg(&plan.filesystem)
+        .arg(uuid(&plan.seed, "esp"))
+        .arg(uuid(&plan.seed, "boot"))
+        .arg(uuid(&plan.seed, "root"))
+        .arg(uuid(&plan.seed, "disk"))
+        .arg(((plan.bytes - MIB) / 512 - 1).to_string())
+        .arg(if resume { "resume" } else { "new" })
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::piped());
+    cmd.process_group(0);
+    let mut child = RunningChild {
+        child: cmd.spawn()?,
+        running: true,
+    };
+    let stderr = child
+        .child
+        .stderr
+        .take()
+        .ok_or_else(|| fail("missing diagnostic pipe"))?;
+    let reader = std::thread::spawn(move || {
+        let mut tail = Vec::new();
+        let mut buf = [0; 4096];
+        let mut stream = stderr;
+        while let Ok(n) = stream.read(&mut buf) {
+            if n == 0 {
+                break;
+            }
+            tail.extend_from_slice(&buf[..n]);
+            if tail.len() > 8192 {
+                tail.drain(..tail.len() - 8192);
+            }
+        }
+        tail
+    });
+    let start = Instant::now();
+    let status = loop {
+        if let Some(s) = child.child.try_wait()? {
+            child.running = false;
+            break s;
+        }
+        if start.elapsed() > Duration::from_secs(1200) {
+            unsafe {
+                libc::kill(-(child.child.id() as i32), libc::SIGKILL);
+            }
+            child.child.wait()?;
+            child.running = false;
+            return Err(fail(
+                "image bootstrap timeout; inspect receipt and resume only if probes pass",
+            ));
+        }
+        std::thread::sleep(Duration::from_millis(100));
+    };
+    let diagnostics = reader
+        .join()
+        .map_err(|_| fail("diagnostic reader failed"))?;
+    image.sync_all()?;
+    receipt.seek(SeekFrom::Start(0))?;
+    let mut text = String::new();
+    (&mut receipt).take(65537).read_to_string(&mut text)?;
+    validate_bootstrap_journal(&text, &plan.digest)?;
+    if !status.success() || !text.ends_with("verified-bootable\n") {
+        return Err(fail(format!(
+            "image bootstrap execution failed; inspect receipt before resume: {}",
+            String::from_utf8_lossy(&diagnostics)
+        )));
+    }
+    Ok(())
+}
+
+fn validate_step_journal(
+    text: &str,
+    digest: &str,
+    steps: &[&str],
+    final_record: &str,
+) -> Result<()> {
     let mut lines = text.lines();
     if lines.next() != Some(digest) || !text.ends_with('\n') || text.len() > 65536 {
         return Err(fail("stale, truncated or invalid image journal"));
@@ -476,7 +701,7 @@ fn validate_journal(text: &str, digest: &str) -> Result<()> {
     let mut completed = 0;
     let mut active = false;
     for line in lines {
-        if line == "verified" {
+        if line == final_record {
             if active || completed != steps.len() {
                 return Err(fail("premature verification receipt"));
             }
@@ -484,7 +709,7 @@ fn validate_journal(text: &str, digest: &str) -> Result<()> {
         }
         let step = steps
             .get(completed)
-            .ok_or_else(|| fail("receipt after completed storage"))?;
+            .ok_or_else(|| fail("receipt after completed steps"))?;
         if line == format!("start:{step}") && !active {
             active = true;
         } else if line == format!("ok:{step}") && active {
@@ -496,9 +721,48 @@ fn validate_journal(text: &str, digest: &str) -> Result<()> {
     }
     Ok(())
 }
+
+pub fn validate_journal(text: &str, digest: &str) -> Result<()> {
+    validate_step_journal(
+        text,
+        digest,
+        &["partition", "esp", "boot", "root"],
+        "verified",
+    )
+}
+
+pub fn validate_bootstrap_journal(text: &str, digest: &str) -> Result<()> {
+    validate_step_journal(
+        text,
+        digest,
+        &[
+            "storage_probe",
+            "pacstrap",
+            "system_config",
+            "initramfs",
+            "bootloader",
+        ],
+        "verified-bootable",
+    )
+}
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn bootstrap_journals_validate() {
+        let valid = "abc\nstart:storage_probe\nok:storage_probe\nstart:pacstrap\nok:pacstrap\nstart:system_config\nok:system_config\nstart:initramfs\nok:initramfs\nstart:bootloader\nok:bootloader\nverified-bootable\n";
+        assert!(validate_bootstrap_journal(valid, "abc").is_ok());
+        assert!(validate_bootstrap_journal("abc\nstart:storage_probe\n", "abc").is_ok());
+        for bad in [
+            "abc",
+            "wrong_digest\n",
+            "abc\nstart:storage_probe\nok:storage_probe\nverified-bootable\n",
+            "abc\nstart:unknown\n",
+            "abc\nok:bootloader\n",
+        ] {
+            assert!(validate_bootstrap_journal(bad, "abc").is_err());
+        }
+    }
     #[test]
     fn journals_reject_stale_truncated_unknown() {
         assert!(validate_journal("abc\nstart:partition\nok:partition\nstart:esp\nok:esp\nstart:boot\nok:boot\nstart:root\nok:root\nverified\n", "abc").is_ok());

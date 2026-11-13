@@ -1,9 +1,9 @@
 {
   "schema": 2,
-  "id": "bd49827dbf9d474f2f4be8b2689e0990",
+  "id": "70f9cabeafb08ca727fa562be54b14f6",
   "created": "1970-01-01T00:00:00Z",
-  "borea_version": "0.1.0",
-  "digest": "bd49827dbf9d474f2f4be8b2689e09900118b59979cf42811855eb29b5907057",
+  "borea_version": "B-0.3",
+  "digest": "70f9cabeafb08ca727fa562be54b14f65ff43a7cea916b2f437f3067250e801e",
   "config_digest": "41c713a78056c02109cea00f9777d6425ce5d32e3a46cc681175eb9916073b66",
   "matrix_digest": "2c8e72b621a2407f672a030615d9fd7f732adb37cb06ae7dacfeaca926f5b593",
   "family": "arch",

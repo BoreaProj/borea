@@ -1,9 +1,9 @@
 {
   "schema": 2,
-  "id": "26834468e5fd1e51a04cc17414c48c40",
+  "id": "9c95f3f3df228714b86be53a7464aedd",
   "created": "1970-01-01T00:00:00Z",
-  "borea_version": "0.1.0",
-  "digest": "26834468e5fd1e51a04cc17414c48c40e9920494c2f7aaf7ac7d8e1d48ed344d",
+  "borea_version": "B-0.3",
+  "digest": "9c95f3f3df228714b86be53a7464aedd6febfba2755feab5fa09b2371271b804",
   "config_digest": "63a66e3e8f7b9c203c3d83345c0ee53669b7f1267c99de69a9853a73dbc3e82a",
   "matrix_digest": "2c8e72b621a2407f672a030615d9fd7f732adb37cb06ae7dacfeaca926f5b593",
   "family": "debian",
