@@ -672,3 +672,18 @@ release. Deferred cards stay in this file marked `deferred`.
   bootloaders. These remain gated pending separate execution/VM validation.
 - **Verify:** privileged disposable-image CI for both filesystems; rejection
   and stale-identity tests; existing workspace checks.
+
+### G03 — Closed image Arch bootstrap and Limine bootloader executor
+- **Release:** B-0.3 (workspace version 0.3.0).
+- **Scope:** Borea-created raw images with verified G02 storage layout;
+  pinned Arch runtime bundle; root-private snapshot with shared host networking
+  for package retrieval; execute `pacstrap` to install base packages (`base`,
+  `linux`, `linux-firmware`, `btrfs-progs`, `networkmanager`, `sudo`, `zram-generator`,
+  `openssh`, `limine`, `efibootmgr`); target chroot configuration (fstab,
+  hostname, hosts, locale-gen, timezone, user, sudoers, NetworkManager/sshd services);
+  initramfs generation (`mkinitcpio -P`); Limine EFI binary install and
+  `limine.conf` config generation; ordered durable receipts and complete unmount cleanup.
+- **Out:** non-Arch distro bootstraps (Debian/Fedora/openSUSE image bootstrap remain
+  subsequent cards), physical disks, encrypted root, Omarchy script runner.
+- **Verify:** privileged disposable-image bootstrap CI producing a bootable Arch raw
+  image; repeat execution probes; existing workspace checks.

@@ -38,3 +38,35 @@ jobs:
         with:
           name: image-storage-${{ matrix.family }}-${{ matrix.fs }}
           path: target/image-validation
+
+  bootstrap:
+    needs: [storage]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        fs: [btrfs, ext4]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.99.1
+      - uses: Swatinem/rust-cache@v2
+      - name: Namespace prerequisite
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y bubblewrap
+      - name: Build and fetch pinned independent Arch runtime
+        run: |
+          cargo build --release --locked -p borea-cli -p xtask
+          target/release/borea runtime fetch --family arch --cache "$RUNNER_TEMP/borea-image-runtime"
+      - name: Real disposable-image Arch bootstrap and Limine bootloader
+        run: |
+          mkdir -p target/bootstrap-validation
+          set -o pipefail
+          sudo env BOREA_RUNTIME_CACHE="$RUNNER_TEMP/borea-image-runtime" target/release/xtask disk bootstrap --fs '${{ matrix.fs }}' 2>&1 | tee 'target/bootstrap-validation/${{ matrix.fs }}.log'
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: image-bootstrap-arch-${{ matrix.fs }}
+          path: target/bootstrap-validation

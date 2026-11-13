@@ -63,3 +63,25 @@ A real SIGKILL test checks that image loop mappings disappear. Power-loss
 recovery and every possible signal timing are not yet proven. SIGKILL can leave
 root-private runtime staging under `/tmp/borea-image-PID-*`; ordinary temporary
 file cleanup reclaims it. The ephemeral test runner reclaims its own staging.
+
+## Target bootstrap and Limine bootloader (B-0.3 / G03)
+
+G03 extends image execution with closed target bootstrap and bootloader
+installation on the verified storage layout. It requires network access to
+retrieve upstream packages into `/target` and installs `base`, `linux`,
+`linux-firmware`, `btrfs-progs`, `networkmanager`, `sudo`, `zram-generator`,
+`openssh`, `limine` and `efibootmgr`.
+
+```sh
+sudo borea image bootstrap --family arch --manifest /absolute/test.image.json \
+  --cache /absolute/runtime-cache --journal /absolute/test.bootstrap.journal --yes
+```
+
+Target configuration sets hostname, hosts, locale generation, default user,
+sudoers drop-in, NetworkManager/sshd service activation, `mkinitcpio -P` initramfs
+build and Limine EFI/config setup. Receipts sync `storage_probe`, `pacstrap`,
+`system_config`, `initramfs`, `bootloader` and `verified-bootable`.
+Repeat execution probes target files before skipping completed steps.
+
+Validation: `sudo env BOREA_RUNTIME_CACHE=/absolute/runtime-cache \
+  target/release/xtask disk bootstrap --fs btrfs` (repeat for `ext4`).
