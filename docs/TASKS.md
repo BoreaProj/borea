@@ -14,10 +14,10 @@ the repository root.
 | Day | Must finish | Can run in parallel |
 | --- | --- | --- |
 | D0 | A01, A03, A04, A05, A06, F01 | A02, A07, F02 |
-| D1 | A08, A09, B01, B02, B03, B05, B06 | A10, F03 |
-| D2 | C01, C02, C06, B07, B08, F04 | A10 |
+| D1 | A08, A09, B01, B02, B03, B05, B06, B07 | A10, F03 |
+| D2 | C01, C02, C06, B08, B09, B10, F04 | A10 |
 | D3 | A10, C03, C04 | E01, E02 |
-| D4 | C05, C07 | E03, E04 |
+| D4 | C05, C07, B11 | E03, E04 |
 | D5 | D01, D02, D03, D12 | D13 |
 | D6 | D05, D08, D09, D11 | D06, D07 |
 | D7 | D04, D10, E05 | F05 |
@@ -148,37 +148,46 @@ release. Deferred cards stay in this file marked `deferred`.
 ### B02 — GPT partition plan
 - **WS:** B · **Dep:** B01
 - **Files:** `crates/borea-distro/src/storage/partition.rs`
-- **Deliverable:** `sgdisk` steps for ESP/boot/root; layout hash; `LayoutMatches`
-  probe; `--zap-all` only after identity confirmation.
+- **Deliverable:** `sgdisk` steps for ESP/boot/root; deterministic partition GUIDs
+  (UUIDv5, D-029); layout hash; `LayoutMatches` probe; `--zap-all` only after
+  identity confirmation.
 - **Done when:** a 20 GiB image partitions correctly twice; second run skips.
 - **Verify:** `cargo xtask disk selftest --stage partition`
 - **Out:** MBR, alignment tuning, alongside/resize.
 
-### B03 — Filesystems and mount tree
+### B03 — Filesystems, subvolumes and mount tree
 - **WS:** B · **Dep:** B02
-- **Files:** `crates/borea-distro/src/storage/fs.rs`, `mount.rs`
-- **Deliverable:** `mkfs.fat`, `mkfs.ext4`, mount root/boot/ESP under
-  `--root`, `BlockFsType` probes, safe unmount order.
-- **Done when:** selftest formats and mounts twice; probes skip on re-apply.
-- **Verify:** `cargo xtask disk selftest --stage mount`
-- **Out:** btrfs, xfs, swap partition.
+- **Files:** `crates/borea-distro/src/storage/fs.rs`, `btrfs.rs`, `mount.rs`
+- **Deliverable:** `mkfs.fat`, `mkfs.ext4` for `/boot`, `mkfs.btrfs` plus
+  `@`, `@home`, `@snapshots`, `@log`, `@cache` for `/`, deterministic UUIDs
+  (D-029), Btrfs mount options, `BlockFsType`/`SubvolumeExists` probes, mount
+  root/boot/ESP under `--root`, safe unmount order. `root_fs = "ext4"` follows
+  the same tree without subvolumes.
+- **Done when:** selftest formats and mounts Btrfs and ext4 twice; subvolumes
+  exist; probes skip on re-apply.
+- **Verify:** `cargo xtask disk selftest --stage mount --fs btrfs` and
+  `--fs ext4`
+- **Out:** xfs, swap partition, snapshot tooling (D-028).
 
 ### B04 — LUKS2
 - **WS:** B · **Dep:** B03, A09
 - **Files:** `crates/borea-distro/src/storage/luks.rs`
-- **Deliverable:** `luksFormat`/`luksOpen`/close with key on stdin, crypttab,
-  family initramfs hooks.
-- **Done when:** an encrypted image opens with the canary key and `verify`
-  detects the mapper; wrong key fails cleanly.
+- **Deliverable:** `luksFormat`/`luksOpen`/close with key on stdin and a
+  deterministic UUID, Btrfs root inside the mapper, crypttab, family initramfs
+  hooks.
+- **Done when:** an encrypted Btrfs image opens with the canary key and `verify`
+  detects the mapper and `rootflags=subvol=@`; wrong key fails cleanly.
 - **Verify:** `cargo xtask disk selftest --encrypt`
 - **Out:** detached headers, TPM, FIDO2, key slots beyond one.
 
 ### B05 — fstab, crypttab, swap
 - **WS:** B · **Dep:** B03
 - **Files:** `crates/borea-distro/src/storage/fstab.rs`
-- **Deliverable:** UUID-based fstab, crypttab when encrypted, zram config,
-  optional swapfile.
-- **Done when:** generated files are byte-stable and parse in a fixture.
+- **Deliverable:** UUID/PARTUUID-based fstab with Btrfs `subvol=` and mount
+  options, crypttab when encrypted, zram config, optional swapfile. The ESP is
+  referenced by `PARTUUID=`; ext4/Btrfs/LUKS by `UUID=`.
+- **Done when:** generated files are byte-stable and parse in a fixture;
+  `fstab` never names a device path.
 - **Verify:** `cargo test -p borea-distro fstab`
 - **Out:** mount-by-label, network filesystems.
 
@@ -192,23 +201,65 @@ release. Deferred cards stay in this file marked `deferred`.
 - **Verify:** `cargo test -p borea-run chroot`
 - **Out:** namespaces, systemd-nspawn, container runtimes.
 
-### B07 — GRUB adapter
+### B07 — Bootloader policy and selection
 - **WS:** B · **Dep:** B06
-- **Files:** `crates/borea-distro/src/boot/grub.rs`
-- **Deliverable:** package set, `grub-install`, `grub-mkconfig` path per family,
-  EFI fallback copy, cmdline assembly.
-- **Done when:** a fixture root receives the expected commands and config path.
-- **Verify:** `cargo test -p borea-distro grub`
-- **Out:** systemd-boot, rEFInd, Secure Boot.
+- **Files:** `crates/borea-distro/src/boot/mod.rs`
+- **Deliverable:** resolve `loader = "auto"` from the family recipe, gate
+  explicit loaders against the `boot.*` matrix cells, emit `boot.select`, and
+  keep step ids stable (`boot.limine.*`, `boot.grub.*`).
+- **Done when:** Arch auto resolves to Limine, Debian/Fedora/openSUSE to GRUB;
+  `loader = "limine"` on Debian/Fedora/openSUSE returns `E_UNSUPPORTED` with
+  reason + remedy; `loader = "grub"` is accepted everywhere.
+- **Verify:** `cargo test -p borea-distro boot::policy`
+- **Out:** installing either loader, Secure Boot.
 
-### B08 — initramfs per family
+### B08 — Limine adapter (Arch)
+- **WS:** B · **Dep:** B07
+- **Files:** `crates/borea-distro/src/boot/limine.rs`
+- **Deliverable:** package set (`limine`, `efibootmgr`); copy `BOOTX64.EFI` to
+  the ESP fallback and `/EFI/borea`; `efibootmgr` entry; write
+  `/boot/efi/EFI/BOOT/limine.conf` (first EFI candidate) plus an informational
+  copy at `/boot/limine/limine.conf`, with `guid(<boot-fs-uuid>)` kernel paths,
+  the fallback initramfs entry and `rootflags=subvol=@` (or the ext4 cmdline).
+- **Done when:** an Arch fixture root receives the expected EFI copy, entry and
+  config bytes; a kernel package update leaves the config valid.
+- **Verify:** `cargo test -p borea-distro limine && cargo xtask e2e --family
+  arch --profile minimal`
+- **Out:** Limine on other families, BIOS, Secure Boot, a config-regeneration
+  hook.
+
+### B09 — GRUB adapter
+- **WS:** B · **Dep:** B07
+- **Files:** `crates/borea-distro/src/boot/grub.rs`
+- **Deliverable:** package set, `grub-install`/`grub2-install`,
+  `grub-mkconfig`/`grub2-mkconfig` path per family, `/etc/default/grub` and
+  Fedora `/etc/kernel/cmdline` with `rootflags=subvol=@`, EFI fallback copy.
+- **Done when:** a fixture root receives the expected commands and config path;
+  Debian, Fedora and openSUSE VMs boot on Btrfs.
+- **Verify:** `cargo test -p borea-distro grub && cargo xtask e2e --family
+  debian --profile minimal`
+- **Out:** systemd-boot, rEFInd, Secure Boot, BLS parsers beyond the cmdline.
+
+### B10 — initramfs per family
 - **WS:** B · **Dep:** B04, B06
 - **Files:** `crates/borea-distro/src/boot/initramfs.rs`
 - **Deliverable:** `mkinitcpio -P`, `update-initramfs -u -k all`, `dracut -f`,
-  `mkinitrd`, with the encryption hooks and cmdline each needs.
-- **Done when:** encrypted VM boots to the passphrase prompt and root mount.
+  `mkinitrd`, with the Btrfs module, encryption hooks and cmdline each needs.
+- **Done when:** Btrfs and encrypted VMs boot to the root mount; `/proc/cmdline`
+  contains `rootflags=subvol=@` and the expected root device.
 - **Verify:** `cargo xtask e2e --family arch --profile minimal-encrypted`
 - **Out:** UKI, unified kernel images, custom initramfs.
+
+### B11 — ext4-root and GRUB fallback cells
+- **WS:** B · **Dep:** B03, B09, F04
+- **Files:** `crates/xtask/src/e2e.rs`, `recipes/profiles/*`
+- **Deliverable:** `--root-fs ext4` and `--loader grub` overrides; one ext4-root
+  minimal cell per family plus the Arch-GRUB cell; artifacts indexed.
+- **Done when:** all five fallback cells are green and `matrix verify --strict`
+  counts them.
+- **Verify:** `cargo xtask e2e --family arch --profile minimal --root-fs ext4
+  --loader grub`
+- **Out:** xfs, zfs, dual-boot.
 
 ---
 
@@ -228,7 +279,8 @@ release. Deferred cards stay in this file marked `deferred`.
 - **WS:** C · **Dep:** C01, B02, B05
 - **Files:** `crates/borea-distro/src/arch.rs`, `recipes/families/arch.toml`
 - **Deliverable:** `pacstrap` bootstrap, pacman install/query, mirror check,
-  microcode, base packages, `mkinitcpio`.
+  microcode, base packages (`btrfs-progs`), `mkinitcpio`, loader packages from
+  the resolved boot policy.
 - **Done when:** Arch minimal VM boots and verifies.
 - **Verify:** `cargo xtask e2e --family arch --profile minimal`
 - **Out:** AUR helper, arch-chroot.
@@ -246,7 +298,7 @@ release. Deferred cards stay in this file marked `deferred`.
 - **WS:** C · **Dep:** C02
 - **Files:** `crates/borea-distro/src/fedora.rs`, `recipes/families/fedora.toml`
 - **Deliverable:** `dnf5 --installroot`, releasever, repo config, weak-deps off,
-  `/etc/fstab`, initramfs, grub2 paths.
+  `/etc/fstab`, `btrfs-progs`, initramfs, grub2 paths and `/etc/kernel/cmdline`.
 - **Done when:** Fedora minimal VM boots and verifies.
 - **Verify:** `cargo xtask e2e --family fedora --profile minimal`
 - **Out:** Silverblue/atomic, rpm-ostree.
@@ -254,8 +306,8 @@ release. Deferred cards stay in this file marked `deferred`.
 ### C05 — openSUSE adapter
 - **WS:** C · **Dep:** C02
 - **Files:** `crates/borea-distro/src/suse.rs`, `recipes/families/suse.toml`
-- **Deliverable:** `zypper --root` repo add/refresh/install, patterns, initrd,
-  grub2 paths.
+- **Deliverable:** `zypper --root` repo add/refresh/install, patterns,
+  `btrfs-progs`, initrd, grub2 paths, Btrfs root layout.
 - **Done when:** openSUSE minimal VM boots and verifies.
 - **Verify:** `cargo xtask e2e --family suse --profile minimal`
 - **Out:** Leap vs Tumbleweed matrix beyond the pinned snapshot, YaST.
@@ -508,7 +560,7 @@ release. Deferred cards stay in this file marked `deferred`.
 - **Done when:** a missing artifact fails the release gate and `matrix render`
   leaves the docs unchanged on a clean tree.
 - **Verify:** `cargo xtask matrix render --check && cargo xtask matrix verify --strict`
-- **Out:** paid runners for all 24 cells nightly (start with a subset).
+- **Out:** paid runners for every required cell nightly (start with a subset).
 
 ---
 
@@ -520,7 +572,8 @@ release. Deferred cards stay in this file marked `deferred`.
 | openSUSE MangoWM source build | wlroots/scenefx mismatches | upstream package or D-012 accepted |
 | Debian COSMIC source build | large Rust/Qt stack, no packaging | upstream Debian packaging |
 | Fedora end-4 | community path unverified | maintained COPR |
-| Secure Boot | key custody and enrolment story missing | D-009 accepted |
-| Btrfs/snapshots | not required for v1 | after 24 cells green |
+| Secure Boot | key custody and enrolment story missing | O-05 accepted |
+| Snapshot tooling and rollback | v0.1 creates `@snapshots` but installs no manager (D-028) | O-06 accepted |
+| Limine on openSUSE | packaged, but GRUB is better integrated and no VM cell exists (O-21) | O-21 accepted + VM cell |
 | alongside/resize | dangerous, large | after v1 |
 | GUI | explicitly removed | never in this repo |

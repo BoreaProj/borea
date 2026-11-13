@@ -57,20 +57,27 @@ release = "2026.11.01"          # ISO/mirror snapshot date, overridable in confi
 bootstrap = "pacstrap"
 
 base_packages = [
-  "base", "linux", "linux-firmware", "networkmanager", "sudo",
-  "grub", "efibootmgr", "cryptsetup", "zram-generator", "less", "nano",
+  "base", "linux", "linux-firmware", "btrfs-progs", "networkmanager", "sudo",
+  "cryptsetup", "zram-generator", "less", "nano",
 ]
 microcode = { intel = "intel-ucode", amd = "amd-ucode" }
 
 [host]
-tools = ["pacstrap", "pacman", "sgdisk", "mkfs.ext4", "mkfs.fat", "cryptsetup", "grub-install"]
+tools = ["pacstrap", "pacman", "sgdisk", "mkfs.btrfs", "mkfs.ext4", "mkfs.fat",
+         "btrfs", "cryptsetup", "limine", "grub-install"]
 
 [boot]
+default_loader = "limine"       # auto resolves to this
+loaders = ["limine", "grub"]    # offerable here; matrix cells must exist
+limine_package = "limine"
+limine_efi = "/usr/share/limine/BOOTX64.EFI"
+limine_config = "/boot/efi/EFI/BOOT/limine.conf"
 grub_package = "grub"
 grub_install = "grub-install"
 grub_mkconfig = "grub-mkconfig"
 grub_cfg = "/boot/grub/grub.cfg"
 initramfs = "mkinitcpio -P"
+kernel_cmdline = "rootflags=subvol=@"
 
 [evidence]
 url = "https://archlinux.org/download/"
@@ -83,10 +90,37 @@ Family fields:
 | --- | --- |
 | `release` | default release/snapshot; config may override |
 | `bootstrap` | adapter id: `pacstrap`, `debootstrap`, `dnf5`, `zypper` |
-| `base_packages` | minimum system, before session |
+| `base_packages` | minimum system, before session; includes `btrfs-progs` |
 | `microcode` | CPU-vendor package map |
-| `host.tools` | what `doctor` requires in the live environment |
-| `boot.*` | family-specific bootloader and initramfs commands |
+| `host.tools` | tools `doctor` may require in the live environment; it checks the subset the resolved plan uses (loader-aware) |
+| `boot.default_loader` | what `loader = "auto"` resolves to |
+| `boot.loaders` | loaders this family may offer; must match matrix cells |
+| `boot.limine_*` | Arch only: package, EFI source and config path |
+| `boot.grub_*` | package, install/mkconfig commands and config path |
+| `boot.initramfs` | family initramfs command |
+| `boot.kernel_cmdline` | flags appended to the family's normal cmdline |
+
+Loader policy is data, not code. The resolver reads `default_loader` and
+`loaders`, then checks the `boot.*` matrix cells before emitting steps (D-026).
+A family that lists `limine` in `loaders` must have a `boot.limine` cell that is
+`native` and a passing VM artifact; otherwise `matrix check` fails.
+
+Storage policy is shared by every family (D-027, D-029):
+
+| Setting | Default | Other values |
+| --- | --- | --- |
+| root filesystem | `btrfs` with `@`, `@home`, `@snapshots`, `@log`, `@cache` | `ext4` (explicit fallback) |
+| `/boot` filesystem | `ext4`, unencrypted | none in v1 |
+| Btrfs mount options | `compress=zstd:3,noatime,ssd,discard=async` | none in v1 |
+| kernel cmdline | `rootflags=subvol=@` | omitted for ext4 root |
+| UUIDs | UUIDv5 from `(config digest, disk serial, role)` | none in v1 |
+| snapshots | layout only, no tooling | deferred (D-028, O-06) |
+
+Family recipes add `btrfs-progs` to `base_packages`; they do not list `grub` or
+`limine` in `base_packages` because the bootloader package is chosen by the
+resolved loader in the boot phase. The boot phase adds the loader package plus
+`efibootmgr` (Limine on Arch and GRUB on every family) so the boot entry is
+created in the target, never assumed from the live environment.
 
 ## 3. Repository recipe
 
@@ -286,7 +320,7 @@ Resolution order per family:
 
 ```toml
 schema = 1
-revision = "matrix-2026-11-13"
+revision = "matrix-2026-11-13.2"
 
 [[cell]]
 family = "debian"
@@ -302,6 +336,21 @@ component = "compositor.hyprland"
 tier = "native"
 evidence = "https://archlinux.org/packages/extra/x86_64/hyprland/"
 checked = 2026-11-13
+
+[[cell]]
+family = "arch"
+component = "boot.limine"
+tier = "native"
+evidence = "https://archlinux.org/packages/extra/x86_64/limine/"
+checked = 2026-11-13
+
+[[cell]]
+family = "debian"
+component = "boot.limine"
+tier = "unsupported"
+reason = "No Limine package in Debian 13 or backports as of 2026-11-13"
+remedy = "Use loader = \"grub\"; Limine on Debian is post-v1"
+evidence = "https://qa.debian.org/madison.php?package=limine"
 ```
 
 Required fields by tier:
@@ -336,8 +385,12 @@ keymap = "us"
 [disk]
 device = "/dev/vda"
 mode = "replace"
-root_fs = "ext4"
+root_fs = "btrfs"
 encrypt = false
+
+[boot]
+loader = "auto"
+secure_boot = false
 
 [account]
 username = "tester"
@@ -397,3 +450,8 @@ cargo xtask e2e --family <family> --profile <profile>
   the other
 - every `checks` entry has a kind the verifier implements
 - every profile validates against the config schema with no unknown fields
+- every `boot.loaders` entry has a `boot.<loader>` matrix cell for that family,
+  and `boot.default_loader` is one of them
+- every family lists `btrfs-progs` in `base_packages`; `/boot` is not listed as
+  a configurable filesystem
+- `root_fs` is `btrfs` or `ext4`; `loader` is `auto`, `limine` or `grub`

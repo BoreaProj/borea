@@ -76,13 +76,22 @@ pub struct TargetConfig {
 pub struct DiskConfig {
     pub device: PathBuf,
     pub mode: DiskMode,            // Replace only in v1
-    pub root_fs: Filesystem,       // Ext4 only in v1
+    pub root_fs: Filesystem,       // Btrfs (default) | Ext4
     pub encrypt: bool,
     pub luks_password_file: Option<PathBuf>,
     pub esp_size_mib: u64,         // default 1024
-    pub boot_size_mib: u64,        // default 2048
+    pub boot_size_mib: u64,        // default 2048; /boot is always ext4
     pub swap: Swap,                // None | Zram | File(u64)
 }
+
+pub enum Filesystem { Btrfs, Ext4 }
+
+pub struct BootConfig {
+    pub loader: Loader,            // Auto | Limine | Grub
+    pub secure_boot: bool,         // only false in v1
+}
+
+pub enum Loader { Auto, Limine, Grub }
 
 pub struct AccountConfig {
     pub username: String,
@@ -106,7 +115,9 @@ pub struct SessionConfig {
 Validation rejects unknown fields (`deny_unknown_fields`), non-absolute paths,
 empty usernames, reserved usernames, NUL bytes in secrets, `swap=file` when
 `encrypt` is false is allowed but documented, and any v1 non-goal value with
-`E_UNSUPPORTED`.
+`E_UNSUPPORTED`. `secure_boot = true` is refused. `loader = "limine"` on
+Debian, Fedora or openSUSE is refused with the matrix reason and remedy
+(D-026); `loader = "auto"` resolves through the family recipe, never in core.
 
 ### 3.2 Recipe
 
@@ -165,7 +176,8 @@ pub struct Plan {
     pub config_digest: String,
     pub matrix_digest: String,
     pub target: TargetSummary,          // family, release, arch, firmware
-    pub disk: DiskSummary,              // device, serial, size, layout id
+    pub disk: DiskSummary,              // device, serial, size, layout id, root_fs
+    pub boot: BootSummary,              // requested loader, resolved loader
     pub steps: Vec<Step>,
     pub checks: Vec<Check>,
     pub secrets: Vec<SecretSlot>,
@@ -196,14 +208,23 @@ pub enum Action {
     CopyIn { source: PathBuf, dest: PathBuf, mode: u32 },
     Mkdir { path: PathBuf, mode: u32 },
     Partition { device: PathBuf, table: PartitionTable },
-    Format { device: PathBuf, fs: Filesystem, label: String },
-    LuksFormat { device: PathBuf, name: String, key: SecretRef },
+    Format { device: PathBuf, fs: Filesystem, label: String, uuid: Uuid },
+    Subvolume { device: PathBuf, name: String },
+    LuksFormat { device: PathBuf, name: String, uuid: Uuid, key: SecretRef },
     LuksOpen { device: PathBuf, name: String, key: SecretRef },
     Mount { source: String, target: PathBuf, fstype: Option<String>, options: Vec<String> },
     Umount { target: PathBuf },
     EnableUnit { root: PathBuf, unit: String },
 }
+```
 
+`Uuid` is a plan-time value derived with UUIDv5 (D-029), never generated during
+`apply`. `Format` maps to `mkfs.ext4 -U <uuid>` or `mkfs.btrfs -U <uuid>`; for
+FAT32 it maps to `mkfs.fat -F32 -i <volume-id>` (the ESP is referenced by
+`PARTUUID=` in fstab); `LuksFormat` maps to `cryptsetup luksFormat --uuid
+<uuid>`; `Subvolume` maps to `btrfs subvolume create`.
+
+```rust
 pub struct CommandSpec {
     pub argv: Vec<String>,              // never a shell string
     pub cwd: Option<PathBuf>,
@@ -226,6 +247,7 @@ pub enum Probe {
     FileContains { path: PathBuf, needle: String },
     PathMissing(PathBuf),
     BlockFsType { device: PathBuf, fstype: String },
+    SubvolumeExists { device: PathBuf, name: String },
     LayoutMatches { device: PathBuf, layout: String },   // hash of GPT plan
     CommandOk(CommandSpec),
 }
@@ -332,16 +354,46 @@ v1 layout, GPT, x86_64 UEFI:
 | # | Size | Type | FS | Mount | Notes |
 | --- | --- | --- | --- | --- | --- |
 | 1 | 1 GiB | EFI System | FAT32 | `/boot/efi` | `esp` label |
-| 2 | 2 GiB | Linux | ext4 | `/boot` | unencrypted, GRUB reads it |
-| 3 | rest | Linux / LUKS | ext4 | `/` | LUKS2 container when `encrypt = true` |
+| 2 | 2 GiB | Linux | ext4 | `/boot` | unencrypted; loaders read it |
+| 3 | rest | Linux / LUKS | Btrfs | `/` | ext4 when `disk.root_fs = "ext4"`; LUKS2 when `encrypt = true` |
+
+`/boot` is the explicit ext4 exception on every family: it is small, every
+loader and distro tool reads it without special support, and keeping it
+unencrypted means Limine and GRUB never need LUKS2 or Btrfs read support. The
+kernel and initramfs on `/boot` unlock and mount the root.
+
+Btrfs subvolumes (default root):
+
+| Subvolume | Mount | Why separate |
+| --- | --- | --- |
+| `@` | `/` | root; kernel cmdline `rootflags=subvol=@` |
+| `@home` | `/home` | user data out of root snapshots |
+| `@snapshots` | `/.snapshots` | reserved; no tooling in v1 (D-028) |
+| `@log` | `/var/log` | logs excluded from root snapshots |
+| `@cache` | `/var/cache` | cache excluded from root snapshots |
+
+Mount options: `compress=zstd:3,noatime,ssd,discard=async` for every Btrfs
+mount. The root is mounted with `subvol=@`; systemd remounts it from fstab with
+the full option set after the initramfs hands over. `fsck.btrfs` is not run;
+Btrfs checks are read-only and manual.
 
 - No swap partition. `swap = "zram"` writes a `zram-generator` config (or the
-  family equivalent); `swap = "file"` creates `/swapfile` after root is mounted.
-- Root is mounted at `/mnt`, boot at `/mnt/boot`, ESP at `/mnt/boot/efi`.
-- `/etc/fstab` and `/etc/crypttab` are generated from UUIDs, never device names.
-- `sgdisk` creates the table; `mkfs.fat -F32`, `mkfs.ext4`, `cryptsetup
-  luksFormat/open` do the rest. These are the distro's tools, not
-  reimplementations.
+  family equivalent); `swap = "file"` creates `/.swapfile` after root is
+  mounted (a subvolume path, never `/swapfile` on a subvolume root).
+- Root is mounted at `/mnt`, boot at `/mnt/boot`, ESP at `/mnt/boot/efi`. For
+  Btrfs, the top-level volume (`subvolid=5`) is mounted at a temporary
+  `/mnt/.btrfs` to create subvolumes, then unmounted before `@` is mounted at
+  `/mnt`.
+- `/etc/fstab` and `/etc/crypttab` are generated from UUIDs and PARTUUIDs,
+  never device names. The ESP uses `PARTUUID=`; ext4/Btrfs/LUKS use `UUID=`.
+- `sgdisk` creates the table; `mkfs.fat -F32 -i`, `mkfs.ext4 -U`,
+  `mkfs.btrfs -U`, `btrfs subvolume create` and `cryptsetup luksFormat/open` do
+  the rest. These are the distro's tools, not reimplementations.
+- GPT GUIDs and filesystem/LUKS UUIDs are derived with UUIDv5 from
+  `(config digest, target disk serial, role)` and passed to `sgdisk -u`,
+  `mkfs.ext4 -U`, `mkfs.btrfs -U`, `mkfs.fat -i` and `cryptsetup --uuid`
+  (D-029). fstab, crypttab and the loader config are therefore deterministic
+  and complete at plan time.
 - The partition layout is hashed into the plan. `LayoutMatches` compares the
   current GPT GUIDs/sizes before allowing a re-apply to skip partitioning.
 
@@ -349,18 +401,89 @@ Encryption details are per family and live in the adapter:
 
 | Family | Packages | Initramfs | Kernel cmdline |
 | --- | --- | --- | --- |
-| Arch | `cryptsetup` | `encrypt` hook + `cryptdevice=UUID=...:cryptroot` | `root=/dev/mapper/cryptroot` |
-| Debian | `cryptsetup-initramfs` | `cryptsetup` initramfs hook | `root=/dev/mapper/cryptroot` |
-| Fedora | `cryptsetup` | dracut `rd.luks.uuid=...` | `root=/dev/mapper/cryptroot` |
-| openSUSE | `cryptsetup` | `cryptsetup` in initrd | `root=/dev/mapper/cryptroot` |
+| Arch | `cryptsetup` | `encrypt` hook + `cryptdevice=UUID=...:cryptroot` | `root=/dev/mapper/cryptroot rootflags=subvol=@` |
+| Debian | `cryptsetup-initramfs` | `cryptsetup` initramfs hook | `root=/dev/mapper/cryptroot rootflags=subvol=@` |
+| Fedora | `cryptsetup` | dracut `rd.luks.uuid=...` | `root=/dev/mapper/cryptroot rootflags=subvol=@` |
+| openSUSE | `cryptsetup` | `cryptsetup` in initrd | `root=/dev/mapper/cryptroot rootflags=subvol=@` |
 
-The LUKS passphrase is a secret slot (`disk.luks`). It is normally the account
-password when `sudo = "same"`, but the config may reference a separate file.
+With `encrypt = false` the cmdline uses `root=UUID=<root-fs-uuid> rootflags=subvol=@`
+(Btrfs) or `root=UUID=<root-fs-uuid>` (ext4). The LUKS passphrase is a secret
+slot (`disk.luks`). It is normally the account password when `sudo = "same"`,
+but the config may reference a separate file.
+
+The Btrfs initramfs requirement is satisfied by the family's `filesystems`
+hook/module set; `btrfs-progs` is installed in the target for administration
+but is not required to mount the root.
 
 ## 7. Bootloader
 
-GRUB on every family, because one adapter and one config shape is worth more
-than matching each family's default. UEFI only, Secure Boot off.
+One policy, two adapters (D-026). `boot.loader = "auto"` resolves per family;
+`limine` or `grub` may be forced where the matrix allows it. UEFI only, Secure
+Boot off.
+
+| Family | `auto` | Limine | GRUB | Why |
+| --- | --- | --- | --- | --- |
+| Arch | Limine | native, required | native, fallback | stable `/boot/vmlinuz-linux` names; simple static config |
+| Debian | GRUB | unsupported (no package) | native | versioned kernels; `update-grub` is native |
+| Fedora | GRUB | unsupported (no package) | native | BLS entries; `grub2-mkconfig` is native |
+| openSUSE | GRUB | gated (O-21) | native | Btrfs/snapper-aware GRUB integration |
+
+### 7.1 Limine (Arch)
+
+Limine is installed from the `limine` package. The adapter:
+
+1. copies `/usr/share/limine/BOOTX64.EFI` to the ESP at
+   `/boot/efi/EFI/BOOT/BOOTX64.EFI` (firmware fallback path) and
+   `/boot/efi/EFI/borea/limine_x64.efi`;
+2. creates a boot entry with `efibootmgr --create --disk <disk> --part 1
+   --label borea --loader '\EFI\BOOT\BOOTX64.EFI'`;
+3. writes `/boot/efi/EFI/BOOT/limine.conf`, next to the EFI application. On
+   EFI, Limine tries `<EFI app path>/limine.conf` first, so this is the first
+   candidate it sees;
+4. writes an informational copy to `/boot/limine/limine.conf` on the ext4
+   `/boot` partition for offline inspection. Limine does not read this copy on
+   the borea layout because it finds the ESP config first.
+
+The config references the ext4 `/boot` filesystem by its deterministic UUID, so
+it does not depend on partition numbering:
+
+```text
+timeout: 3
+default_entry: 1
+
+/Arch Linux
+    protocol: linux
+    path: guid(<boot-fs-uuid>):/vmlinuz-linux
+    module_path: guid(<boot-fs-uuid>):/initramfs-linux.img
+    cmdline: root=UUID=<root-fs-uuid> rootflags=subvol=@ rw
+
+/Arch Linux (fallback initramfs)
+    protocol: linux
+    path: guid(<boot-fs-uuid>):/vmlinuz-linux
+    module_path: guid(<boot-fs-uuid>):/initramfs-linux-fallback.img
+    cmdline: root=UUID=<root-fs-uuid> rootflags=subvol=@ rw
+```
+
+No Limine hook is required on Arch because the kernel and initramfs filenames
+are stable across package updates. `mkinitcpio -P` refreshes the initramfs in
+place. If `linux-lts` is added later, a card extends the entry list.
+
+Limine does not read Btrfs or LUKS: it loads the kernel and initramfs from the
+unencrypted ext4 `/boot`, and the initramfs unlocks the root.
+
+### 7.2 GRUB (Debian, Fedora, openSUSE, Arch fallback)
+
+`grub-install`/`grub2-install` runs inside the chroot after `/proc`, `/sys` and
+`/dev` are bound. `/etc/default/grub` carries the root subvolume flag:
+
+```text
+GRUB_CMDLINE_LINUX="rootflags=subvol=@"
+```
+
+`grub-mkconfig`/`grub2-mkconfig` then writes the family's config path. On
+Fedora the adapter also writes `/etc/kernel/cmdline` so BLS entries inherit
+`rootflags=subvol=@`. The adapter owns the path differences; plan step ids are
+always `boot.grub.install` and `boot.grub.config`.
 
 | Family | Packages | Install command | Config output |
 | --- | --- | --- | --- |
@@ -369,9 +492,24 @@ than matching each family's default. UEFI only, Secure Boot off.
 | Fedora | `grub2-efi-x64 grub2-tools` | `grub2-install ...` | `/boot/grub2/grub.cfg` |
 | openSUSE | `grub2-x86_64-efi` | `grub2-install ...` | `/boot/grub2/grub.cfg` |
 
-`grub-mkconfig`/`grub2-mkconfig` runs inside the chroot after `/proc`, `/sys`
-and `/dev` are bound. The adapter owns the path differences; the plan step id is
-always `boot.grub.install` and `boot.grub.config`.
+GRUB reads Btrfs and ext4 roots, so it needs no extra filesystem package for
+the root. Verification checks that the generated config contains
+`rootflags=subvol=@` (Btrfs) and the root UUID, and that the EFI fallback binary
+exists.
+
+### 7.3 Step order
+
+`boot.select` resolves `Auto` and gates unsupported combinations during
+planning. The remaining steps run after `initramfs`:
+
+```text
+boot.select -> boot.limine.install | boot.grub.install
+            -> boot.limine.config   | boot.grub.config
+            -> boot.verify
+```
+
+`boot.verify` is a check step, not a mutation: it asserts the EFI binary, the
+config file and the cmdline content before the plan is allowed to finish.
 
 ## 8. Chroot plumbing
 
@@ -404,13 +542,18 @@ pub trait Family: Send + Sync {
 ```
 
 `Ctx` carries the validated config, the target root, the resolved release,
-secret refs and the storage layout. Adapters are stateless.
+secret refs, the chosen loader and the storage layout. Adapters are stateless.
+`bootloader` dispatches on `ctx.loader`, which is already resolved and gated.
 
-`host_requirements` powers `borea doctor`: for Arch it checks
-`pacstrap`, `pacman`, `sgdisk`, `mkfs.ext4`, `mkfs.fat`, `cryptsetup`,
-`grub-install`; Debian checks `debootstrap`, `apt-get`, etc. `doctor` reports
+`host_requirements` powers `borea doctor`: for Arch it checks `pacstrap`,
+`pacman`, `sgdisk`, `mkfs.btrfs`, `mkfs.ext4`, `mkfs.fat`, `btrfs` and
+`cryptsetup`, then the tools for the *resolved* loader (`limine` and
+`efibootmgr`, or `grub-install`); Debian checks `debootstrap`, `apt-get`,
+`mkfs.btrfs`, `mkfs.ext4`, `sgdisk`, `grub-install`, etc. `doctor` reports
 missing tools with the install command for the live environment, not a generic
-error.
+error. A family recipe lists the union of tools its adapters may call; `doctor`
+only requires the subset the current plan will use, so a Limine install does not
+demand `grub-install` and a GRUB fallback does not demand `limine`.
 
 ## 10. Session layer
 
@@ -507,4 +650,6 @@ command to run. No raw `io::Error` reaches the terminal without context.
 
 No plugin ABI, no dynamic recipe loading from the network, no remote catalog,
 no telemetry, no update checker, no config daemon, no D-Bus, no Polkit helper,
-no GUI toolkit. The binary is a function from config to plan to target.
+no GUI toolkit, no snapshot manager or automatic rollback (D-028), and no
+bootloader outside Limine-on-Arch and GRUB (D-026). The binary is a function
+from config to plan to target.

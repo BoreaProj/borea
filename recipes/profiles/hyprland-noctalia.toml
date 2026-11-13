@@ -12,14 +12,14 @@ keymap = "us"
 [disk]
 device = "/dev/vda"
 mode = "replace"
-root_fs = "ext4"
+root_fs = "btrfs"
 encrypt = false
 esp_size = "1GiB"
 boot_size = "2GiB"
 swap = "zram"
 
 [boot]
-loader = "grub"
+loader = "auto"
 secure_boot = false
 
 [account]

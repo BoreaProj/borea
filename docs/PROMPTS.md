@@ -99,7 +99,9 @@ Implement the family adapter:
 - base packages, microcode, NetworkManager
 - package install/query
 - repo add/refresh with pinned keys
-- initramfs and GRUB paths for the family
+- initramfs and bootloader paths for the family (Limine on Arch, GRUB on the
+  others; `loader = "auto"` already resolved)
+- Btrfs root with `rootflags=subvol=@`, ext4 `/boot`
 - host requirements for `borea doctor`
 
 Hard rules:
@@ -112,6 +114,7 @@ Hard rules:
 Verify:
   cargo test -p borea-distro <family>
   cargo xtask e2e --family <family> --profile minimal
+  cargo xtask e2e --family <family> --profile minimal --root-fs ext4
 
 Paste the artifact path from target/e2e/.../result.json.
 If the VM cannot boot, stop and report the serial log tail; do not weaken checks.

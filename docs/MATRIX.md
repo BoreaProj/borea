@@ -5,7 +5,7 @@ This is the source of truth for what `borea plan` may offer. It is data:
 will generate them once card F05 lands. If they disagree, the TOML wins and CI
 fails. Until then, a matrix change updates both the TOML and this file.
 
-**Revision:** `matrix-2026-11-13`
+**Revision:** `matrix-2026-11-13.2` (Btrfs/Limine)
 **Evidence last checked:** 2026-11-13
 **Rule:** a `native` or `third-party` cell needs a passing VM artifact for that
 family before release. No artifact, no green.
@@ -19,10 +19,13 @@ family before release. No artifact, no green.
 | `native` | package in the family's official repositories | offered |
 | `third-party` | documented external repo/COPR/OBS/APT with a pinned key | offered with a notice |
 | `source` | built in the target from a pinned upstream commit | offered only with `--allow-source`, experimental |
-| `unsupported` | no documented path as of the evidence date | refused with reason + remedy |
+| `unsupported` | not offered by this release | refused with reason + remedy |
 
 `native` includes official backports (Debian `trixie-backports` is a Debian
-repository, not a third party).
+repository, not a third party). `unsupported` covers both "no packaging path
+exists" (Debian/Fedora Limine) and "a path exists but v0.1 deliberately does not
+offer it" (openSUSE Limine). The reason says which and the evidence link is
+still mandatory.
 
 ## 2. Components
 
@@ -64,20 +67,47 @@ repository, not a third party).
 
 SDDM, GDM and NetworkManager are part of the base/desktop recipes rather than
 standalone matrix components; the table records the packaging assumption behind
-those recipes. Only `greeter.greetd`, `apps.flatpak` and `system.codecs` have
-cells in `recipes/matrix.toml`.
+those recipes. Every other row in §2.1–§2.5 — base, desktop, compositor, shell,
+greeter, Flatpak, codecs, filesystem and bootloader — has cells in
+`recipes/matrix.toml`.
+
+### 2.5 Storage and boot
+
+These cells describe plan options, not installable session components. They are
+still cells so `borea explain boot.limine --family debian` has an answer and the
+resolver has one gate mechanism for every capability.
+
+| Component | Arch | Debian | Fedora | openSUSE |
+| --- | --- | --- | --- | --- |
+| Btrfs root (`fs.btrfs`) | native | native | native | native |
+| ext4 (`fs.ext4`, `/boot` and root fallback) | native | native | native | native |
+| Limine (`boot.limine`) | native (default) | **unsupported** | **unsupported** | **unsupported** (v0.1 gate) |
+| GRUB (`boot.grub`) | native (fallback) | native (default) | native (default) | native (default) |
+
+`loader = "auto"` resolves to Limine on Arch and GRUB on the other three. Limine
+is packaged on openSUSE but deliberately not offered in v0.1; GRUB is the
+tested Btrfs/snapper-aware path there (O-21). See `DECISIONS.md` D-026/D-027.
 
 ## 3. Session pairs promised in v0.1
 
 A pair is the compositor + shell combination. The matrix gates components; a
 pair is only promised when its row has an artifact. v0.1 promises exactly these
-pairs, on every family:
+pairs, on every family, on the default storage layout (Btrfs root, ext4
+`/boot`, default loader):
 
 | Pair | Arch | Debian | Fedora | openSUSE |
 | --- | --- | --- | --- | --- |
 | Hyprland only | required | required | required | required |
 | Hyprland + Noctalia | required | required | required | required |
 | Hyprland + DMS | required | required | required | required |
+
+v0.1 also requires these storage and boot cells:
+
+| Cell | Arch | Debian | Fedora | openSUSE |
+| --- | --- | --- | --- | --- |
+| minimal on ext4 root | required | required | required | required |
+| minimal with GRUB | required (fallback) | covered by default | covered by default | covered by default |
+| minimal with Limine | covered by default | — | — | gated |
 
 Other combinations are **planned**, not refused: the resolver allows them when
 both components are supported and the shell's `compatible_compositors` list
@@ -100,6 +130,9 @@ This table is the current set; `cargo xtask matrix check` enforces it.
 | Debian + end-4 | Upstream documents Arch (and Nix); Debian path is WIP only | Use Noctalia or DMS, which are supported on Debian |
 | Fedora + end-4 | Community packages only; no maintained COPR verified for F44 | Use Noctalia or DMS; revisit if a pinned COPR appears |
 | openSUSE + end-4 | Upstream fork/WIP only; no maintained package | Use Noctalia or DMS |
+| Debian + Limine | No Limine package in Debian 13 or backports as of 2026-11-13 | Use GRUB; Limine on Debian is post-v1 |
+| Fedora + Limine | No Limine package in Fedora 43–45, EPEL or Rawhide as of 2026-11-13 | Use GRUB; Limine on Fedora is post-v1 |
+| openSUSE + Limine | Limine 12.9.4 is packaged in Tumbleweed as of the evidence date, but v0.1 deliberately uses GRUB for its Btrfs/snapper-aware boot flow and has no Limine VM cell | Use GRUB; promote Limine only with a VM cell (O-21) |
 
 `source` cells are not silently enabled. They require `--allow-source` and are
 marked experimental in the plan notes. v0.1 ships:
@@ -146,12 +179,15 @@ is offered.
 These are the native tools each family's environment must provide. `doctor`
 checks them; the adapter uses them.
 
-| Family | Bootstrap | Base packages | Bootloader |
-| --- | --- | --- | --- |
-| Arch | `pacstrap -K -P /mnt` from the Arch ISO | `base linux linux-firmware` + microcode | GRUB |
-| Debian | `debootstrap --variant=minbase trixie /mnt` | `apt` base + `linux-image-amd64` | GRUB |
-| Fedora | `dnf5 --installroot=/mnt --releasever=<n>` | `fedora-release glibc systemd kernel` | GRUB |
-| openSUSE | `zypper --root /mnt` (Tumbleweed) | `openSUSE-release systemd kernel-default` | GRUB |
+| Family | Bootstrap | Base packages | Root FS | Default bootloader |
+| --- | --- | --- | --- | --- |
+| Arch | `pacstrap -K -P /mnt` from the Arch ISO | `base linux linux-firmware btrfs-progs` + microcode | Btrfs | Limine (`limine` in extra) |
+| Debian | `debootstrap --variant=minbase trixie /mnt` | `apt` base + `linux-image-amd64` + `btrfs-progs` | Btrfs | GRUB (`grub-efi-amd64`) |
+| Fedora | `dnf5 --installroot=/mnt --releasever=<n>` | `fedora-release glibc systemd kernel btrfs-progs` | Btrfs | GRUB (`grub2-efi-x64`) |
+| openSUSE | `zypper --root /mnt` (Tumbleweed) | `openSUSE-release systemd kernel-default btrfs-progs` | Btrfs | GRUB (`grub2-x86_64-efi`) |
+
+Every family also gets an ext4 `/boot` partition. ext4 root is an explicit
+config choice, not the default; it is covered by one VM cell per family.
 
 Source pages and exact package names are recorded per recipe in
 `recipes/families/*.toml` with an `evidence.checked` date. Package names must be
@@ -168,6 +204,9 @@ resolved against a live repository during D2–D4, not trusted from this table.
 | DMS on Debian | needs `quickshell` from backports | adapter enables backports explicitly; if unavailable, gate |
 | end-4 | installer is a moving target | pin commit; source tier; VM gate |
 | MangoWM on Debian | ButterRepo pins wlroots 0.19 beside Debian 0.18 | install only in the target, never on the host; verify no conflict |
+| Btrfs subvolume layout | loaders and initramfs must carry `rootflags=subvol=@` | plan-time cmdline, offline and online checks; ext4 fallback cell |
+| Limine on Arch | kernel package could rename files | stable `/boot/vmlinuz-linux` and `initramfs-linux.img`; verify after a kernel update |
+| openSUSE + Btrfs | snapper conventions differ from the generic layout | snapshots deferred (D-028); GRUB remains the default; revisit with O-06/O-21 |
 
 ## 8. How to change the matrix
 

@@ -34,7 +34,8 @@ tool. Rebuilding that is a second operating system.
 
 ### D-004 — Use the distro's native tools; drop the pure-Rust constraint
 **Decision:** `pacstrap`, `debootstrap`, `dnf5 --installroot`, `zypper --root`,
-`sgdisk`, `mkfs.*`, `cryptsetup`, `mount`, `grub-install`, `chroot`.
+`sgdisk`, `mkfs.*`, `btrfs`, `cryptsetup`, `mount`, `grub-install`, `limine`,
+`efibootmgr`, `chroot`.
 **Why:** These tools encode years of distro-specific edge cases. Reimplementing
 them in Rust is how the old project stalled.
 **Rejected:** pure-Rust GPT/FAT/ext4/LUKS implementations; a custom package
@@ -71,6 +72,7 @@ product decision with its own risk.
 **Rejected:** dual-boot, automatic shrinking, multi-disk LVM.
 
 ### D-009 — GRUB on every family
+**Superseded by:** D-026 (2026-11-13).
 **Decision:** One bootloader adapter, GRUB, with family-specific package names
 and config paths.
 **Why:** Four bootloaders is four times the failure surface. GRUB works on all
@@ -78,6 +80,7 @@ four and reads an unencrypted `/boot`.
 **Rejected:** systemd-boot, BLS, per-family defaults, rEFInd.
 
 ### D-010 — ext4, unencrypted `/boot`, optional LUKS2 root
+**Superseded by:** D-027 (2026-11-13).
 **Decision:** Three partitions (ESP, boot, root); ext4 root; LUKS2 on root only
 when `encrypt = true`.
 **Why:** Simple, debuggable, and compatible with GRUB. Encryption remains
@@ -188,6 +191,67 @@ turning the installer into a dependency graph.
 **Rejected:** async runtimes (`tokio`), HTTP clients, GUI toolkits, database
 crates, SSH crates.
 
+### D-026 — Limine on Arch, GRUB on the other three
+**Date:** 2026-11-13
+**Decision:** `boot.loader = "auto"` resolves to Limine on Arch and GRUB on
+Debian, Fedora and openSUSE. `loader = "limine"` is accepted only on Arch in
+v0.1: Debian and Fedora ship no Limine package, and openSUSE packages it but
+v0.1 does not offer it because GRUB is the tested Btrfs/snapper-aware path
+there. `loader = "grub"` is accepted everywhere, including Arch as the fallback.
+**Why:** Arch keeps stable `/boot/vmlinuz-linux` and
+`/boot/initramfs-linux.img` names, so a static Limine config survives kernel
+updates without a hook. Limine only reads the unencrypted ext4 `/boot`; the
+initramfs unlocks LUKS2 and mounts Btrfs, so the loader needs neither. Debian,
+Fedora and openSUSE use versioned kernels plus native GRUB integration (Fedora
+BLS, openSUSE snapper), so regenerating entries with GRUB is the better path.
+**Rejected:** GRUB everywhere (supersedes D-009), Limine everywhere,
+systemd-boot, a Limine hook that rewrites the config on every kernel update.
+
+### D-027 — Btrfs root by default, ext4 for `/boot` and as an explicit fallback
+**Date:** 2026-11-13
+**Decision:** Root is Btrfs with subvolumes `@` (root), `@home`, `@snapshots`,
+`@log` and `@cache`; mount options `compress=zstd:3,noatime,ssd,discard=async`;
+the kernel cmdline carries `rootflags=subvol=@`. `/boot` is ext4 on every
+family. `disk.root_fs = "ext4"` remains accepted as an explicit choice.
+**Why:** Btrfs gives compression, cheap subvolumes and a snapshot-ready layout
+without LVM. `/boot` stays ext4 because every loader and distro tool reads it
+without special support, it is small, and keeping it unencrypted means the
+loader never needs LUKS support. ext4 root stays available for hardware or
+policy constraints, but it is not the default.
+**Rejected:** ext4-only root (supersedes D-010), Btrfs `/boot`, ZFS, LVM,
+encrypted `/boot`.
+
+### D-028 — Snapshot tooling is deferred; the layout is snapshot-ready
+**Date:** 2026-11-13
+**Decision:** v0.1 creates `@snapshots` but installs no snapper, timeshift or
+boot-into-snapshot menu, and takes no automatic snapshots on package
+transactions. Users may snapshot manually with `btrfs subvolume snapshot`.
+**Why:** Snapshot management is a product of its own: retention, restore UX,
+boot entries and a recovery contract. The subvolume layout means a later card
+can add it without reformatting or changing the plan schema.
+**Rejected:** bundling a snapshot manager in v0.1, openSUSE snapper integration
+before the storage layout is tested.
+**Revisit:** after the required cells are green; O-06.
+
+### D-029 — Deterministic partition, filesystem and LUKS UUIDs
+**Date:** 2026-11-13
+**Decision:** The plan derives GPT partition GUIDs and filesystem/LUKS UUIDs
+with UUIDv5 from `(config digest, target disk serial, role)`, and passes them to
+`sgdisk -u`, `mkfs.ext4 -U`, `mkfs.btrfs -U` and
+`cryptsetup luksFormat --uuid`. The ESP has no filesystem UUID in the
+`mkfs.ext4` sense, so it is identified by its deterministic GPT partition GUID
+(`PARTUUID=`) in fstab, and its FAT volume ID is set with `mkfs.fat -i` so
+`blkid` output is stable too. fstab, crypttab, the Limine config and the GRUB
+cmdline are therefore complete at plan time.
+**Why:** The plan is the API and must be byte-stable. Random UUIDs created at
+apply time would force fstab and boot config to be runtime templates, which is
+harder to test and to resume. Including the disk serial keeps two machines with
+the same config distinct.
+**Rejected:** random UUIDs plus runtime templating, rewriting fstab and boot
+config from `blkid` probes during apply.
+**Note:** cloning a disk keeps its UUIDs; re-plan on the new disk to regenerate
+them.
+
 ---
 
 ## Open
@@ -218,12 +282,15 @@ that forces a decision.
 ### O-05 — Secure Boot
 **Default:** off, documented.
 **Trigger:** a user requires it on hardware with Secure Boot enforced.
-**Cost:** key custody, MOK enrolment, signing, shim, revocation story.
+**Cost:** key custody, MOK enrolment, signing, shim, revocation story. Limine
+needs an enrolled config hash in addition to a signed EFI binary; GRUB needs a
+signed shim path.
 
-### O-06 — Btrfs and snapshots
-**Default:** ext4.
-**Trigger:** after the 24 required cells are green.
-**Cost:** subvolumes, mount options, snapshot tooling, GRUB integration.
+### O-06 — Snapshot tooling and rollback
+**Default:** layout only; no tooling (D-028). `@snapshots` exists but is empty.
+**Trigger:** after the required cells are green, or a user needs rollback.
+**Cost:** retention policy, snapper/timeshift choice, boot-menu integration,
+restore UX, per-family differences (openSUSE expects `@/.snapshots`).
 
 ### O-07 — Alongside / dual boot
 **Default:** replace only (D-008).
@@ -303,6 +370,14 @@ ones.
 **Default:** none. Ever.
 **Trigger:** none.
 
+### O-21 — Limine on openSUSE
+**Default:** gate (D-026). `loader = "limine"` is refused on openSUSE.
+**Trigger:** a VM cell proves Limine with Btrfs and versioned
+`/boot/vmlinuz-*-default` kernels, and we decide it beats GRUB/snapper.
+**Cost:** config regeneration on kernel updates, snapshot-menu story, an extra
+boot cell per release.
+**Alternative:** stay on GRUB; the package remains available for manual use.
+
 ---
 
 ## Rejected alternatives (kept for context)
@@ -320,3 +395,9 @@ ones.
 | Simulation-first | proves nothing about boot |
 | Varlink/worker | daemon lifecycle with no benefit |
 | Pure Rust for disk/boot | reimplements mature tools |
+| GRUB everywhere | worse than Limine on Arch; superseded by D-026 |
+| Limine everywhere | no package on Debian/Fedora, extra integration risk on openSUSE |
+| ext4-only root | leaves compression and subvolumes unused; superseded by D-027 |
+| Btrfs `/boot` | no benefit for a small partition and more loader assumptions |
+| Snapshot manager in v0.1 | retention/restore UX is its own product; see D-028 |
+| Random UUIDs + runtime config templating | plan stops being byte-stable; see D-029 |

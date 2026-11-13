@@ -20,16 +20,17 @@ keymap = "uk"
 [disk]
 device = "/dev/vda"          # use a stable /dev/disk/by-id path on real hardware
 mode = "replace"             # only replace in v1
-root_fs = "ext4"             # only ext4 in v1
+root_fs = "btrfs"            # btrfs (default) | ext4 (explicit fallback)
 encrypt = false
 # luks_password_file = "/run/borea/luks.pass"
 esp_size = "1GiB"
-boot_size = "2GiB"
+boot_size = "2GiB"           # /boot is always ext4 in v1
 swap = "zram"                # none | zram | file
 
 [boot]
-loader = "grub"
-secure_boot = false
+loader = "auto"              # auto | limine | grub
+                             # auto = limine on arch, grub on debian/fedora/suse
+secure_boot = false          # must stay false in v1
 
 [account]
 username = "luke"

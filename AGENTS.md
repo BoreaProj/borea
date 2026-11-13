@@ -28,8 +28,10 @@ repeat them.
   One process runs one plan.
 - **No simulation engine.** `--dry-run`, golden plans and the VM matrix are the
   simulation story.
-- **No dual-boot, alongside resizing, Secure Boot signing, Btrfs, snapshots,
-  ARM, BIOS/legacy or non-systemd families** in v1. Refuse, do not guess.
+- **No dual-boot, alongside resizing, Secure Boot signing, snapshot tooling,
+  ARM, BIOS/legacy or non-systemd families** in v1. Refuse, do not guess. Btrfs
+  root and ext4 `/boot` are the supported storage layout; Limine is supported on
+  Arch only, GRUB on all four (see `docs/DECISIONS.md` D-026/D-027).
 - **No new crate or dependency** without recording it in `docs/DECISIONS.md`.
   Prefer the standard library and the distro's own tools.
 - **No `if family == ...` outside `crates/borea-distro`.** Session and recipe
@@ -94,6 +96,15 @@ cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
 cargo test --workspace --all-features --locked
 cargo xtask matrix check
 cargo xtask plan golden
+```
+
+For a storage or boot change, also run both filesystem lanes and both loaders
+where the matrix allows them:
+
+```sh
+cargo xtask disk selftest --fs btrfs
+cargo xtask disk selftest --fs ext4
+cargo xtask e2e --family arch --profile minimal --loader grub
 ```
 
 For a distro or session card, also run the exact cell:

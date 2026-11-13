@@ -7,7 +7,7 @@
 # An unsupported cell requires reason, remedy and evidence.
 
 schema = 1
-revision = "matrix-2026-11-13"
+revision = "matrix-2026-11-13.2"
 
 # ---------------------------------------------------------------- base
 
@@ -387,4 +387,124 @@ family = "suse"
 component = "system.codecs"
 tier = "third-party"
 evidence = "https://packman.links2linux.org/"
+checked = 2026-11-13
+
+# ---------------------------------------------------------------- storage and boot
+# These cells describe plan options, not session components. `loader = "auto"`
+# resolves to Limine on Arch and GRUB elsewhere (D-026). Root is Btrfs by
+# default; ext4 is the /boot filesystem and an explicit root fallback (D-027).
+
+[[cell]]
+family = "arch"
+component = "fs.btrfs"
+tier = "native"
+evidence = "https://archlinux.org/packages/core/x86_64/btrfs-progs/"
+checked = 2026-11-13
+
+[[cell]]
+family = "debian"
+component = "fs.btrfs"
+tier = "native"
+evidence = "https://packages.debian.org/trixie/btrfs-progs"
+checked = 2026-11-13
+
+[[cell]]
+family = "fedora"
+component = "fs.btrfs"
+tier = "native"
+evidence = "https://packages.fedoraproject.org/pkgs/btrfs-progs/btrfs-progs/"
+checked = 2026-11-13
+
+[[cell]]
+family = "suse"
+component = "fs.btrfs"
+tier = "native"
+evidence = "https://software.opensuse.org/package/btrfs-progs"
+checked = 2026-11-13
+
+[[cell]]
+family = "arch"
+component = "fs.ext4"
+tier = "native"
+evidence = "https://archlinux.org/packages/core/x86_64/e2fsprogs/"
+checked = 2026-11-13
+
+[[cell]]
+family = "debian"
+component = "fs.ext4"
+tier = "native"
+evidence = "https://packages.debian.org/trixie/e2fsprogs"
+checked = 2026-11-13
+
+[[cell]]
+family = "fedora"
+component = "fs.ext4"
+tier = "native"
+evidence = "https://packages.fedoraproject.org/pkgs/e2fsprogs/e2fsprogs/"
+checked = 2026-11-13
+
+[[cell]]
+family = "suse"
+component = "fs.ext4"
+tier = "native"
+evidence = "https://software.opensuse.org/package/e2fsprogs"
+checked = 2026-11-13
+
+[[cell]]
+family = "arch"
+component = "boot.limine"
+tier = "native"
+evidence = "https://archlinux.org/packages/extra/x86_64/limine/"
+checked = 2026-11-13
+
+[[cell]]
+family = "debian"
+component = "boot.limine"
+tier = "unsupported"
+reason = "No Limine package in Debian 13 or backports as of 2026-11-13"
+remedy = "Use loader = \"grub\"; Limine on Debian is post-v1"
+evidence = "https://qa.debian.org/madison.php?package=limine"
+
+[[cell]]
+family = "fedora"
+component = "boot.limine"
+tier = "unsupported"
+reason = "No Limine package in Fedora 43-45, EPEL or Rawhide as of 2026-11-13"
+remedy = "Use loader = \"grub\"; Limine on Fedora is post-v1"
+evidence = "https://packages.fedoraproject.org/search?query=limine"
+
+[[cell]]
+family = "suse"
+component = "boot.limine"
+tier = "unsupported"
+reason = "Limine 12.9.4 is packaged in Tumbleweed, but v0.1 deliberately uses GRUB for its Btrfs/snapper-aware boot flow and has no Limine VM cell"
+remedy = "Use loader = \"grub\"; promote Limine only with a VM cell (O-21)"
+evidence = "https://software.opensuse.org/package/limine"
+
+[[cell]]
+family = "arch"
+component = "boot.grub"
+tier = "native"
+evidence = "https://archlinux.org/packages/extra/x86_64/grub/"
+checked = 2026-11-13
+
+[[cell]]
+family = "debian"
+component = "boot.grub"
+tier = "native"
+evidence = "https://packages.debian.org/trixie/grub-efi-amd64"
+checked = 2026-11-13
+
+[[cell]]
+family = "fedora"
+component = "boot.grub"
+tier = "native"
+evidence = "https://packages.fedoraproject.org/pkgs/grub2/grub2-efi-x64/"
+checked = 2026-11-13
+
+[[cell]]
+family = "suse"
+component = "boot.grub"
+tier = "native"
+evidence = "https://software.opensuse.org/package/grub2-x86_64-efi"
 checked = 2026-11-13

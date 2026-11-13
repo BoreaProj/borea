@@ -29,12 +29,15 @@ systems in v1.
 ### Arch
 
 Boot the Arch ISO. It provides `pacman`, `pacstrap`, `sgdisk`, `mkfs.*`,
-`cryptsetup` and `grub-install`.
+`btrfs`, `cryptsetup`, `limine` and `grub-install`.
 
 ```sh
-pacman -Sy --needed arch-install-scripts
+pacman -Sy --needed arch-install-scripts btrfs-progs limine
 ./borea doctor --family arch
 ```
+
+For the GRUB fallback cell, add `grub`: `pacman -S --needed grub`. `doctor` only
+asks for the loader the plan resolves.
 
 ### Debian
 
@@ -117,11 +120,13 @@ sudo ./borea apply plan.json --yes
 The executor:
 
 1. re-checks the device identity (serial + size),
-2. partitions, formats and mounts,
+2. partitions, formats and mounts (Btrfs subvolumes on the default lane; ext4
+   `/boot` always),
 3. bootstraps the base system,
 4. configures locale, user, services,
 5. installs the session,
-6. installs and configures GRUB and the initramfs,
+6. installs and configures the bootloader (Limine on Arch, GRUB elsewhere) and
+   the initramfs,
 7. writes the journal under `/mnt/var/log/borea/` and on the live system.
 
 If it fails, it stops, keeps mounts and prints:
@@ -141,8 +146,9 @@ Do not reboot a half-installed target. Read the journal tail, fix the cause
 sudo ./borea verify plan.json --root /mnt
 ```
 
-This checks files, packages, units, users, session entries and the bootloader
-offline. Fix any failure before rebooting.
+This checks files, packages, units, users, session entries, the filesystem
+layout (`findmnt`, subvolumes, mount options) and the bootloader (EFI binary,
+config and cmdline) offline. Fix any failure before rebooting.
 
 ## 7. First boot
 
@@ -167,18 +173,36 @@ Production profiles do not enable SSH. Use the console for the first login.
 - Change the password if the temporary one was reused.
 - Enable full-disk encryption unlock at boot (already configured).
 - Add your own dotfiles; borea only seeds a minimal working session.
+- The root is Btrfs. Inspect it with `btrfs subvolume list /` and
+  `btrfs filesystem usage /`. `@snapshots` is empty by design; v0.1 does not
+  install snapshot tooling (D-028). A manual snapshot is:
+  `sudo btrfs subvolume snapshot -r / /.snapshots/root-$(date +%F)`. Do not
+  snapshot `/` while it is being written heavily, and do not expect a boot-menu
+  entry: limine/GRUB menus are not snapshot-aware in v0.1.
 - For Omarchy, see [`OMARCHY.md`](OMARCHY.md).
 
 ## 9. Recovery
 
 | Symptom | Likely cause | Action |
 | --- | --- | --- |
+| Limine prompt/menu but no boot | wrong `guid(...)` or kernel path | boot live, `blkid` the `/boot` partition, compare with `/boot/efi/EFI/BOOT/limine.conf`, re-run the Limine steps |
 | GRUB prompt, no menu | `grub.cfg` not generated or wrong path | boot live, `borea verify --root /mnt`, re-run the boot steps |
-| Kernel panic, no root | wrong `root=`/UUID or missing initramfs | check `fstab`, `crypttab`, initramfs command in the journal |
+| Kernel panic, no root | wrong `root=`/UUID, missing `rootflags=subvol=@`, or missing initramfs | check `fstab`, `crypttab`, cmdline and initramfs command in the journal |
+| `mount: unknown filesystem type 'btrfs'` | initramfs lacks the Btrfs module | chroot, add `btrfs` to the initramfs config, regenerate, re-verify |
 | LUKS prompt loops | wrong key slot or crypttab UUID | open manually with `cryptsetup open`, compare UUIDs |
 | Greeter but no session | session `.desktop` missing or Exec wrong | check `/usr/share/wayland-sessions/`, journal |
 | Shell starts then exits | compositor/shell version mismatch | check the pair in `MATRIX.md`; use a supported pair |
 | Network missing | NetworkManager not enabled | `systemctl enable --now NetworkManager` in a chroot |
+
+To mount a Btrfs target manually from the live environment:
+
+```sh
+cryptsetup open /dev/<root-part> cryptroot      # only when encrypt = true
+mount -o subvol=@,compress=zstd:3,noatime /dev/mapper/cryptroot /mnt
+mount -o subvol=@home /dev/mapper/cryptroot /mnt/home
+mount /dev/<boot-part> /mnt/boot
+mount /dev/<esp-part> /mnt/boot/efi
+```
 
 `borea apply --resume` is safe after a failure. It skips completed steps and
 probes the current state. If the disk was changed outside borea, re-plan; do not

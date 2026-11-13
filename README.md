@@ -8,6 +8,13 @@ Niri, MangoWM) with a shell (Noctalia, DUX/Dank Material Shell, end-4). It runs
 on **Arch, Debian, Fedora and openSUSE**, and says plainly which combinations
 it cannot install yet instead of offering buttons that fail.
 
+The root is **Btrfs by default** (`@`, `@home`, `@snapshots`, `@log`, `@cache`,
+zstd compression), with ext4 where it is the better tool: the small unencrypted
+`/boot` partition and an explicit `root_fs = "ext4"` fallback. Boot is
+**Limine on Arch** and **GRUB elsewhere**, because Arch's stable kernel filenames
+suit a static Limine config and the other families have native GRUB/BLS/snapper
+integration.
+
 It also carries the Omarchy tools: a **trimmer** for Omarchy defaults and a
 **default manager** that keeps removed defaults from coming back after updates.
 
@@ -30,7 +37,8 @@ What is deliberately **not** here:
 - no live ISO, custom initramfs, USB writer or release attestation
 - no daemon, socket protocol or background worker
 - no simulation engine — `--dry-run` and golden plan tests replace it
-- no dual-boot, Secure Boot signing, Btrfs snapshots or ARM in v1
+- no snapshot manager or automatic rollback — the Btrfs layout is snapshot-ready
+- no dual-boot, Secure Boot signing or ARM in v1
 
 ## The model
 
@@ -109,6 +117,10 @@ Everything else is a documented gate. The full table, evidence and dates are in
 | minimal, KDE, GNOME | yes | yes | yes | yes |
 | Hyprland | yes | yes | yes | yes |
 | Noctalia, DUX/DMS | yes | yes | yes | yes |
+| Btrfs root, ext4 `/boot` | yes | yes | yes | yes |
+| ext4 root fallback | yes | yes | yes | yes |
+| Limine | yes (default) | gate | gate | gate |
+| GRUB | yes (fallback) | yes (default) | yes (default) | yes (default) |
 | Niri | yes | gate | yes | yes |
 | MangoWM | yes | third-party | third-party | gate |
 | COSMIC | yes | gate | yes | third-party |

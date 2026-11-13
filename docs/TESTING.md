@@ -24,8 +24,9 @@ needs a VM artifact. A bootloader, kernel or encryption change needs both.
 
 - `borea-core`: config validation, recipe lint, matrix gates, resolver order,
   canonical JSON, digest stability, secret redaction.
-- `borea-distro`: argv for each family, fstab/crypttab rendering, boot paths,
-  key fingerprint checks.
+- `borea-distro`: argv for each family, fstab/crypttab rendering (UUID and
+  PARTUUID), bootloader policy and paths (Limine on Arch, GRUB elsewhere),
+  Btrfs subvolume steps, key fingerprint checks.
 - `borea-session`: component merge, greeter selection, seed destinations,
   duplicate detection.
 - `borea-run`: probe evaluation, journal replay, resume, redaction, chroot
@@ -65,26 +66,38 @@ Properties enforced:
 - changing only `created` does not;
 - every plan validates against `schema` before comparison.
 
-Golden files: one per family for minimal, plus one per required session pair.
-Keep them small; do not commit a plan with absolute host paths.
+Golden files: one per family for minimal (default Btrfs + resolved loader),
+plus one per required session pair, plus the four ext4-root variants and the
+Arch-GRUB variant. Keep them small; do not commit a plan with absolute host
+paths.
 
 ## 4. Disk selftest
 
 Runs on a sparse raw image, never a block device.
 
 ```sh
-cargo xtask disk selftest --size 20G --stage all
+cargo xtask disk selftest --size 20G --stage all --fs btrfs
+cargo xtask disk selftest --size 20G --stage all --fs ext4
 cargo xtask disk selftest --encrypt
 ```
 
 It asserts:
 
-1. GPT has exactly three partitions with the expected sizes and type GUIDs.
-2. ESP is FAT32, `/boot` and `/` are ext4, labels are correct.
-3. Mount tree is root → boot → ESP; fstab uses UUIDs.
-4. LUKS2 opens with the canary key and closes cleanly.
-5. A second run skips every step (journal shows `skipped`).
-6. Cleanup detaches the loop device even after a panic.
+1. GPT has exactly three partitions with the expected sizes and type GUIDs;
+   GUIDs are stable across a re-plan and differ when the disk serial changes.
+2. ESP is FAT32, `/boot` is ext4 on both lanes, `/` is Btrfs on the default lane
+   and ext4 on the fallback lane; labels are correct.
+3. Btrfs has `@`, `@home`, `@snapshots`, `@log` and `@cache`; mount options are
+   `compress=zstd:3,noatime,ssd,discard=async`.
+4. Mount tree is root (subvol=@) → boot → ESP; fstab uses `UUID=` for
+   ext4/Btrfs/LUKS and `PARTUUID=` for the ESP, plus `subvol=` and the mount
+   options.
+5. The kernel cmdline carries `rootflags=subvol=@` on Btrfs and no subvol flag
+   on ext4.
+6. LUKS2 opens with the canary key and closes cleanly; the LUKS UUID matches the
+   plan.
+7. A second run skips every step (journal shows `skipped`).
+8. Cleanup detaches the loop device even after a panic.
 
 The harness refuses to run if `--image` resolves to a device or if the image is
 already attached.
@@ -96,10 +109,10 @@ reproduce that environment in a container with the same tools:
 
 | Family | Container base | Tools |
 | --- | --- | --- |
-| Arch | `archlinux:latest` | `arch-install-scripts`, `pacman`, `sgdisk`, `e2fsprogs`, `dosfstools`, `cryptsetup`, `grub` |
-| Debian | `debian:trixie` | `debootstrap`, `apt`, `sgdisk`, `e2fsprogs`, `dosfstools`, `cryptsetup`, `grub-efi-amd64` |
-| Fedora | `fedora:latest` | `dnf5`, `sgdisk`, `e2fsprogs`, `dosfstools`, `cryptsetup`, `grub2-tools` |
-| openSUSE | `opensuse/tumbleweed` | `zypper`, `sgdisk`, `e2fsprogs`, `dosfstools`, `cryptsetup`, `grub2` |
+| Arch | `archlinux:latest` | `arch-install-scripts`, `pacman`, `sgdisk`, `btrfs-progs`, `e2fsprogs`, `dosfstools`, `cryptsetup`, `limine`, `grub` |
+| Debian | `debian:trixie` | `debootstrap`, `apt`, `sgdisk`, `btrfs-progs`, `e2fsprogs`, `dosfstools`, `cryptsetup`, `grub-efi-amd64` |
+| Fedora | `fedora:latest` | `dnf5`, `sgdisk`, `btrfs-progs`, `e2fsprogs`, `dosfstools`, `cryptsetup`, `grub2-tools` |
+| openSUSE | `opensuse/tumbleweed` | `zypper`, `sgdisk`, `btrfs-progs`, `e2fsprogs`, `dosfstools`, `cryptsetup`, `grub2` |
 
 ```sh
 cargo xtask env --family debian -- borea doctor --json
@@ -120,9 +133,15 @@ by the live lane in §8.
 
 ```sh
 cargo xtask e2e --family arch --profile minimal
+cargo xtask e2e --family arch --profile minimal --loader grub
+cargo xtask e2e --family arch --profile minimal --root-fs ext4
 cargo xtask e2e --family debian --profile hyprland-noctalia --keep
 cargo xtask e2e --family suse --profile kde --encrypt
 ```
+
+`--loader` accepts `auto`, `limine` or `grub`; the harness refuses a loader the
+family matrix gates. `--root-fs` accepts `btrfs` or `ext4`. Both flags override
+the profile for one run and are recorded in `result.json`.
 
 Pipeline:
 
@@ -158,6 +177,11 @@ The test SSH key is injected by the plan in test profiles only
 - `apply` exits 0 and the journal has no failed step.
 - The VM reaches SSH within the timeout (default 180 s after boot).
 - `borea verify` exits 0 with every check `ok`.
+- The bootloader check passes: the EFI binary and config exist, the config names
+  the right kernel/initramfs, and the booted `/proc/cmdline` matches the plan.
+- `/proc/cmdline` contains `rootflags=subvol=@` and the expected root UUID on
+  Btrfs; `findmnt /` shows `subvol=/@` and the compression option after systemd
+  remounts the root.
 - For desktop/shell cells, the session check passes: the greeter unit is
   enabled, the session `.desktop` file exists, and the shell/compositor package
   is installed. A headless check cannot prove pixels; a human spot-check is
@@ -186,7 +210,9 @@ green without a `pass: true` result newer than the last recipe change.
 
 | Profile | Extra assertions beyond minimal |
 | --- | --- |
-| `minimal` | boot, root login, network unit enabled, no failed units |
+| `minimal` | boot, root login, network unit enabled, no failed units, Btrfs subvolumes |
+| `minimal-ext4` | same, but `/` is ext4 and the cmdline has no `rootflags` |
+| `minimal-grub` | same, but GRUB is the resolved loader (Arch fallback) |
 | `kde` | `sddm` enabled, `plasmawayland.desktop` exists, `plasma-workspace` installed |
 | `gnome` | `gdm` enabled, `gnome.desktop` exists, `gnome-shell` installed |
 | `cosmic` | `cosmic-greeter`/session file, `cosmic-session` installed |
@@ -230,9 +256,9 @@ cargo xtask secret canary
 
 Nightly (or manual):
 
-- disk selftest, unencrypted and encrypted;
+- disk selftest, Btrfs and ext4, unencrypted and encrypted;
 - one family per night on a rotating schedule, all four by the end of the week;
-- full 24-cell matrix on release candidates;
+- the 24 session cells plus the five storage/boot cells on release candidates;
 - artifacts uploaded and indexed.
 
 A red nightly does not block unrelated PRs, but it blocks a release. The
@@ -244,9 +270,12 @@ release checklist reads the latest artifact index, not memory.
 2. `journal.jsonl` — the last `start` without `ok` is the step. The captured
    tail has the command output.
 3. `serial.log` — boot failures, missing initramfs, wrong root, failed units.
+   For a Btrfs root, check that the cmdline has `rootflags=subvol=@`; for
+   Limine, check that the config's `guid(...)` matches the `/boot` UUID.
 4. Re-run with `--keep` and inspect the disk:
    `cargo xtask vm shell --image <cell>/disk.img` (boots a rescue shell) or
-   attach the image read-only on the host.
+   attach the image read-only on the host. Mount Btrfs with
+   `mount -o subvol=@ <img> /mnt` (use a loop with `--partscan`).
 5. Reproduce the plan only:
    `cargo xtask env --family <f> -- borea plan --config <cell>/config.toml --out /tmp/p.json`
 6. If the failure is family-specific, fix the adapter, not the core. If it is

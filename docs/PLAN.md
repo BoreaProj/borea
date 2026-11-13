@@ -24,7 +24,9 @@ borea v2 takes the opposite position:
 ## 2. Goals
 
 1. **Minimal, reproducible installs** on Arch, Debian, Fedora and openSUSE from
-   the family's live or rescue environment.
+   the family's live or rescue environment, with Btrfs by default and ext4 only
+   where it is the better tool (the unencrypted `/boot` partition and the
+   explicit root fallback).
 2. **One session layer** on top: KDE, GNOME, COSMIC, or Hyprland / Niri /
    MangoWM with Noctalia / DUX (DMS) / end-4.
 3. **Customisable defaults** through TOML recipes and a user config, without
@@ -47,7 +49,8 @@ borea v2 takes the opposite position:
 | Simulation engine | `--dry-run`, golden plans, VM matrix |
 | Dual-boot / alongside / resize | Large, dangerous, not required for v1 |
 | Secure Boot signing and key enrolment | Needs a trust story we do not have |
-| Btrfs, snapshots, rollback | ext4 first; add only after v1 is green |
+| Snapshot tooling, rollback, boot-into-snapshot | The Btrfs layout is snapshot-ready, but the manager is post-v1 (D-028) |
+| Limine outside Arch | No package on Debian/Fedora; GRUB is better on openSUSE in v1 (D-026) |
 | ARM, RISC-V, BIOS/legacy | x86_64 UEFI only |
 | Wi-Fi setup in the installer | Use the live environment's network tooling |
 | Installing Omarchy itself | Omarchy has its own ISO; v1 trims/manages an existing install |
@@ -88,15 +91,15 @@ keymap = "uk"
 [disk]
 device = "/dev/vda"
 mode = "replace"             # only "replace" in v1
-root_fs = "ext4"             # ext4 only in v1
+root_fs = "btrfs"            # btrfs (default) | ext4 (explicit fallback)
 encrypt = false
 # luks_password_file = "/run/borea/luks.pass"   # required when encrypt and != account password
 esp_size = "1GiB"
-boot_size = "2GiB"
+boot_size = "2GiB"           # /boot is always ext4 in v1
 swap = "zram"                # none | zram | file
 
 [boot]
-loader = "grub"
+loader = "auto"              # auto | limine | grub; auto = limine on arch, grub elsewhere
 secure_boot = false
 
 [account]
@@ -144,8 +147,8 @@ and omit `compositor`/`shell`.
                     │
         distro tools: pacstrap, debootstrap,
         dnf5 --installroot, zypper --root,
-        sgdisk, mkfs, cryptsetup, mount,
-        grub-install, chroot
+        sgdisk, mkfs.btrfs, mkfs.ext4, cryptsetup, mount,
+        limine, grub-install, chroot
 ```
 
 - `borea-core` owns config, recipes, matrix, plan, checks and validation.
@@ -188,9 +191,14 @@ Tier definitions:
 | `native` | packaged in the family's official repositories |
 | `third-party` | documented repository/COPR/OBS/APT repo with a pinned key |
 | `source` | built in the target from a pinned upstream commit |
-| `unsupported` | no documented path; `plan` refuses |
+| `unsupported` | not offered by this release; `plan` refuses with the reason |
 
-v0.1 **must** pass, on all four families, in a VM:
+`unsupported` covers both "no packaging path exists" and "a path exists but v0.1
+deliberately does not offer it". The reason says which; the evidence link is
+still required.
+
+v0.1 **must** pass, on all four families, in a VM, on the default storage layout
+(Btrfs root, ext4 `/boot`, default loader):
 
 - minimal
 - KDE
@@ -199,12 +207,22 @@ v0.1 **must** pass, on all four families, in a VM:
 - Hyprland + Noctalia
 - Hyprland + DUX/DMS
 
+v0.1 **must** also pass these storage and boot cells:
+
+- minimal on an **ext4 root**, one per family (proves the fallback);
+- minimal with **GRUB on Arch** (proves the fallback loader).
+
+That is 29 required cells: 24 session cells, 4 ext4-root cells and 1 Arch-GRUB
+cell. `cargo xtask matrix verify --strict` counts them, not a hand-written
+number.
+
 v0.1 **may** pass (gated in `MATRIX.md`, not promised):
 
 - Niri on Debian
 - MangoWM on openSUSE
 - COSMIC on Debian
 - end-4 on Arch as a `source` cell (experimental, `--allow-source`)
+- Limine on openSUSE (O-21)
 
 Every other cell must be explicitly `unsupported` with a reason. The rule is:
 a green row in `MATRIX.md` requires a passing VM artifact path in the release
@@ -238,36 +256,40 @@ cells; `borea plan` emits the golden JSON byte-for-byte.
 ### D1 — Executor, storage, bootloader plan (critical)
 
 - Journal, probes, resume, secret slots, redaction.
-- GPT layout, ESP, `/boot`, root, ext4, optional LUKS2, mount tree, fstab.
-- GRUB step set for all four families (paths differ; adapter owns them).
-- Loopback test: create a 20 GiB image, partition it, format it, mount it,
-  write fstab, unmount it. Re-apply is a no-op.
+- GPT layout, ESP, ext4 `/boot`, Btrfs root with `@`, `@home`, `@snapshots`,
+  `@log`, `@cache`, optional LUKS2, mount tree, fstab, deterministic UUIDs.
+- Bootloader policy (`auto`), Limine config generation for Arch, GRUB fallback
+  paths for all four families (paths differ; the adapter owns them).
+- Loopback test: create a 20 GiB image, partition it, format it, create
+  subvolumes, mount it, write fstab, unmount it. Re-apply is a no-op.
 
-**Exit:** `cargo xtask disk selftest` passes twice; second run skips every
-storage step.
+**Exit:** `cargo xtask disk selftest --fs btrfs` and `--fs ext4` pass twice
+each; second run skips every storage step.
 
 ### D2 — Arch minimal end to end (critical)
 
 - `pacstrap` adapter, base packages, locale/timezone/user/services.
+- Limine install and first boot; GRUB fallback cell.
 - Container runner + QEMU boot + SSH verification.
 - First real VM: boots, logs in, `borea verify` passes.
 
-**Exit:** `cargo xtask e2e --family arch --profile minimal` green, artifact
-kept.
+**Exit:** `cargo xtask e2e --family arch --profile minimal` green (Limine,
+Btrfs); `--loader grub` and `--root-fs ext4` cells green; artifacts kept.
 
 ### D3 — Debian and Fedora minimal (critical)
 
-- `debootstrap`, `dnf5 --installroot`, per-family fstab/initramfs/boot paths.
-- Same e2e cell for both.
+- `debootstrap`, `dnf5 --installroot`, per-family fstab/initramfs/GRUB paths.
+- Same e2e cell for both, on Btrfs with the ext4 `/boot`.
 
 **Exit:** both cells green. Any family-specific divergence documented in the
 adapter, not leaked into core.
 
 ### D4 — openSUSE, encryption, resume
 
-- `zypper --root`, openSUSE boot paths.
+- `zypper --root`, openSUSE GRUB paths, Btrfs root.
 - LUKS2 e2e on Arch and Debian; document Fedora/openSUSE if they lag.
 - Kill-and-resume test mid-bootstrap.
+- ext4-root cells for Fedora and openSUSE.
 
 **Exit:** openSUSE minimal green; at least two encryption cells green; resume
 from a killed apply completes without repeating destructive steps.
@@ -322,28 +344,29 @@ the owner or a small, reviewed interface PR.
 | F Harness | `crates/xtask`, `fixtures`, `.github/workflows`, `docs/TESTING.md` | product code |
 
 Interfaces freeze at end of D1: `Config`, `Plan`, `Step`, `Check`, `Recipe`,
-`Family`, `Session`. After that, additive changes only; breaking changes need a
-decision entry and a schema bump.
+`Family`, `Session`, `Loader`, `Filesystem`. After that, additive changes only;
+breaking changes need a decision entry and a schema bump.
 
 ## 10. Acceptance criteria
 
 A release is acceptable when all of these are true:
 
-1. The six required cells per family pass in a VM from a clean disk, using the
-   family's own bootstrap tool, and the installed system boots to a login
-   prompt or greeter.
-2. `borea verify` passes over SSH after the first boot for every green cell.
-3. Re-running `apply` on a completed plan is a no-op; re-running after a killed
+1. The six required session cells per family pass in a VM from a clean disk,
+   using the family's own bootstrap tool, on Btrfs with the default loader, and
+   the installed system boots to a login prompt or greeter.
+2. The four ext4-root cells and the Arch-GRUB cell pass from a clean disk.
+3. `borea verify` passes over SSH after the first boot for every green cell.
+4. Re-running `apply` on a completed plan is a no-op; re-running after a killed
    apply resumes correctly.
-4. Every gated cell returns a reason, a remedy and a link to the evidence.
-5. No secret appears in any plan, journal, log or artifact (test with a canary).
-6. The Omarchy trim/default flow passes against a fixture root and (if a VM is
+5. Every gated cell returns a reason, a remedy and a link to the evidence.
+6. No secret appears in any plan, journal, log or artifact (test with a canary).
+7. The Omarchy trim/default flow passes against a fixture root and (if a VM is
    available) a real Omarchy VM.
-7. CI is green: fmt, clippy `-D warnings`, tests, matrix check, golden plans.
-8. Docs match reality; nothing in README claims an untested cell.
-9. If a required cell cannot pass, the release either waits or records a
-   decision that demotes it to a gate. It never ships a smaller contract
-   silently.
+8. CI is green: fmt, clippy `-D warnings`, tests, matrix check, golden plans.
+9. Docs match reality; nothing in README claims an untested cell.
+10. If a required cell cannot pass, the release either waits or records a
+    decision that demotes it to a gate. It never ships a smaller contract
+    silently.
 
 ## 11. Risks and mitigations
 
@@ -353,14 +376,17 @@ A release is acceptable when all of these are true:
 | Third-party repos change or break keys | high | pin key fingerprints; `matrix check` validates recipes; fail closed |
 | Shells need compositor versions the distro lacks | medium | tier `source` or gate; never silently install a mismatched pair |
 | VM automation eats the schedule | medium | build harness on D0–D1, not D7; container lane for fast iteration |
-| Encryption + GRUB + initramfs differs per family | medium | treat as separate acceptance cells, not a checkbox |
+| Encryption + bootloader + Btrfs + initramfs differs per family | medium | treat as separate acceptance cells, not a checkbox |
+| Limine static config breaks after a kernel rename | medium | Arch kernel filenames are stable; `boot.verify` asserts the paths and a kernel-update check runs before promotion; GRUB fallback cell |
+| Btrfs subvolume or mount-option mistake makes the root unbootable | medium | plan-time fstab and `rootflags=subvol=@`; `findmnt` assertions in the VM; ext4-root fallback cell per family |
 | Agent drift / scope creep | high | one card at a time, file ownership, "no new crate without decision" |
 | Testing on the host damages a real disk | low | image files, loop devices, `--yes` + identity check |
 | Package names drift before release | medium | recipes carry evidence date + upstream URL; nightly matrix check |
 
 ## 12. Definition of done
 
-- Six required cells × four families green, artifacts linked.
+- Twenty-nine required cells green (24 session, 4 ext4-root, 1 Arch-GRUB),
+  artifacts linked.
 - `borea` builds a static x86_64 binary; `borea-defaults` builds for the target.
 - Docs (`PLAN`, `ARCHITECTURE`, `RECIPES`, `MATRIX`, `TASKS`, `TESTING`,
   `DECISIONS`, `OMARCHY`, `PROMPTS`) are current.
@@ -374,10 +400,11 @@ The plan is deliberately narrow. The only moving parts are:
 
 - a schema and resolver,
 - four bootstrap adapters,
-- one storage/boot path,
+- one storage layout with two filesystems (Btrfs default, ext4 `/boot`/fallback),
+- two bootloaders (Limine on Arch, GRUB on the rest and as fallback),
 - a handful of session recipes,
 - a VM loop.
 
-There is no image to build, no GUI to render, no daemon to supervise, and no
-new operating system to maintain. If a task cannot be verified by a plan
-fixture or a VM cell, it is not in v1.
+There is no image to build, no GUI to render, no daemon to supervise, no
+snapshot manager, and no new operating system to maintain. If a task cannot be
+verified by a plan fixture or a VM cell, it is not in v1.
