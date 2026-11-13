@@ -1,9 +1,9 @@
 {
   "schema": 2,
-  "id": "fea68d94926f3619cc29d1440fcbe934",
+  "id": "dd85c6611e1bfcd54e65286c50ad755e",
   "created": "1970-01-01T00:00:00Z",
-  "borea_version": "0.1.0",
-  "digest": "fea68d94926f3619cc29d1440fcbe934de37335c26f78604b6b832f2129c8e4f",
+  "borea_version": "B-0.3",
+  "digest": "dd85c6611e1bfcd54e65286c50ad755ef63c6dee3ca31078595fc2abf9944f8d",
   "config_digest": "9d9e2aa555a83677c174e3589045d1dd3c99edb6dfa86469b9cfb0d32c688cc0",
   "matrix_digest": "2c8e72b621a2407f672a030615d9fd7f732adb37cb06ae7dacfeaca926f5b593",
   "family": "fedora",

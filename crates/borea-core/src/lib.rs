@@ -10,6 +10,12 @@ pub mod runtime;
 pub use config::*;
 pub use error::{BoreaError, Result};
 pub use plan::*;
+pub const RELEASE: &str = "B-0.3";
+
+pub fn release() -> &'static str {
+    RELEASE
+}
+
 pub fn version() -> &'static str {
-    env!("CARGO_PKG_VERSION")
+    RELEASE
 }

@@ -543,3 +543,15 @@ signals. `tempfile` is promoted to a runtime dependency for private staging.
 Incomplete destructive steps fail closed if their exact UUID probe cannot
 prove completion. Recreate the disposable image rather than guessing.
 Encryption and target package/bootstrap/boot execution remain gated.
+
+### D-036 — Release numbering format B-<major>.<minor> and milestone B-0.3
+
+**Date:** 2026-11-13
+**Decision:** Standardise Borea releases on the `B-<major>.<minor>` naming scheme,
+starting with release `B-0.3` for Milestone G03 (disposable-image target bootstrap
+and Limine bootloader executor). Cargo packages use workspace SemVer `0.3.0`.
+User-facing CLI banners, `--version` output, plan `borea_version`, and release
+tags use the canonical `B-` prefix (e.g. `B-0.3`).
+**Why:** Unambiguously distinguishes standalone Borea installer releases from
+distro release versions and generic library versions while keeping Cargo's
+package semver valid.
