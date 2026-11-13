@@ -89,7 +89,7 @@ fn run() -> Result<()> {
     let mut raw = std::env::args().skip(1).collect::<Vec<_>>();
     if raw.is_empty() || raw == ["--help"] || raw == ["help"] {
         println!(
-            "borea {} — experimental installer planning, family runtimes and fixture tools\n\nCommands:\n  doctor --family FAMILY [--cache DIR] [--json]\n  runtime list|fetch|verify|probe|exec [--family FAMILY] [--cache DIR]\n  catalogue --family FAMILY [--json]\n  explain COMPONENT --family FAMILY\n  plan --config FILE --out FILE [--dry-run] [--fixture --identity FILE]\n  apply PLAN --dry-run\n  apply PLAN --yes --device DEVICE (live execution gated)\n  apply PLAN --fixture-root DIR --journal FILE [--resume]\n  verify PLAN --root DIR | --ssh USER@HOST [--json]\n  status --journal FILE\n  omarchy configure --config FILE [--json]\n  omarchy trim --list | ID... --dry-run\n  omarchy defaults status --policy FILE\n\nNo VM cells are supported yet. See docs/IMPLEMENTATION.md.",
+            "borea {} — experimental installer planning, family runtimes and fixture tools\n\nCommands:\n  doctor --family FAMILY [--cache DIR] [--json]\n  image create|apply --family FAMILY --manifest FILE (disposable storage only)\n  runtime list|fetch|verify|probe|exec [--family FAMILY] [--cache DIR]\n  catalogue --family FAMILY [--json]\n  explain COMPONENT --family FAMILY\n  plan --config FILE --out FILE [--dry-run] [--fixture --identity FILE]\n  apply PLAN --dry-run\n  apply PLAN --yes --device DEVICE (live execution gated)\n  apply PLAN --fixture-root DIR --journal FILE [--resume]\n  verify PLAN --root DIR | --ssh USER@HOST [--json]\n  status --journal FILE\n  omarchy configure --config FILE [--json]\n  omarchy trim --list | ID... --dry-run\n  omarchy defaults status --policy FILE\n\nNo VM cells are supported yet. See docs/IMPLEMENTATION.md.",
             version()
         );
         return Ok(());
@@ -99,6 +99,9 @@ fn run() -> Result<()> {
         return Ok(());
     }
     let cmd = raw.remove(0);
+    if cmd == "image" {
+        return image(raw);
+    }
     if cmd == "runtime" {
         return runtime(raw);
     }
@@ -439,4 +442,65 @@ fn runtime(mut raw: Vec<String>) -> Result<()> {
         _ => unreachable!(),
     };
     output(&serde_json::to_value(state)?, a.flag("json"))
+}
+
+fn image(mut raw: Vec<String>) -> Result<()> {
+    if raw.is_empty() {
+        return Err(BoreaError::invalid("image create|apply required"));
+    }
+    let cmd = raw.remove(0);
+    let a = Args::parse(
+        raw,
+        &[
+            "image", "manifest", "fs", "size-gib", "family", "cache", "journal",
+        ],
+        &["yes", "resume", "json"],
+    )?;
+    a.no_positionals()?;
+    let lock = borea_core::runtime::RuntimeLock::embedded()?;
+    let family = FamilyId::parse(a.required("family")?)?;
+    let spec = lock.get(family)?;
+    match cmd.as_str() {
+        "create" => {
+            let size = a
+                .value("size-gib")
+                .unwrap_or("20")
+                .parse::<u64>()
+                .map_err(|_| BoreaError::invalid("invalid --size-gib"))?;
+            let bytes = size
+                .checked_mul(1024 * 1024 * 1024)
+                .ok_or_else(|| BoreaError::invalid("image size overflow"))?;
+            let plan = borea_run::image::create(
+                Path::new(a.required("image")?),
+                Path::new(a.required("manifest")?),
+                a.value("fs").unwrap_or("btrfs"),
+                bytes,
+                spec,
+            )?;
+            output(&serde_json::to_value(plan)?, true)
+        }
+        "apply" => {
+            let plan = serde_json::from_slice::<borea_run::image::ImagePlan>(&std::fs::read(
+                a.required("manifest")?,
+            )?)?;
+            let cache = a
+                .value("cache")
+                .map(PathBuf::from)
+                .map(Ok)
+                .unwrap_or_else(borea_run::runtime::default_cache)?;
+            borea_run::image::apply(
+                &plan,
+                spec,
+                &cache,
+                Path::new(a.required("journal")?),
+                a.flag("resume"),
+                a.flag("yes"),
+            )?;
+            output(
+                &serde_json::json!({"schema":1,"storage_verified":true,"bootable":false}),
+                true,
+            )
+        }
+        _ => Err(BoreaError::invalid("unknown image command")),
+    }
 }

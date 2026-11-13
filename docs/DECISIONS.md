@@ -524,3 +524,22 @@ boot cell per release.
 | Btrfs `/boot` | no benefit for a small partition and more loader assumptions |
 | Snapshot manager in v0.1 | retention/restore UX is its own product; see D-028 |
 | Random UUIDs + runtime config templating | plan stops being byte-stable; see D-029 |
+
+### D-035 — Closed image storage execution
+
+G02 uses a separate strict image manifest (schema 1), never the draft command
+plan. Images must be created by Borea as root-owned mode-0600 regular files.
+The executor retains an exclusive image lock and configures auto-clearing loop
+devices directly from that descriptor, including bounded partition slices.
+Only these loops enter a foreground Bubblewrap mount namespace. The namespace
+keeps only the capability needed to mount, with no network, host filesystem or
+physical disk access. It runs one reviewed fixed storage program, not a daemon
+or generic worker. Native family tools still come from the pinned runtime.
+
+A private root-owned temporary copy of the compressed runtime is rehashed
+before extraction; a writable user cache is never elevated. `libc` 0.2 (already
+transitive) is approved for Linux loop ioctls, locks, root checks and process
+signals. `tempfile` is promoted to a runtime dependency for private staging.
+Incomplete destructive steps fail closed if their exact UUID probe cannot
+prove completion. Recreate the disposable image rather than guessing.
+Encryption and target package/bootstrap/boot execution remain gated.

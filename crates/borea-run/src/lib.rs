@@ -1,4 +1,5 @@
 //! Execution boundaries, append-only journals and offline verification.
+pub mod image;
 pub mod journal;
 pub mod omarchy;
 pub mod runtime;

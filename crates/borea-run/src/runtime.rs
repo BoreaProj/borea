@@ -601,6 +601,44 @@ pub fn probe(spec: &RuntimeSpec, cache: &Path) -> Result<RuntimeStatus> {
     Ok(status)
 }
 
+/// Copy and authenticate bytes before extracting into root-private storage.
+/// Never elevate the mutable extracted tree in an unprivileged cache.
+pub(crate) fn private_snapshot(
+    spec: &RuntimeSpec,
+    cache: &Path,
+    private: &Path,
+) -> Result<PathBuf> {
+    spec.validate()?;
+    let source = location(spec, cache).join("runtime.tar.gz");
+    let mut source = OpenOptions::new()
+        .read(true)
+        .custom_flags(libc::O_NOFOLLOW | libc::O_NONBLOCK)
+        .open(source)?;
+    if !source.metadata()?.is_file() || source.metadata()?.len() != spec.size {
+        return Err(error(
+            "E_RUNTIME_INTEGRITY",
+            "runtime source must be a regular archive of the pinned size",
+        ));
+    }
+    let archive = private.join("runtime.tar.gz");
+    let mut dest = OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .mode(0o600)
+        .open(&archive)?;
+    let n = std::io::copy(&mut (&mut source).take(spec.size + 1), &mut dest)?;
+    if n != spec.size {
+        return Err(error("E_RUNTIME_INTEGRITY", "runtime copy size mismatch"));
+    }
+    dest.sync_all()?;
+    verify_archive(spec, &archive)?;
+    let root = private.join("rootfs");
+    fs::create_dir(&root)?;
+    archive_tree(spec, &archive, &root, true)?;
+    tool_paths(spec, &root)?;
+    Ok(root)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -619,6 +657,23 @@ mod tests {
         builder.into_inner().unwrap().finish().unwrap();
         let spec=RuntimeSpec{schema:1,family:FamilyId::Arch,version:"runtime-test.1".into(),arch:"x86_64".into(),image:format!("example@sha256:{}","a".repeat(64)),url:"https://github.com/BoreaProj/borea/releases/download/runtime-test.1/borea-runtime-arch-x86_64.tar.gz".into(),sha256:sha256(&mut File::open(&file).unwrap()).unwrap(),size:fs::metadata(&file).unwrap().len(),max_unpacked_bytes:1024,tools:vec!["tool".into()]};
         (spec, file)
+    }
+    #[test]
+    fn private_snapshot_ignores_mutable_tree_and_rejects_bad_archive() {
+        let d = tempfile::tempdir().unwrap();
+        let (spec, archive) = fixture(d.path());
+        let cache = d.path().join("cache");
+        let state = fetch(&spec, &cache, Some(&archive), true).unwrap();
+        fs::write(state.root.join("usr/bin/tool"), b"changed").unwrap();
+        let private = d.path().join("private");
+        fs::create_dir(&private).unwrap();
+        let snapshot = private_snapshot(&spec, &cache, &private).unwrap();
+        assert_eq!(fs::read(snapshot.join("usr/bin/tool")).unwrap(), b"fixture");
+        fs::write(&state.archive, vec![0; spec.size as usize]).unwrap();
+        let other = d.path().join("other");
+        fs::create_dir(&other).unwrap();
+        assert!(private_snapshot(&spec, &cache, &other).is_err());
+        assert!(!other.join("rootfs").exists());
     }
     #[test]
     fn runtime_offline_import_verify_and_reuse() {
