@@ -298,6 +298,20 @@ standalone installs have passed. Existing apply gates remain in place.
 **Why:** Explicit user correction: Borea is an entirely independent project and
 installer, not dependent on a distro or its live environment.
 
+### D-032 — Build Pages from the existing Markdown documentation
+**Date:** 2026-11-13
+**Decision:** Replace the added Astro deployment template with GitHub's
+`actions/jekyll-build-pages@v1`, Primer theme, relative Markdown link handling
+and optional front matter for the existing documents. Use the supported Pages
+artifact upload/deploy actions. These are documentation build dependencies,
+not installer runtime dependencies.
+**Why:** The failed Astro workflow expects package.json/yarn.lock that do not
+exist. The repository already has the documentation that Pages should publish;
+no frontend application or npm dependency graph is needed. Rust CI stays intact.
+**Validation:** Assert generated index, implementation and plan HTML before
+upload. Pull requests build/check without deployment permissions; main publishes.
+**Reference:** https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages
+
 ---
 
 ## Open

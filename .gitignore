@@ -7,3 +7,7 @@
 .DS_Store
 .idea/
 .vscode/
+
+# Documentation build output
+/_site/
+/.jekyll-cache/

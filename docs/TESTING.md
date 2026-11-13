@@ -300,3 +300,15 @@ without a decision entry and a reason.
 - The canary password is `canary-not-a-real-password`; CI greps every artifact.
 - Tests that need root say so and skip with a clear message otherwise; they do
   not silently pass.
+
+## 12. Documentation deployment
+
+`.github/workflows/pages.yml` builds the README entry page and Markdown docs
+using GitHub's Jekyll Pages action. `_config.yml` supplies the theme and relative
+link conversion; no package.json, npm or Astro build is involved. Source and
+build artifacts are excluded from publication. The workflow checks generated
+index, implementation and plan pages before uploading a Pages artifact.
+
+Pull requests build documentation without deploying. Main and manual runs
+publish through the `github-pages` environment. Confirm both build/deploy jobs
+and the separate Rust CI; a successful Rust run alone does not verify Pages.

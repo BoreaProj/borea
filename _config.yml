@@ -1,0 +1,27 @@
+title: Borea
+description: Independent, standalone Linux installer and customiser
+theme: jekyll-theme-primer
+markdown: GFM
+plugins:
+  - jekyll-relative-links
+  - jekyll-optional-front-matter
+relative_links:
+  enabled: true
+  collections: false
+defaults:
+  - scope:
+      path: ""
+    values:
+      layout: default
+exclude:
+  - AGENTS.md
+  - CLAUDE.md
+  - Cargo.toml
+  - Cargo.lock
+  - LICENSE
+  - rust-toolchain.toml
+  - crates
+  - examples
+  - fixtures
+  - recipes
+  - target

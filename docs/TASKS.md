@@ -30,6 +30,19 @@ the repository root.
 
 ---
 
+## F06 — Repair Pages documentation deployment
+- **Files:** `.github/workflows/pages.yml`, `.github/workflows/astro.yml`,
+  `_config.yml`, `index.md`, `.gitignore`, `docs/DECISIONS.md`, `docs/TESTING.md`.
+- **Problem:** the Astro template fails at package-manager detection because
+  this Rust project has no Astro application, package.json or JavaScript lockfile.
+- **Deliverable:** publish the existing README and Markdown docs through GitHub's
+  supported Jekyll Pages action, retaining deployment and checking entry points.
+- **Verify:** build the Pages artifact, assert index/plan/implementation HTML
+  exists, then confirm build/deploy and Rust CI on GitHub Actions.
+- **Out:** adding an Astro app, changing installer code, bypassing Rust checks.
+
+---
+
 ## G — Independent runtime
 
 ### G01 — Standalone runtime/tool provisioning contract
