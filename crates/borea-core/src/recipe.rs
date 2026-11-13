@@ -58,6 +58,8 @@ pub fn recipes() -> Result<BTreeMap<String, Recipe>> {
     let mut out = BTreeMap::new();
     for s in [
         include_str!("../../../recipes/components/app.firefox.toml"),
+        include_str!("../../../recipes/components/app.neovim.toml"),
+        include_str!("../../../recipes/components/profile.omarchy.toml"),
         include_str!("../../../recipes/components/apps.flatpak.toml"),
         include_str!("../../../recipes/components/base.minimal.toml"),
         include_str!("../../../recipes/components/boot.grub.toml"),
@@ -130,6 +132,7 @@ fn ids_sorted(mut ids: Vec<String>) -> Vec<String> {
     ids
 }
 pub fn lint() -> Result<()> {
+    crate::omarchy::upstream()?;
     let catalog = recipes()?;
     resolve(&catalog.keys().cloned().collect::<Vec<_>>(), &catalog)?;
     for r in catalog.values() {

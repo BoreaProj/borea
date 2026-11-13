@@ -13,3 +13,6 @@ initramfs = ["mkinitcpio", "-P"]
 network_unit = "NetworkManager.service"
 sudo_group = "wheel"
 evidence = "https://archlinux.org/download/"
+
+# Optional source profile: profile.omarchy (see profiles/omarchy.toml).
+# Omarchy stays in the Arch family; it is not an additional FamilyId.

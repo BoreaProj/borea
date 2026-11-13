@@ -115,6 +115,7 @@ Debian/openSUSE paths are WIP.
 **Revisit:** a maintained Fedora COPR, Debian repo or openSUSE package.
 
 ### D-015 — Omarchy tools operate on an existing install only
+**Superseded by:** D-033 for the Arch Omarchy profile; existing-system tools remain available.
 **Decision:** `borea omarchy trim` and `borea omarchy defaults` require a
 detected Omarchy system. Installing Omarchy is out of scope.
 **Why:** Omarchy ships its own ISO and installer. Duplicating it is the old
@@ -311,6 +312,42 @@ no frontend application or npm dependency graph is needed. Rust CI stays intact.
 **Validation:** Assert generated index, implementation and plan HTML before
 upload. Pull requests build/check without deployment permissions; main publishes.
 **Reference:** https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages
+
+### D-033 — Arch Omarchy profile with Linutil baseline and manual app control
+**Date:** 2026-11-13
+**Decision:** Offer Omarchy as `profile.omarchy` inside the Arch family,
+selected with config schema 2 and `session.type = "omarchy"`. Other families
+refuse it. This supersedes the installation exclusion in D-015 at the user's
+explicit request. Borea remains independent of target-family live media.
+**Baseline:** Linutil commit `fda64ff50cd33f5cf12d5b68613f39ce6643e9d4` delegates
+its Omarchy entry directly to the upstream installer; it does not define a
+separate application-removal preset. Record this evidence and Omarchy commit
+`f4378f0de5b44d331ee943746a97872b718a6c18` in one embedded metadata file with
+entrypoint SHA-256 hashes and a package/webapp baseline. No scripts are copied
+or executed by planning. These pins freeze reviewed inputs, not all upstream
+package repositories or runtime network downloads.
+**Manual control:** Preserve everything by default. Explicit `keep`, `remove`
+and `replace` choices are validated for duplicates/conflicts; replacements are
+installed before selected originals are removed. Unknown ids fail. Chromium
+is retained for web apps; default browser is a separate explicit choice.
+Removal intent names exact packages and uses no recursive/orphan/forced removal.
+Keep-removed-after-update policies are opt-in and contain only selected removals.
+**Upstream system defaults:** The profile uses upstream SDDM/Hyprland and requires
+Btrfs/Limine at the pinned revision. Upstream Omarchy includes snapshot/boot and
+system configuration; that is a profile-specific exception to D-028's plain-family
+snapshot tooling exclusion. Borea adds no automatic Linutil system tweaks,
+cleanup, dotfile replacements or application debloat.
+**Schemas:** Config 2 adds the explicit Omarchy choices; basic schema 1 configs
+remain readable, but Omarchy requires 2. Plan 2 adds typed `InstallOmarchy`,
+Omarchy/package probes and a package-absence check. Schema 1 plans require
+replanning. Recipe/matrix and existing defaults-policy JSON stay at schema 1.
+Golden fixtures are updated in the same change, with two optional Omarchy cases;
+the 29 required release VM cases are unchanged.
+**Execution status:** The typed installer stage is intent, not a runnable
+curl-to-shell command. User-context integration, upstream prompt/reboot handling,
+repository trust, independent runtime and exact VM evidence are still required.
+Live apply and mutation gates stay in place; no supported cell is claimed.
+**References:** pinned files under `recipes/omarchy/upstream.toml`; no new dependency.
 
 ---
 

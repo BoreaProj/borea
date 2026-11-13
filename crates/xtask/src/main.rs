@@ -157,6 +157,18 @@ fn case_config(f: FamilyId, profile: &str, fs: Filesystem, l: Loader) -> Result<
     // Codecs are independently tested recipe requests; required session golden cases isolate the session.
     c.apps.codecs = false;
     match profile {
+        "omarchy" | "omarchy-custom" => {
+            c.session.kind = "omarchy".into();
+            c.session.greeter = "auto".into();
+            let mut o = borea_core::omarchy::OmarchyConfig::default();
+            if profile == "omarchy-custom" {
+                o.keep = vec!["spotify".into()];
+                o.remove = vec!["docker".into(), "whatsapp".into()];
+                o.replace.insert("obsidian".into(), "neovim".into());
+                o.default_browser = Some("firefox".into());
+            }
+            c.omarchy = Some(o);
+        }
         "kde" | "gnome" => {
             c.session.kind = "desktop".into();
             c.session.desktop = Some(profile.into());
@@ -179,7 +191,7 @@ fn case_config(f: FamilyId, profile: &str, fs: Filesystem, l: Loader) -> Result<
 fn build_case(c: &Config) -> Result<Plan> {
     let m = Matrix::embedded()?;
     let l = borea_distro::loader(c, &recipe::family(c.target.family)?, &m)?;
-    let s = borea_session::select(c, &m, l, false, false)?;
+    let s = borea_session::select(c, &m, l, c.session.kind == "omarchy", false)?;
     let d = DeviceIdentity {
         path: c.disk.device.clone(),
         serial: "fixture-disk".into(),
@@ -204,7 +216,18 @@ fn golden(update: bool) -> Result<()> {
     }
     let mut plans = 0;
     let mut refusals = 0;
-    for (f, profile, fs, l) in cases() {
+    for (f, profile, fs, l) in
+        cases()
+            .into_iter()
+            .chain(["omarchy", "omarchy-custom"].into_iter().map(|profile| {
+                (
+                    FamilyId::Arch,
+                    profile.into(),
+                    Filesystem::Btrfs,
+                    Loader::Auto,
+                )
+            }))
+    {
         let c = case_config(f, &profile, fs, l)?;
         let result = match build_case(&c) {
             Ok(p) => {
@@ -237,7 +260,7 @@ fn golden(update: bool) -> Result<()> {
         }
     }
     println!(
-        "golden: {plans} deterministic draft plans, {refusals} explicit refusal fixtures; 29 required cases represented, none VM-validated"
+        "golden: {plans} deterministic draft plans, {refusals} explicit refusal fixtures; 29 required cases plus 2 optional Omarchy cases represented, none VM-validated"
     );
     Ok(())
 }

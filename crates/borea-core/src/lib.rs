@@ -3,6 +3,7 @@ pub mod config;
 pub mod defaults;
 pub mod error;
 pub mod matrix;
+pub mod omarchy;
 pub mod plan;
 pub mod recipe;
 pub use config::*;

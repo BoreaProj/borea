@@ -18,6 +18,16 @@ gated. G01 tracks verified runtime delivery/isolation and cross-family VM
 validation. A static binary alone does not provide the external installation
 tools. No bootable Borea environment is claimed or required by this correction.
 
+## Arch Omarchy profile
+
+E06/D-033 adds an Arch-only Omarchy source profile with pinned Linutil/upstream
+defaults, a read-only configure preview, explicit app preservation/removal/
+replacement and browser choices. No changes are selected by default. See
+[OMARCHY.md](OMARCHY.md) and `examples/omarchy.toml` for the full controls.
+Config/plan schema 2 is emitted; basic schema 1 configs remain readable, but old
+plans require regeneration. The defaults policy and recipe/matrix schemas stay 1.
+The typed upstream install stage is not executable yet; live apply remains gated.
+
 ## Working behavior
 
 | Area | Implemented and tested | Remaining |
@@ -33,7 +43,7 @@ tools. No bootable Borea environment is claimed or required by this correction.
 | Sessions/apps | KDE/GNOME/COSMIC, compositor/shell selection, greetd/greeter intent, Firefox/Flatpak/codec package maps | Shell seeds/ownership and upstream package validation; unpinned paths refuse |
 | Execution | Dry-run; confined file-only fixture writes/copies/directories; append-only fsynced journal with lock and stale-plan rejection | Live commands, stdin secrets, signal/timeout handling, cleanup |
 | Verification | Offline file checks; SSH argv quoting and check reports; failures exit 5 | Offline native package/unit checks, remote timeouts and complete boot checks |
-| Omarchy | Full documented trim catalogue preview, browser protection, policy transitions, status/restore/note-install | Verified upstream pin, live removals, automatic update-window detection and hooks |
+| Omarchy | Full documented trim catalogue preview, browser protection, policy transitions, status/restore/note-install | Live removals, automatic update-window detection and hooks |
 | Harness | 29 golden cases, recipe/matrix checks, secret boundary canary, sparse image create/remove, restricted cached container runner | Disk mutation, known-good VM/media pins, QEMU/SSH e2e and artifact collection |
 
 No area whose remaining column includes VM validation is claimed installable.
@@ -99,10 +109,11 @@ Mutating policy commands require filesystem write permission, lock the file,
 keep a `.json.bak` and sync the write. Automatic hook installation is absent.
 `trim` and `enforce` exit 3 before reading or mutating package state.
 
-No code was copied from the old installer: the trim mapping was transcribed
-from `docs/OMARCHY.md`. Its referenced upstream commit and the old policy files
-were not available, so compatibility is limited to the documented schema and
-unknown-field round trips. Full legacy compatibility is not yet proven.
+No code was copied from the old installer. The original trim mapping came from
+the restart design; E06 refreshed it against pinned upstream package/webapp
+evidence. Old policy source files remain unavailable, so compatibility is limited
+to the documented schema and unknown-field round trips; full legacy compatibility
+is not yet proven.
 
 ## Validation
 
@@ -120,12 +131,13 @@ cargo xtask e2e --profile omarchy-trim
 ```
 
 The last command checks trim **preview** argv only, not removal/enforcement.
-Golden results: 25 plans, four refusals (Debian Noctalia/DMS, Fedora DMS,
+Golden results: 27 plans, four refusals (Debian Noctalia/DMS, Fedora DMS,
 openSUSE DMS). No VM artifacts exist. Disk Btrfs/ext4 mutation selftests and
 installation e2e return unsupported, not success. `matrix verify --strict`
 returns the expected release-blocking error.
 
-The recorded results are in [validation/first-pass.md](validation/first-pass.md).
+The initial results are in [validation/first-pass.md](validation/first-pass.md).
+The Arch Omarchy addition is recorded in [validation/omarchy-profile.md](validation/omarchy-profile.md).
 
 ## Next executable cards
 

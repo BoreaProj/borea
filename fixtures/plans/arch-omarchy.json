@@ -1,0 +1,1597 @@
+{
+  "schema": 2,
+  "id": "8276b4ecd22c8e0eff0eeedbce4f737b",
+  "created": "1970-01-01T00:00:00Z",
+  "borea_version": "0.1.0",
+  "digest": "8276b4ecd22c8e0eff0eeedbce4f737b266c8131043b2e05bce14acbbac107e2",
+  "config_digest": "993c4b3c3ccf9f360a2b177761aa5275dcfca5cfbc1d8d08f7412009c03330b7",
+  "matrix_digest": "2c8e72b621a2407f672a030615d9fd7f732adb37cb06ae7dacfeaca926f5b593",
+  "family": "arch",
+  "disk": {
+    "path": "/dev/vda",
+    "serial": "fixture-disk",
+    "size": 21474836480,
+    "sector_size": 512
+  },
+  "root_fs": "btrfs",
+  "loader": "limine",
+  "root": "/mnt",
+  "steps": [
+    {
+      "id": "storage.partition",
+      "title": "storage partition",
+      "action": {
+        "kind": "command",
+        "argv": [
+          "sgdisk",
+          "--zap-all",
+          "--clear",
+          "--new=1:0:+1024M",
+          "--typecode=1:ef00",
+          "--partition-guid=1:1738b98f-04a1-554f-a3f7-ce9775e0715a",
+          "--new=2:0:+2048M",
+          "--typecode=2:8300",
+          "--partition-guid=2:a22a6f3f-f9dd-5c0a-9694-e24cc6b5ae82",
+          "--new=3:0:0",
+          "--typecode=3:8300",
+          "--partition-guid=3:1b54ffe6-2a38-5878-9044-cd672918988d",
+          "/dev/vda"
+        ],
+        "chroot": false,
+        "stdin": null
+      },
+      "needs": [],
+      "probe": {
+        "kind": "none"
+      },
+      "danger": "destructive",
+      "timeout_s": 600,
+      "phase": "storage"
+    },
+    {
+      "id": "storage.settle",
+      "title": "storage settle",
+      "action": {
+        "kind": "command",
+        "argv": [
+          "udevadm",
+          "settle"
+        ],
+        "chroot": false,
+        "stdin": null
+      },
+      "needs": [
+        "storage.partition"
+      ],
+      "probe": {
+        "kind": "command_ok",
+        "argv": [
+          "test",
+          "-b",
+          "/dev/vda3"
+        ],
+        "chroot": false
+      },
+      "danger": "safe",
+      "timeout_s": 600,
+      "phase": "storage"
+    },
+    {
+      "id": "storage.format.esp",
+      "title": "storage format esp",
+      "action": {
+        "kind": "command",
+        "argv": [
+          "mkfs.fat",
+          "-F32",
+          "-i",
+          "8f2429e6",
+          "/dev/vda1"
+        ],
+        "chroot": false,
+        "stdin": null
+      },
+      "needs": [
+        "storage.settle"
+      ],
+      "probe": {
+        "kind": "none"
+      },
+      "danger": "destructive",
+      "timeout_s": 600,
+      "phase": "storage"
+    },
+    {
+      "id": "storage.format.boot",
+      "title": "storage format boot",
+      "action": {
+        "kind": "command",
+        "argv": [
+          "mkfs.ext4",
+          "-F",
+          "-U",
+          "cd75f471-ba89-5632-b5dc-41df6e6bfb70",
+          "/dev/vda2"
+        ],
+        "chroot": false,
+        "stdin": null
+      },
+      "needs": [
+        "storage.format.esp"
+      ],
+      "probe": {
+        "kind": "none"
+      },
+      "danger": "destructive",
+      "timeout_s": 600,
+      "phase": "storage"
+    },
+    {
+      "id": "storage.format.root",
+      "title": "storage format root",
+      "action": {
+        "kind": "command",
+        "argv": [
+          "mkfs.btrfs",
+          "-f",
+          "-U",
+          "20095b36-a9f0-55a0-b3a8-9737f8f3b009",
+          "/dev/vda3"
+        ],
+        "chroot": false,
+        "stdin": null
+      },
+      "needs": [
+        "storage.format.boot"
+      ],
+      "probe": {
+        "kind": "none"
+      },
+      "danger": "destructive",
+      "timeout_s": 600,
+      "phase": "storage"
+    },
+    {
+      "id": "storage.root.dir",
+      "title": "storage root dir",
+      "action": {
+        "kind": "mkdir",
+        "path": "/",
+        "mode": 493
+      },
+      "needs": [
+        "storage.format.root"
+      ],
+      "probe": {
+        "kind": "file_exists",
+        "path": "/"
+      },
+      "danger": "mutating",
+      "timeout_s": 600,
+      "phase": "storage"
+    },
+    {
+      "id": "storage.mount.top",
+      "title": "storage mount top",
+      "action": {
+        "kind": "command",
+        "argv": [
+          "mount",
+          "-o",
+          "subvolid=5",
+          "/dev/vda3",
+          "/mnt"
+        ],
+        "chroot": false,
+        "stdin": null
+      },
+      "needs": [
+        "storage.root.dir"
+      ],
+      "probe": {
+        "kind": "command_ok",
+        "argv": [
+          "findmnt",
+          "--mountpoint",
+          "/mnt"
+        ],
+        "chroot": false
+      },
+      "danger": "mutating",
+      "timeout_s": 600,
+      "phase": "storage"
+    },
+    {
+      "id": "storage.subvolume.",
+      "title": "storage subvolume ",
+      "action": {
+        "kind": "command",
+        "argv": [
+          "btrfs",
+          "subvolume",
+          "create",
+          "/mnt/@"
+        ],
+        "chroot": false,
+        "stdin": null
+      },
+      "needs": [
+        "storage.mount.top"
+      ],
+      "probe": {
+        "kind": "command_ok",
+        "argv": [
+          "btrfs",
+          "subvolume",
+          "show",
+          "/mnt/@"
+        ],
+        "chroot": false
+      },
+      "danger": "mutating",
+      "timeout_s": 600,
+      "phase": "storage"
+    },
+    {
+      "id": "storage.subvolume.home",
+      "title": "storage subvolume home",
+      "action": {
+        "kind": "command",
+        "argv": [
+          "btrfs",
+          "subvolume",
+          "create",
+          "/mnt/@home"
+        ],
+        "chroot": false,
+        "stdin": null
+      },
+      "needs": [
+        "storage.subvolume."
+      ],
+      "probe": {
+        "kind": "command_ok",
+        "argv": [
+          "btrfs",
+          "subvolume",
+          "show",
+          "/mnt/@home"
+        ],
+        "chroot": false
+      },
+      "danger": "mutating",
+      "timeout_s": 600,
+      "phase": "storage"
+    },
+    {
+      "id": "storage.subvolume.snapshots",
+      "title": "storage subvolume snapshots",
+      "action": {
+        "kind": "command",
+        "argv": [
+          "btrfs",
+          "subvolume",
+          "create",
+          "/mnt/@snapshots"
+        ],
+        "chroot": false,
+        "stdin": null
+      },
+      "needs": [
+        "storage.subvolume.home"
+      ],
+      "probe": {
+        "kind": "command_ok",
+        "argv": [
+          "btrfs",
+          "subvolume",
+          "show",
+          "/mnt/@snapshots"
+        ],
+        "chroot": false
+      },
+      "danger": "mutating",
+      "timeout_s": 600,
+      "phase": "storage"
+    },
+    {
+      "id": "storage.subvolume.log",
+      "title": "storage subvolume log",
+      "action": {
+        "kind": "command",
+        "argv": [
+          "btrfs",
+          "subvolume",
+          "create",
+          "/mnt/@log"
+        ],
+        "chroot": false,
+        "stdin": null
+      },
+      "needs": [
+        "storage.subvolume.snapshots"
+      ],
+      "probe": {
+        "kind": "command_ok",
+        "argv": [
+          "btrfs",
+          "subvolume",
+          "show",
+          "/mnt/@log"
+        ],
+        "chroot": false
+      },
+      "danger": "mutating",
+      "timeout_s": 600,
+      "phase": "storage"
+    },
+    {
+      "id": "storage.subvolume.cache",
+      "title": "storage subvolume cache",
+      "action": {
+        "kind": "command",
+        "argv": [
+          "btrfs",
+          "subvolume",
+          "create",
+          "/mnt/@cache"
+        ],
+        "chroot": false,
+        "stdin": null
+      },
+      "needs": [
+        "storage.subvolume.log"
+      ],
+      "probe": {
+        "kind": "command_ok",
+        "argv": [
+          "btrfs",
+          "subvolume",
+          "show",
+          "/mnt/@cache"
+        ],
+        "chroot": false
+      },
+      "danger": "mutating",
+      "timeout_s": 600,
+      "phase": "storage"
+    },
+    {
+      "id": "storage.unmount.top",
+      "title": "storage unmount top",
+      "action": {
+        "kind": "command",
+        "argv": [
+          "umount",
+          "/mnt"
+        ],
+        "chroot": false,
+        "stdin": null
+      },
+      "needs": [
+        "storage.subvolume.cache"
+      ],
+      "probe": {
+        "kind": "command_ok",
+        "argv": [
+          "mountpoint",
+          "--quiet",
+          "/mnt/.borea-never-mounted"
+        ],
+        "chroot": false
+      },
+      "danger": "mutating",
+      "timeout_s": 600,
+      "phase": "storage"
+    },
+    {
+      "id": "storage.mount.root",
+      "title": "storage mount root",
+      "action": {
+        "kind": "command",
+        "argv": [
+          "mount",
+          "-o",
+          "subvol=@,compress=zstd:3,noatime,ssd,discard=async",
+          "/dev/vda3",
+          "/mnt"
+        ],
+        "chroot": false,
+        "stdin": null
+      },
+      "needs": [
+        "storage.unmount.top"
+      ],
+      "probe": {
+        "kind": "command_ok",
+        "argv": [
+          "findmnt",
+          "--mountpoint",
+          "/mnt"
+        ],
+        "chroot": false
+      },
+      "danger": "mutating",
+      "timeout_s": 600,
+      "phase": "storage"
+    },
+    {
+      "id": "storage.dir.home",
+      "title": "storage dir home",
+      "action": {
+        "kind": "mkdir",
+        "path": "/home",
+        "mode": 493
+      },
+      "needs": [
+        "storage.mount.root"
+      ],
+      "probe": {
+        "kind": "file_exists",
+        "path": "/home"
+      },
+      "danger": "mutating",
+      "timeout_s": 600,
+      "phase": "storage"
+    },
+    {
+      "id": "storage.mount.home",
+      "title": "storage mount home",
+      "action": {
+        "kind": "command",
+        "argv": [
+          "mount",
+          "-o",
+          "subvol=@home,compress=zstd:3,noatime,ssd,discard=async",
+          "/dev/vda3",
+          "/mnt/home"
+        ],
+        "chroot": false,
+        "stdin": null
+      },
+      "needs": [
+        "storage.dir.home"
+      ],
+      "probe": {
+        "kind": "command_ok",
+        "argv": [
+          "findmnt",
+          "--mountpoint",
+          "/mnt/home"
+        ],
+        "chroot": false
+      },
+      "danger": "mutating",
+      "timeout_s": 600,
+      "phase": "storage"
+    },
+    {
+      "id": "storage.dir.snapshots",
+      "title": "storage dir snapshots",
+      "action": {
+        "kind": "mkdir",
+        "path": "/.snapshots",
+        "mode": 493
+      },
+      "needs": [
+        "storage.mount.home"
+      ],
+      "probe": {
+        "kind": "file_exists",
+        "path": "/.snapshots"
+      },
+      "danger": "mutating",
+      "timeout_s": 600,
+      "phase": "storage"
+    },
+    {
+      "id": "storage.mount.snapshots",
+      "title": "storage mount snapshots",
+      "action": {
+        "kind": "command",
+        "argv": [
+          "mount",
+          "-o",
+          "subvol=@snapshots,compress=zstd:3,noatime,ssd,discard=async",
+          "/dev/vda3",
+          "/mnt/.snapshots"
+        ],
+        "chroot": false,
+        "stdin": null
+      },
+      "needs": [
+        "storage.dir.snapshots"
+      ],
+      "probe": {
+        "kind": "command_ok",
+        "argv": [
+          "findmnt",
+          "--mountpoint",
+          "/mnt/.snapshots"
+        ],
+        "chroot": false
+      },
+      "danger": "mutating",
+      "timeout_s": 600,
+      "phase": "storage"
+    },
+    {
+      "id": "storage.dir.log",
+      "title": "storage dir log",
+      "action": {
+        "kind": "mkdir",
+        "path": "/var/log",
+        "mode": 493
+      },
+      "needs": [
+        "storage.mount.snapshots"
+      ],
+      "probe": {
+        "kind": "file_exists",
+        "path": "/var/log"
+      },
+      "danger": "mutating",
+      "timeout_s": 600,
+      "phase": "storage"
+    },
+    {
+      "id": "storage.mount.log",
+      "title": "storage mount log",
+      "action": {
+        "kind": "command",
+        "argv": [
+          "mount",
+          "-o",
+          "subvol=@log,compress=zstd:3,noatime,ssd,discard=async",
+          "/dev/vda3",
+          "/mnt/var/log"
+        ],
+        "chroot": false,
+        "stdin": null
+      },
+      "needs": [
+        "storage.dir.log"
+      ],
+      "probe": {
+        "kind": "command_ok",
+        "argv": [
+          "findmnt",
+          "--mountpoint",
+          "/mnt/var/log"
+        ],
+        "chroot": false
+      },
+      "danger": "mutating",
+      "timeout_s": 600,
+      "phase": "storage"
+    },
+    {
+      "id": "storage.dir.cache",
+      "title": "storage dir cache",
+      "action": {
+        "kind": "mkdir",
+        "path": "/var/cache",
+        "mode": 493
+      },
+      "needs": [
+        "storage.mount.log"
+      ],
+      "probe": {
+        "kind": "file_exists",
+        "path": "/var/cache"
+      },
+      "danger": "mutating",
+      "timeout_s": 600,
+      "phase": "storage"
+    },
+    {
+      "id": "storage.mount.cache",
+      "title": "storage mount cache",
+      "action": {
+        "kind": "command",
+        "argv": [
+          "mount",
+          "-o",
+          "subvol=@cache,compress=zstd:3,noatime,ssd,discard=async",
+          "/dev/vda3",
+          "/mnt/var/cache"
+        ],
+        "chroot": false,
+        "stdin": null
+      },
+      "needs": [
+        "storage.dir.cache"
+      ],
+      "probe": {
+        "kind": "command_ok",
+        "argv": [
+          "findmnt",
+          "--mountpoint",
+          "/mnt/var/cache"
+        ],
+        "chroot": false
+      },
+      "danger": "mutating",
+      "timeout_s": 600,
+      "phase": "storage"
+    },
+    {
+      "id": "storage.boot.dir",
+      "title": "storage boot dir",
+      "action": {
+        "kind": "mkdir",
+        "path": "/boot",
+        "mode": 493
+      },
+      "needs": [
+        "storage.mount.cache"
+      ],
+      "probe": {
+        "kind": "file_exists",
+        "path": "/boot"
+      },
+      "danger": "mutating",
+      "timeout_s": 600,
+      "phase": "storage"
+    },
+    {
+      "id": "storage.mount.boot",
+      "title": "storage mount boot",
+      "action": {
+        "kind": "command",
+        "argv": [
+          "mount",
+          "/dev/vda2",
+          "/mnt/boot"
+        ],
+        "chroot": false,
+        "stdin": null
+      },
+      "needs": [
+        "storage.boot.dir"
+      ],
+      "probe": {
+        "kind": "command_ok",
+        "argv": [
+          "findmnt",
+          "--mountpoint",
+          "/mnt/boot"
+        ],
+        "chroot": false
+      },
+      "danger": "mutating",
+      "timeout_s": 600,
+      "phase": "storage"
+    },
+    {
+      "id": "storage.esp.dir",
+      "title": "storage esp dir",
+      "action": {
+        "kind": "mkdir",
+        "path": "/boot/efi",
+        "mode": 493
+      },
+      "needs": [
+        "storage.mount.boot"
+      ],
+      "probe": {
+        "kind": "file_exists",
+        "path": "/boot/efi"
+      },
+      "danger": "mutating",
+      "timeout_s": 600,
+      "phase": "storage"
+    },
+    {
+      "id": "storage.mount.esp",
+      "title": "storage mount esp",
+      "action": {
+        "kind": "command",
+        "argv": [
+          "mount",
+          "/dev/vda1",
+          "/mnt/boot/efi"
+        ],
+        "chroot": false,
+        "stdin": null
+      },
+      "needs": [
+        "storage.esp.dir"
+      ],
+      "probe": {
+        "kind": "command_ok",
+        "argv": [
+          "findmnt",
+          "--mountpoint",
+          "/mnt/boot/efi"
+        ],
+        "chroot": false
+      },
+      "danger": "mutating",
+      "timeout_s": 600,
+      "phase": "storage"
+    },
+    {
+      "id": "bootstrap.arch",
+      "title": "bootstrap arch",
+      "action": {
+        "kind": "command",
+        "argv": [
+          "pacstrap",
+          "-K",
+          "/mnt",
+          "base",
+          "linux",
+          "linux-firmware",
+          "btrfs-progs",
+          "networkmanager",
+          "sudo",
+          "zram-generator",
+          "openssh"
+        ],
+        "chroot": false,
+        "stdin": null
+      },
+      "needs": [
+        "storage.mount.esp"
+      ],
+      "probe": {
+        "kind": "file_exists",
+        "path": "/etc/os-release"
+      },
+      "danger": "mutating",
+      "timeout_s": 3600,
+      "phase": "bootstrap"
+    },
+    {
+      "id": "base.packages",
+      "title": "base packages",
+      "action": {
+        "kind": "command",
+        "argv": [
+          "pacman",
+          "-S",
+          "--needed",
+          "--noconfirm",
+          "base",
+          "btrfs-progs",
+          "curl",
+          "efibootmgr",
+          "git",
+          "limine",
+          "linux",
+          "linux-firmware",
+          "networkmanager",
+          "openssh",
+          "sddm",
+          "sudo",
+          "zram-generator"
+        ],
+        "chroot": true,
+        "stdin": null
+      },
+      "needs": [
+        "bootstrap.arch"
+      ],
+      "probe": {
+        "kind": "command_ok",
+        "argv": [
+          "test",
+          "-e",
+          "/var/lib/borea/base-packages"
+        ],
+        "chroot": true
+      },
+      "danger": "mutating",
+      "timeout_s": 600,
+      "phase": "base"
+    },
+    {
+      "id": "base.packages.receipt",
+      "title": "base packages receipt",
+      "action": {
+        "kind": "write_file",
+        "path": "/var/lib/borea/base-packages",
+        "contents": "base\nbtrfs-progs\ncurl\nefibootmgr\ngit\nlimine\nlinux\nlinux-firmware\nnetworkmanager\nopenssh\nsddm\nsudo\nzram-generator",
+        "mode": 420
+      },
+      "needs": [
+        "base.packages"
+      ],
+      "probe": {
+        "kind": "file_contains",
+        "path": "/var/lib/borea/base-packages",
+        "needle": "base\nbtrfs-progs\ncurl\nefibootmgr\ngit\nlimine\nlinux\nlinux-firmware\nnetworkmanager\nopenssh\nsddm\nsudo\nzram-generator"
+      },
+      "danger": "mutating",
+      "timeout_s": 600,
+      "phase": "base"
+    },
+    {
+      "id": "base.fstab",
+      "title": "base fstab",
+      "action": {
+        "kind": "write_file",
+        "path": "/etc/fstab",
+        "contents": "UUID=20095b36-a9f0-55a0-b3a8-9737f8f3b009 / btrfs subvol=@,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=20095b36-a9f0-55a0-b3a8-9737f8f3b009 /home btrfs subvol=@home,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=20095b36-a9f0-55a0-b3a8-9737f8f3b009 /.snapshots btrfs subvol=@snapshots,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=20095b36-a9f0-55a0-b3a8-9737f8f3b009 /var/log btrfs subvol=@log,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=20095b36-a9f0-55a0-b3a8-9737f8f3b009 /var/cache btrfs subvol=@cache,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=cd75f471-ba89-5632-b5dc-41df6e6bfb70 /boot ext4 defaults 0 2\nPARTUUID=1738b98f-04a1-554f-a3f7-ce9775e0715a /boot/efi vfat umask=0077 0 2\n",
+        "mode": 420
+      },
+      "needs": [
+        "base.packages.receipt"
+      ],
+      "probe": {
+        "kind": "file_contains",
+        "path": "/etc/fstab",
+        "needle": "UUID=20095b36-a9f0-55a0-b3a8-9737f8f3b009 / btrfs subvol=@,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=20095b36-a9f0-55a0-b3a8-9737f8f3b009 /home btrfs subvol=@home,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=20095b36-a9f0-55a0-b3a8-9737f8f3b009 /.snapshots btrfs subvol=@snapshots,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=20095b36-a9f0-55a0-b3a8-9737f8f3b009 /var/log btrfs subvol=@log,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=20095b36-a9f0-55a0-b3a8-9737f8f3b009 /var/cache btrfs subvol=@cache,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=cd75f471-ba89-5632-b5dc-41df6e6bfb70 /boot ext4 defaults 0 2\nPARTUUID=1738b98f-04a1-554f-a3f7-ce9775e0715a /boot/efi vfat umask=0077 0 2\n"
+      },
+      "danger": "mutating",
+      "timeout_s": 600,
+      "phase": "base"
+    },
+    {
+      "id": "base.hostname",
+      "title": "base hostname",
+      "action": {
+        "kind": "write_file",
+        "path": "/etc/hostname",
+        "contents": "borea-test\n",
+        "mode": 420
+      },
+      "needs": [
+        "base.fstab"
+      ],
+      "probe": {
+        "kind": "file_contains",
+        "path": "/etc/hostname",
+        "needle": "borea-test\n"
+      },
+      "danger": "mutating",
+      "timeout_s": 600,
+      "phase": "base"
+    },
+    {
+      "id": "base.hosts",
+      "title": "base hosts",
+      "action": {
+        "kind": "write_file",
+        "path": "/etc/hosts",
+        "contents": "127.0.0.1 localhost\n::1 localhost\n127.0.1.1 borea-test\n",
+        "mode": 420
+      },
+      "needs": [
+        "base.hostname"
+      ],
+      "probe": {
+        "kind": "file_contains",
+        "path": "/etc/hosts",
+        "needle": "127.0.0.1 localhost\n::1 localhost\n127.0.1.1 borea-test\n"
+      },
+      "danger": "mutating",
+      "timeout_s": 600,
+      "phase": "base"
+    },
+    {
+      "id": "base.locale",
+      "title": "base locale",
+      "action": {
+        "kind": "write_file",
+        "path": "/etc/locale.conf",
+        "contents": "LANG=en_US.UTF-8\n",
+        "mode": 420
+      },
+      "needs": [
+        "base.hosts"
+      ],
+      "probe": {
+        "kind": "file_contains",
+        "path": "/etc/locale.conf",
+        "needle": "LANG=en_US.UTF-8\n"
+      },
+      "danger": "mutating",
+      "timeout_s": 600,
+      "phase": "base"
+    },
+    {
+      "id": "base.keymap",
+      "title": "base keymap",
+      "action": {
+        "kind": "write_file",
+        "path": "/etc/vconsole.conf",
+        "contents": "KEYMAP=us\n",
+        "mode": 420
+      },
+      "needs": [
+        "base.locale"
+      ],
+      "probe": {
+        "kind": "file_contains",
+        "path": "/etc/vconsole.conf",
+        "needle": "KEYMAP=us\n"
+      },
+      "danger": "mutating",
+      "timeout_s": 600,
+      "phase": "base"
+    },
+    {
+      "id": "base.timezone",
+      "title": "base timezone",
+      "action": {
+        "kind": "command",
+        "argv": [
+          "ln",
+          "-sf",
+          "/usr/share/zoneinfo/UTC",
+          "/etc/localtime"
+        ],
+        "chroot": true,
+        "stdin": null
+      },
+      "needs": [
+        "base.keymap"
+      ],
+      "probe": {
+        "kind": "command_ok",
+        "argv": [
+          "test",
+          "/etc/localtime",
+          "-ef",
+          "/usr/share/zoneinfo/UTC"
+        ],
+        "chroot": true
+      },
+      "danger": "mutating",
+      "timeout_s": 600,
+      "phase": "base"
+    },
+    {
+      "id": "base.locale.gen",
+      "title": "base locale gen",
+      "action": {
+        "kind": "write_file",
+        "path": "/etc/locale.gen",
+        "contents": "en_US.UTF-8 UTF-8\n",
+        "mode": 420
+      },
+      "needs": [
+        "base.timezone"
+      ],
+      "probe": {
+        "kind": "file_contains",
+        "path": "/etc/locale.gen",
+        "needle": "en_US.UTF-8 UTF-8\n"
+      },
+      "danger": "mutating",
+      "timeout_s": 600,
+      "phase": "base"
+    },
+    {
+      "id": "base.locale.generate",
+      "title": "base locale generate",
+      "action": {
+        "kind": "command",
+        "argv": [
+          "locale-gen"
+        ],
+        "chroot": true,
+        "stdin": null
+      },
+      "needs": [
+        "base.locale.gen"
+      ],
+      "probe": {
+        "kind": "command_ok",
+        "argv": [
+          "test",
+          "-e",
+          "/var/lib/borea/locale-generated"
+        ],
+        "chroot": true
+      },
+      "danger": "mutating",
+      "timeout_s": 600,
+      "phase": "base"
+    },
+    {
+      "id": "base.locale.receipt",
+      "title": "base locale receipt",
+      "action": {
+        "kind": "write_file",
+        "path": "/var/lib/borea/locale-generated",
+        "contents": "en_US.UTF-8",
+        "mode": 420
+      },
+      "needs": [
+        "base.locale.generate"
+      ],
+      "probe": {
+        "kind": "file_contains",
+        "path": "/var/lib/borea/locale-generated",
+        "needle": "en_US.UTF-8"
+      },
+      "danger": "mutating",
+      "timeout_s": 600,
+      "phase": "base"
+    },
+    {
+      "id": "base.user",
+      "title": "base user",
+      "action": {
+        "kind": "command",
+        "argv": [
+          "useradd",
+          "--create-home",
+          "--shell",
+          "/bin/bash",
+          "--groups",
+          "wheel",
+          "--comment",
+          "Borea Test",
+          "tester"
+        ],
+        "chroot": true,
+        "stdin": null
+      },
+      "needs": [
+        "base.locale.receipt"
+      ],
+      "probe": {
+        "kind": "command_ok",
+        "argv": [
+          "id",
+          "-u",
+          "tester"
+        ],
+        "chroot": true
+      },
+      "danger": "mutating",
+      "timeout_s": 600,
+      "phase": "base"
+    },
+    {
+      "id": "base.password",
+      "title": "base password",
+      "action": {
+        "kind": "password",
+        "user": "tester",
+        "secret": "account.password"
+      },
+      "needs": [
+        "base.user"
+      ],
+      "probe": {
+        "kind": "file_exists",
+        "path": "/var/lib/borea/password-set"
+      },
+      "danger": "mutating",
+      "timeout_s": 600,
+      "phase": "base"
+    },
+    {
+      "id": "base.password.receipt",
+      "title": "base password receipt",
+      "action": {
+        "kind": "write_file",
+        "path": "/var/lib/borea/password-set",
+        "contents": "993c4b3c3ccf9f360a2b177761aa5275dcfca5cfbc1d8d08f7412009c03330b7",
+        "mode": 384
+      },
+      "needs": [
+        "base.password"
+      ],
+      "probe": {
+        "kind": "file_contains",
+        "path": "/var/lib/borea/password-set",
+        "needle": "993c4b3c3ccf9f360a2b177761aa5275dcfca5cfbc1d8d08f7412009c03330b7"
+      },
+      "danger": "mutating",
+      "timeout_s": 600,
+      "phase": "base"
+    },
+    {
+      "id": "base.sudo",
+      "title": "base sudo",
+      "action": {
+        "kind": "write_file",
+        "path": "/etc/sudoers.d/10-borea",
+        "contents": "%wheel ALL=(ALL:ALL) ALL\n",
+        "mode": 288
+      },
+      "needs": [
+        "base.password.receipt"
+      ],
+      "probe": {
+        "kind": "file_contains",
+        "path": "/etc/sudoers.d/10-borea",
+        "needle": "%wheel ALL=(ALL:ALL) ALL\n"
+      },
+      "danger": "mutating",
+      "timeout_s": 600,
+      "phase": "base"
+    },
+    {
+      "id": "base.zram",
+      "title": "base zram",
+      "action": {
+        "kind": "write_file",
+        "path": "/etc/systemd/zram-generator.conf",
+        "contents": "[zram0]\nzram-size = ram / 2\ncompression-algorithm = zstd\n",
+        "mode": 420
+      },
+      "needs": [
+        "base.sudo"
+      ],
+      "probe": {
+        "kind": "file_contains",
+        "path": "/etc/systemd/zram-generator.conf",
+        "needle": "[zram0]\nzram-size = ram / 2\ncompression-algorithm = zstd\n"
+      },
+      "danger": "mutating",
+      "timeout_s": 600,
+      "phase": "base"
+    },
+    {
+      "id": "base.enable.NetworkManager.service",
+      "title": "base enable NetworkManager service",
+      "action": {
+        "kind": "command",
+        "argv": [
+          "systemctl",
+          "enable",
+          "NetworkManager.service"
+        ],
+        "chroot": true,
+        "stdin": null
+      },
+      "needs": [
+        "base.zram"
+      ],
+      "probe": {
+        "kind": "command_ok",
+        "argv": [
+          "systemctl",
+          "is-enabled",
+          "NetworkManager.service"
+        ],
+        "chroot": true
+      },
+      "danger": "mutating",
+      "timeout_s": 600,
+      "phase": "base"
+    },
+    {
+      "id": "base.enable.sshd.service",
+      "title": "base enable sshd service",
+      "action": {
+        "kind": "command",
+        "argv": [
+          "systemctl",
+          "enable",
+          "sshd.service"
+        ],
+        "chroot": true,
+        "stdin": null
+      },
+      "needs": [
+        "base.enable.NetworkManager.service"
+      ],
+      "probe": {
+        "kind": "command_ok",
+        "argv": [
+          "systemctl",
+          "is-enabled",
+          "sshd.service"
+        ],
+        "chroot": true
+      },
+      "danger": "mutating",
+      "timeout_s": 600,
+      "phase": "base"
+    },
+    {
+      "id": "base.ssh.key",
+      "title": "base ssh key",
+      "action": {
+        "kind": "copy_in",
+        "source": "/run/borea/test.pub",
+        "dest": "/home/tester/.ssh/authorized_keys",
+        "mode": 384
+      },
+      "needs": [
+        "base.enable.sshd.service"
+      ],
+      "probe": {
+        "kind": "file_exists",
+        "path": "/home/tester/.ssh/authorized_keys"
+      },
+      "danger": "mutating",
+      "timeout_s": 600,
+      "phase": "base"
+    },
+    {
+      "id": "base.ssh.permissions",
+      "title": "base ssh permissions",
+      "action": {
+        "kind": "command",
+        "argv": [
+          "chown",
+          "-R",
+          "tester:tester",
+          "/home/tester/.ssh"
+        ],
+        "chroot": true,
+        "stdin": null
+      },
+      "needs": [
+        "base.ssh.key"
+      ],
+      "probe": {
+        "kind": "command_ok",
+        "argv": [
+          "test",
+          "-e",
+          "/var/lib/borea/ssh-owned"
+        ],
+        "chroot": true
+      },
+      "danger": "mutating",
+      "timeout_s": 600,
+      "phase": "base"
+    },
+    {
+      "id": "base.ssh.receipt",
+      "title": "base ssh receipt",
+      "action": {
+        "kind": "write_file",
+        "path": "/var/lib/borea/ssh-owned",
+        "contents": "owned\n",
+        "mode": 384
+      },
+      "needs": [
+        "base.ssh.permissions"
+      ],
+      "probe": {
+        "kind": "file_contains",
+        "path": "/var/lib/borea/ssh-owned",
+        "needle": "owned\n"
+      },
+      "danger": "mutating",
+      "timeout_s": 600,
+      "phase": "base"
+    },
+    {
+      "id": "boot.initramfs",
+      "title": "boot initramfs",
+      "action": {
+        "kind": "command",
+        "argv": [
+          "mkinitcpio",
+          "-P"
+        ],
+        "chroot": true,
+        "stdin": null
+      },
+      "needs": [
+        "base.ssh.receipt"
+      ],
+      "probe": {
+        "kind": "command_ok",
+        "argv": [
+          "test",
+          "-e",
+          "/var/lib/borea/initramfs-generated"
+        ],
+        "chroot": true
+      },
+      "danger": "mutating",
+      "timeout_s": 600,
+      "phase": "boot"
+    },
+    {
+      "id": "boot.initramfs.receipt",
+      "title": "boot initramfs receipt",
+      "action": {
+        "kind": "write_file",
+        "path": "/var/lib/borea/initramfs-generated",
+        "contents": "root=UUID=20095b36-a9f0-55a0-b3a8-9737f8f3b009 rootflags=subvol=@",
+        "mode": 420
+      },
+      "needs": [
+        "boot.initramfs"
+      ],
+      "probe": {
+        "kind": "file_contains",
+        "path": "/var/lib/borea/initramfs-generated",
+        "needle": "root=UUID=20095b36-a9f0-55a0-b3a8-9737f8f3b009 rootflags=subvol=@"
+      },
+      "danger": "mutating",
+      "timeout_s": 600,
+      "phase": "boot"
+    },
+    {
+      "id": "boot.limine.dir.fallback",
+      "title": "boot limine dir fallback",
+      "action": {
+        "kind": "mkdir",
+        "path": "/boot/efi/EFI/BOOT",
+        "mode": 493
+      },
+      "needs": [
+        "boot.initramfs.receipt"
+      ],
+      "probe": {
+        "kind": "file_exists",
+        "path": "/boot/efi/EFI/BOOT"
+      },
+      "danger": "mutating",
+      "timeout_s": 600,
+      "phase": "boot"
+    },
+    {
+      "id": "boot.limine.copy.fallback",
+      "title": "boot limine copy fallback",
+      "action": {
+        "kind": "command",
+        "argv": [
+          "cp",
+          "/usr/share/limine/BOOTX64.EFI",
+          "/boot/efi/EFI/BOOT/BOOTX64.EFI"
+        ],
+        "chroot": true,
+        "stdin": null
+      },
+      "needs": [
+        "boot.limine.dir.fallback"
+      ],
+      "probe": {
+        "kind": "command_ok",
+        "argv": [
+          "cmp",
+          "-s",
+          "/usr/share/limine/BOOTX64.EFI",
+          "/boot/efi/EFI/BOOT/BOOTX64.EFI"
+        ],
+        "chroot": true
+      },
+      "danger": "mutating",
+      "timeout_s": 600,
+      "phase": "boot"
+    },
+    {
+      "id": "boot.limine.dir.borea",
+      "title": "boot limine dir borea",
+      "action": {
+        "kind": "mkdir",
+        "path": "/boot/efi/EFI/borea",
+        "mode": 493
+      },
+      "needs": [
+        "boot.limine.copy.fallback"
+      ],
+      "probe": {
+        "kind": "file_exists",
+        "path": "/boot/efi/EFI/borea"
+      },
+      "danger": "mutating",
+      "timeout_s": 600,
+      "phase": "boot"
+    },
+    {
+      "id": "boot.limine.copy.borea",
+      "title": "boot limine copy borea",
+      "action": {
+        "kind": "command",
+        "argv": [
+          "cp",
+          "/usr/share/limine/BOOTX64.EFI",
+          "/boot/efi/EFI/borea/BOOTX64.EFI"
+        ],
+        "chroot": true,
+        "stdin": null
+      },
+      "needs": [
+        "boot.limine.dir.borea"
+      ],
+      "probe": {
+        "kind": "command_ok",
+        "argv": [
+          "cmp",
+          "-s",
+          "/usr/share/limine/BOOTX64.EFI",
+          "/boot/efi/EFI/borea/BOOTX64.EFI"
+        ],
+        "chroot": true
+      },
+      "danger": "mutating",
+      "timeout_s": 600,
+      "phase": "boot"
+    },
+    {
+      "id": "boot.limine.config",
+      "title": "boot limine config",
+      "action": {
+        "kind": "write_file",
+        "path": "/boot/efi/EFI/BOOT/limine.conf",
+        "contents": "timeout: 5\n/Borea\n    protocol: linux\n    path: guid(cd75f471-ba89-5632-b5dc-41df6e6bfb70)/vmlinuz-linux\n    module_path: guid(cd75f471-ba89-5632-b5dc-41df6e6bfb70)/initramfs-linux.img\n    cmdline: root=UUID=20095b36-a9f0-55a0-b3a8-9737f8f3b009 rootflags=subvol=@\n/Borea fallback\n    protocol: linux\n    path: guid(cd75f471-ba89-5632-b5dc-41df6e6bfb70)/vmlinuz-linux\n    module_path: guid(cd75f471-ba89-5632-b5dc-41df6e6bfb70)/initramfs-linux-fallback.img\n    cmdline: root=UUID=20095b36-a9f0-55a0-b3a8-9737f8f3b009 rootflags=subvol=@\n",
+        "mode": 420
+      },
+      "needs": [
+        "boot.limine.copy.borea"
+      ],
+      "probe": {
+        "kind": "file_contains",
+        "path": "/boot/efi/EFI/BOOT/limine.conf",
+        "needle": "timeout: 5\n/Borea\n    protocol: linux\n    path: guid(cd75f471-ba89-5632-b5dc-41df6e6bfb70)/vmlinuz-linux\n    module_path: guid(cd75f471-ba89-5632-b5dc-41df6e6bfb70)/initramfs-linux.img\n    cmdline: root=UUID=20095b36-a9f0-55a0-b3a8-9737f8f3b009 rootflags=subvol=@\n/Borea fallback\n    protocol: linux\n    path: guid(cd75f471-ba89-5632-b5dc-41df6e6bfb70)/vmlinuz-linux\n    module_path: guid(cd75f471-ba89-5632-b5dc-41df6e6bfb70)/initramfs-linux-fallback.img\n    cmdline: root=UUID=20095b36-a9f0-55a0-b3a8-9737f8f3b009 rootflags=subvol=@\n"
+      },
+      "danger": "mutating",
+      "timeout_s": 600,
+      "phase": "boot"
+    },
+    {
+      "id": "boot.limine.config.copy",
+      "title": "boot limine config copy",
+      "action": {
+        "kind": "write_file",
+        "path": "/boot/limine/limine.conf",
+        "contents": "timeout: 5\n/Borea\n    protocol: linux\n    path: guid(cd75f471-ba89-5632-b5dc-41df6e6bfb70)/vmlinuz-linux\n    module_path: guid(cd75f471-ba89-5632-b5dc-41df6e6bfb70)/initramfs-linux.img\n    cmdline: root=UUID=20095b36-a9f0-55a0-b3a8-9737f8f3b009 rootflags=subvol=@\n/Borea fallback\n    protocol: linux\n    path: guid(cd75f471-ba89-5632-b5dc-41df6e6bfb70)/vmlinuz-linux\n    module_path: guid(cd75f471-ba89-5632-b5dc-41df6e6bfb70)/initramfs-linux-fallback.img\n    cmdline: root=UUID=20095b36-a9f0-55a0-b3a8-9737f8f3b009 rootflags=subvol=@\n",
+        "mode": 420
+      },
+      "needs": [
+        "boot.limine.config"
+      ],
+      "probe": {
+        "kind": "file_contains",
+        "path": "/boot/limine/limine.conf",
+        "needle": "timeout: 5\n/Borea\n    protocol: linux\n    path: guid(cd75f471-ba89-5632-b5dc-41df6e6bfb70)/vmlinuz-linux\n    module_path: guid(cd75f471-ba89-5632-b5dc-41df6e6bfb70)/initramfs-linux.img\n    cmdline: root=UUID=20095b36-a9f0-55a0-b3a8-9737f8f3b009 rootflags=subvol=@\n/Borea fallback\n    protocol: linux\n    path: guid(cd75f471-ba89-5632-b5dc-41df6e6bfb70)/vmlinuz-linux\n    module_path: guid(cd75f471-ba89-5632-b5dc-41df6e6bfb70)/initramfs-linux-fallback.img\n    cmdline: root=UUID=20095b36-a9f0-55a0-b3a8-9737f8f3b009 rootflags=subvol=@\n"
+      },
+      "danger": "mutating",
+      "timeout_s": 600,
+      "phase": "boot"
+    },
+    {
+      "id": "omarchy.install",
+      "title": "omarchy install",
+      "action": {
+        "kind": "install_omarchy",
+        "user": "tester",
+        "source": {
+          "repository": "https://github.com/omacom/omarchy",
+          "commit": "f4378f0de5b44d331ee943746a97872b718a6c18",
+          "entrypoint": "install.sh",
+          "entrypoint_sha256": "37868b0885b9de0d6440addcfd99c9433da0299ecbfc2446937abb7b2297f98c"
+        }
+      },
+      "needs": [
+        "boot.limine.config.copy"
+      ],
+      "probe": {
+        "kind": "omarchy_installed",
+        "user": "tester",
+        "commit": "f4378f0de5b44d331ee943746a97872b718a6c18"
+      },
+      "danger": "mutating",
+      "timeout_s": 600,
+      "phase": "finalise"
+    },
+    {
+      "id": "omarchy.selection",
+      "title": "omarchy selection",
+      "action": {
+        "kind": "write_file",
+        "path": "/var/lib/borea/omarchy-selection.json",
+        "contents": "{\n  \"schema\": 1,\n  \"preset\": \"linutil\",\n  \"upstream\": {\n    \"schema\": 1,\n    \"checked\": \"2026-11-13\",\n    \"omarchy\": {\n      \"repository\": \"https://github.com/omacom/omarchy\",\n      \"commit\": \"f4378f0de5b44d331ee943746a97872b718a6c18\",\n      \"entrypoint\": \"install.sh\",\n      \"entrypoint_sha256\": \"37868b0885b9de0d6440addcfd99c9433da0299ecbfc2446937abb7b2297f98c\"\n    },\n    \"linutil\": {\n      \"repository\": \"https://github.com/ChrisTitusTech/linutil\",\n      \"commit\": \"fda64ff50cd33f5cf12d5b68613f39ce6643e9d4\",\n      \"entrypoint\": \"core/tabs/system-setup/arch/omarchy.sh\",\n      \"entrypoint_sha256\": \"6789ccbd9be1272e5fc7cd3de323f321173fffbf093ef21b23d5e8b9df2cdf0e\"\n    },\n    \"baseline\": {\n      \"packages\": [\n        \"1password-beta\",\n        \"1password-cli\",\n        \"aether\",\n        \"alacritty\",\n        \"alsa-utils\",\n        \"asdcontrol\",\n        \"avahi\",\n        \"bash-completion\",\n        \"bat\",\n        \"bluetui\",\n        \"bolt\",\n        \"brightnessctl\",\n        \"btop\",\n        \"chromium\",\n        \"clang\",\n        \"claude-code\",\n        \"cliamp\",\n        \"cups\",\n        \"cups-browsed\",\n        \"cups-filters\",\n        \"cups-pdf\",\n        \"docker\",\n        \"docker-buildx\",\n        \"docker-compose\",\n        \"dosfstools\",\n        \"dotnet-runtime-9.0\",\n        \"dust\",\n        \"evince\",\n        \"exfatprogs\",\n        \"expac\",\n        \"eza\",\n        \"fastfetch\",\n        \"fcitx5\",\n        \"fcitx5-gtk\",\n        \"fcitx5-qt\",\n        \"fd\",\n        \"ffmpegthumbnailer\",\n        \"fontconfig\",\n        \"fzf\",\n        \"github-cli\",\n        \"gnome-calculator\",\n        \"gnome-disk-utility\",\n        \"gnome-keyring\",\n        \"gnome-themes-extra\",\n        \"gpu-screen-recorder\",\n        \"grim\",\n        \"gum\",\n        \"gvfs-mtp\",\n        \"gvfs-nfs\",\n        \"gvfs-smb\",\n        \"hypridle\",\n        \"hyprland\",\n        \"hyprland-guiutils\",\n        \"hyprland-preview-share-picker\",\n        \"hyprlock\",\n        \"hyprpicker\",\n        \"hyprsunset\",\n        \"imagemagick\",\n        \"impala\",\n        \"imv\",\n        \"inetutils\",\n        \"inxi\",\n        \"iwd\",\n        \"jq\",\n        \"kdenlive\",\n        \"kernel-modules-hook\",\n        \"kvantum-qt5\",\n        \"lazydocker\",\n        \"lazygit\",\n        \"less\",\n        \"libqalculate\",\n        \"libreoffice-fresh\",\n        \"libsecret\",\n        \"libyaml\",\n        \"llvm\",\n        \"localsend\",\n        \"luarocks\",\n        \"mako\",\n        \"man-db\",\n        \"mariadb-libs\",\n        \"mise\",\n        \"mpv\",\n        \"nautilus\",\n        \"nautilus-python\",\n        \"neovim\",\n        \"noto-fonts\",\n        \"noto-fonts-cjk\",\n        \"noto-fonts-emoji\",\n        \"nss-mdns\",\n        \"obs-studio\",\n        \"obsidian\",\n        \"omarchy-nvim\",\n        \"omarchy-walker\",\n        \"pamixer\",\n        \"pinta\",\n        \"playerctl\",\n        \"plocate\",\n        \"plymouth\",\n        \"polkit-gnome\",\n        \"postgresql-libs\",\n        \"power-profiles-daemon\",\n        \"python-gobject\",\n        \"python-poetry-core\",\n        \"python-terminaltexteffects\",\n        \"qt5-wayland\",\n        \"ripgrep\",\n        \"ruby\",\n        \"rust\",\n        \"satty\",\n        \"sddm\",\n        \"signal-desktop\",\n        \"slurp\",\n        \"socat\",\n        \"spotify\",\n        \"starship\",\n        \"sushi\",\n        \"swaybg\",\n        \"swayosd\",\n        \"system-config-printer\",\n        \"tesseract\",\n        \"tesseract-data-eng\",\n        \"tldr\",\n        \"tmux\",\n        \"tobi-try\",\n        \"tree-sitter-cli\",\n        \"ttf-ia-writer\",\n        \"ttf-jetbrains-mono-nerd\",\n        \"typora\",\n        \"tzupdate\",\n        \"ufw\",\n        \"ufw-docker\",\n        \"unzip\",\n        \"usage\",\n        \"uwsm\",\n        \"waybar\",\n        \"whois\",\n        \"wireless-regdb\",\n        \"wiremix\",\n        \"wireplumber\",\n        \"wl-clipboard\",\n        \"woff2-font-awesome\",\n        \"xdg-desktop-portal-gtk\",\n        \"xdg-desktop-portal-hyprland\",\n        \"xdg-terminal-exec\",\n        \"xmlstarlet\",\n        \"xournalpp\",\n        \"yaru-icon-theme\",\n        \"yay\",\n        \"zoxide\"\n      ],\n      \"webapps\": [\n        \"HEY\",\n        \"Basecamp\",\n        \"WhatsApp\",\n        \"Google Photos\",\n        \"Google Contacts\",\n        \"Google Messages\",\n        \"Google Maps\",\n        \"ChatGPT\",\n        \"YouTube\",\n        \"GitHub\",\n        \"X\",\n        \"Figma\",\n        \"Discord\",\n        \"Zoom\",\n        \"Fizzy\"\n      ]\n    }\n  },\n  \"apps\": [\n    {\n      \"id\": \"1password\",\n      \"decision\": \"keep\",\n      \"explicit\": false,\n      \"packages\": [\n        \"1password-beta\",\n        \"1password-cli\"\n      ],\n      \"webapp\": null,\n      \"replacement\": null\n    },\n    {\n      \"id\": \"basecamp\",\n      \"decision\": \"keep\",\n      \"explicit\": false,\n      \"packages\": [],\n      \"webapp\": \"Basecamp\",\n      \"replacement\": null\n    },\n    {\n      \"id\": \"chatgpt\",\n      \"decision\": \"keep\",\n      \"explicit\": false,\n      \"packages\": [],\n      \"webapp\": \"ChatGPT\",\n      \"replacement\": null\n    },\n    {\n      \"id\": \"chromium\",\n      \"decision\": \"keep\",\n      \"explicit\": false,\n      \"packages\": [\n        \"chromium\"\n      ],\n      \"webapp\": null,\n      \"replacement\": null\n    },\n    {\n      \"id\": \"claude-code\",\n      \"decision\": \"keep\",\n      \"explicit\": false,\n      \"packages\": [\n        \"claude-code\"\n      ],\n      \"webapp\": null,\n      \"replacement\": null\n    },\n    {\n      \"id\": \"discord\",\n      \"decision\": \"keep\",\n      \"explicit\": false,\n      \"packages\": [],\n      \"webapp\": \"Discord\",\n      \"replacement\": null\n    },\n    {\n      \"id\": \"docker\",\n      \"decision\": \"keep\",\n      \"explicit\": false,\n      \"packages\": [\n        \"ufw-docker\",\n        \"docker-compose\",\n        \"docker-buildx\",\n        \"docker\"\n      ],\n      \"webapp\": null,\n      \"replacement\": null\n    },\n    {\n      \"id\": \"figma\",\n      \"decision\": \"keep\",\n      \"explicit\": false,\n      \"packages\": [],\n      \"webapp\": \"Figma\",\n      \"replacement\": null\n    },\n    {\n      \"id\": \"fizzy\",\n      \"decision\": \"keep\",\n      \"explicit\": false,\n      \"packages\": [],\n      \"webapp\": \"Fizzy\",\n      \"replacement\": null\n    },\n    {\n      \"id\": \"github\",\n      \"decision\": \"keep\",\n      \"explicit\": false,\n      \"packages\": [],\n      \"webapp\": \"GitHub\",\n      \"replacement\": null\n    },\n    {\n      \"id\": \"google-contacts\",\n      \"decision\": \"keep\",\n      \"explicit\": false,\n      \"packages\": [],\n      \"webapp\": \"Google Contacts\",\n      \"replacement\": null\n    },\n    {\n      \"id\": \"google-maps\",\n      \"decision\": \"keep\",\n      \"explicit\": false,\n      \"packages\": [],\n      \"webapp\": \"Google Maps\",\n      \"replacement\": null\n    },\n    {\n      \"id\": \"google-messages\",\n      \"decision\": \"keep\",\n      \"explicit\": false,\n      \"packages\": [],\n      \"webapp\": \"Google Messages\",\n      \"replacement\": null\n    },\n    {\n      \"id\": \"google-photos\",\n      \"decision\": \"keep\",\n      \"explicit\": false,\n      \"packages\": [],\n      \"webapp\": \"Google Photos\",\n      \"replacement\": null\n    },\n    {\n      \"id\": \"grok\",\n      \"decision\": \"keep\",\n      \"explicit\": false,\n      \"packages\": [],\n      \"webapp\": null,\n      \"replacement\": null\n    },\n    {\n      \"id\": \"hey\",\n      \"decision\": \"keep\",\n      \"explicit\": false,\n      \"packages\": [],\n      \"webapp\": \"HEY\",\n      \"replacement\": null\n    },\n    {\n      \"id\": \"kdenlive\",\n      \"decision\": \"keep\",\n      \"explicit\": false,\n      \"packages\": [\n        \"kdenlive\"\n      ],\n      \"webapp\": null,\n      \"replacement\": null\n    },\n    {\n      \"id\": \"lazydocker\",\n      \"decision\": \"keep\",\n      \"explicit\": false,\n      \"packages\": [\n        \"lazydocker\"\n      ],\n      \"webapp\": null,\n      \"replacement\": null\n    },\n    {\n      \"id\": \"libreoffice\",\n      \"decision\": \"keep\",\n      \"explicit\": false,\n      \"packages\": [\n        \"libreoffice-fresh\"\n      ],\n      \"webapp\": null,\n      \"replacement\": null\n    },\n    {\n      \"id\": \"localsend\",\n      \"decision\": \"keep\",\n      \"explicit\": false,\n      \"packages\": [\n        \"localsend\"\n      ],\n      \"webapp\": null,\n      \"replacement\": null\n    },\n    {\n      \"id\": \"obs-studio\",\n      \"decision\": \"keep\",\n      \"explicit\": false,\n      \"packages\": [\n        \"obs-studio\"\n      ],\n      \"webapp\": null,\n      \"replacement\": null\n    },\n    {\n      \"id\": \"obsidian\",\n      \"decision\": \"keep\",\n      \"explicit\": false,\n      \"packages\": [\n        \"obsidian\"\n      ],\n      \"webapp\": null,\n      \"replacement\": null\n    },\n    {\n      \"id\": \"opencode\",\n      \"decision\": \"keep\",\n      \"explicit\": false,\n      \"packages\": [],\n      \"webapp\": null,\n      \"replacement\": null\n    },\n    {\n      \"id\": \"pinta\",\n      \"decision\": \"keep\",\n      \"explicit\": false,\n      \"packages\": [\n        \"pinta\"\n      ],\n      \"webapp\": null,\n      \"replacement\": null\n    },\n    {\n      \"id\": \"signal\",\n      \"decision\": \"keep\",\n      \"explicit\": false,\n      \"packages\": [\n        \"signal-desktop\"\n      ],\n      \"webapp\": null,\n      \"replacement\": null\n    },\n    {\n      \"id\": \"spotify\",\n      \"decision\": \"keep\",\n      \"explicit\": false,\n      \"packages\": [\n        \"spotify\"\n      ],\n      \"webapp\": null,\n      \"replacement\": null\n    },\n    {\n      \"id\": \"typora\",\n      \"decision\": \"keep\",\n      \"explicit\": false,\n      \"packages\": [\n        \"typora\"\n      ],\n      \"webapp\": null,\n      \"replacement\": null\n    },\n    {\n      \"id\": \"whatsapp\",\n      \"decision\": \"keep\",\n      \"explicit\": false,\n      \"packages\": [],\n      \"webapp\": \"WhatsApp\",\n      \"replacement\": null\n    },\n    {\n      \"id\": \"x\",\n      \"decision\": \"keep\",\n      \"explicit\": false,\n      \"packages\": [],\n      \"webapp\": \"X\",\n      \"replacement\": null\n    },\n    {\n      \"id\": \"xournal\",\n      \"decision\": \"keep\",\n      \"explicit\": false,\n      \"packages\": [\n        \"xournalpp\"\n      ],\n      \"webapp\": null,\n      \"replacement\": null\n    },\n    {\n      \"id\": \"youtube\",\n      \"decision\": \"keep\",\n      \"explicit\": false,\n      \"packages\": [],\n      \"webapp\": \"YouTube\",\n      \"replacement\": null\n    },\n    {\n      \"id\": \"zoom\",\n      \"decision\": \"keep\",\n      \"explicit\": false,\n      \"packages\": [],\n      \"webapp\": \"Zoom\",\n      \"replacement\": null\n    }\n  ],\n  \"install_components\": [],\n  \"default_browser\": null,\n  \"keep_removed_after_updates\": false,\n  \"preserve_unlisted\": true,\n  \"chromium_preserved\": true\n}\n",
+        "mode": 384
+      },
+      "needs": [
+        "omarchy.install"
+      ],
+      "probe": {
+        "kind": "file_contains",
+        "path": "/var/lib/borea/omarchy-selection.json",
+        "needle": "{\n  \"schema\": 1,\n  \"preset\": \"linutil\",\n  \"upstream\": {\n    \"schema\": 1,\n    \"checked\": \"2026-11-13\",\n    \"omarchy\": {\n      \"repository\": \"https://github.com/omacom/omarchy\",\n      \"commit\": \"f4378f0de5b44d331ee943746a97872b718a6c18\",\n      \"entrypoint\": \"install.sh\",\n      \"entrypoint_sha256\": \"37868b0885b9de0d6440addcfd99c9433da0299ecbfc2446937abb7b2297f98c\"\n    },\n    \"linutil\": {\n      \"repository\": \"https://github.com/ChrisTitusTech/linutil\",\n      \"commit\": \"fda64ff50cd33f5cf12d5b68613f39ce6643e9d4\",\n      \"entrypoint\": \"core/tabs/system-setup/arch/omarchy.sh\",\n      \"entrypoint_sha256\": \"6789ccbd9be1272e5fc7cd3de323f321173fffbf093ef21b23d5e8b9df2cdf0e\"\n    },\n    \"baseline\": {\n      \"packages\": [\n        \"1password-beta\",\n        \"1password-cli\",\n        \"aether\",\n        \"alacritty\",\n        \"alsa-utils\",\n        \"asdcontrol\",\n        \"avahi\",\n        \"bash-completion\",\n        \"bat\",\n        \"bluetui\",\n        \"bolt\",\n        \"brightnessctl\",\n        \"btop\",\n        \"chromium\",\n        \"clang\",\n        \"claude-code\",\n        \"cliamp\",\n        \"cups\",\n        \"cups-browsed\",\n        \"cups-filters\",\n        \"cups-pdf\",\n        \"docker\",\n        \"docker-buildx\",\n        \"docker-compose\",\n        \"dosfstools\",\n        \"dotnet-runtime-9.0\",\n        \"dust\",\n        \"evince\",\n        \"exfatprogs\",\n        \"expac\",\n        \"eza\",\n        \"fastfetch\",\n        \"fcitx5\",\n        \"fcitx5-gtk\",\n        \"fcitx5-qt\",\n        \"fd\",\n        \"ffmpegthumbnailer\",\n        \"fontconfig\",\n        \"fzf\",\n        \"github-cli\",\n        \"gnome-calculator\",\n        \"gnome-disk-utility\",\n        \"gnome-keyring\",\n        \"gnome-themes-extra\",\n        \"gpu-screen-recorder\",\n        \"grim\",\n        \"gum\",\n        \"gvfs-mtp\",\n        \"gvfs-nfs\",\n        \"gvfs-smb\",\n        \"hypridle\",\n        \"hyprland\",\n        \"hyprland-guiutils\",\n        \"hyprland-preview-share-picker\",\n        \"hyprlock\",\n        \"hyprpicker\",\n        \"hyprsunset\",\n        \"imagemagick\",\n        \"impala\",\n        \"imv\",\n        \"inetutils\",\n        \"inxi\",\n        \"iwd\",\n        \"jq\",\n        \"kdenlive\",\n        \"kernel-modules-hook\",\n        \"kvantum-qt5\",\n        \"lazydocker\",\n        \"lazygit\",\n        \"less\",\n        \"libqalculate\",\n        \"libreoffice-fresh\",\n        \"libsecret\",\n        \"libyaml\",\n        \"llvm\",\n        \"localsend\",\n        \"luarocks\",\n        \"mako\",\n        \"man-db\",\n        \"mariadb-libs\",\n        \"mise\",\n        \"mpv\",\n        \"nautilus\",\n        \"nautilus-python\",\n        \"neovim\",\n        \"noto-fonts\",\n        \"noto-fonts-cjk\",\n        \"noto-fonts-emoji\",\n        \"nss-mdns\",\n        \"obs-studio\",\n        \"obsidian\",\n        \"omarchy-nvim\",\n        \"omarchy-walker\",\n        \"pamixer\",\n        \"pinta\",\n        \"playerctl\",\n        \"plocate\",\n        \"plymouth\",\n        \"polkit-gnome\",\n        \"postgresql-libs\",\n        \"power-profiles-daemon\",\n        \"python-gobject\",\n        \"python-poetry-core\",\n        \"python-terminaltexteffects\",\n        \"qt5-wayland\",\n        \"ripgrep\",\n        \"ruby\",\n        \"rust\",\n        \"satty\",\n        \"sddm\",\n        \"signal-desktop\",\n        \"slurp\",\n        \"socat\",\n        \"spotify\",\n        \"starship\",\n        \"sushi\",\n        \"swaybg\",\n        \"swayosd\",\n        \"system-config-printer\",\n        \"tesseract\",\n        \"tesseract-data-eng\",\n        \"tldr\",\n        \"tmux\",\n        \"tobi-try\",\n        \"tree-sitter-cli\",\n        \"ttf-ia-writer\",\n        \"ttf-jetbrains-mono-nerd\",\n        \"typora\",\n        \"tzupdate\",\n        \"ufw\",\n        \"ufw-docker\",\n        \"unzip\",\n        \"usage\",\n        \"uwsm\",\n        \"waybar\",\n        \"whois\",\n        \"wireless-regdb\",\n        \"wiremix\",\n        \"wireplumber\",\n        \"wl-clipboard\",\n        \"woff2-font-awesome\",\n        \"xdg-desktop-portal-gtk\",\n        \"xdg-desktop-portal-hyprland\",\n        \"xdg-terminal-exec\",\n        \"xmlstarlet\",\n        \"xournalpp\",\n        \"yaru-icon-theme\",\n        \"yay\",\n        \"zoxide\"\n      ],\n      \"webapps\": [\n        \"HEY\",\n        \"Basecamp\",\n        \"WhatsApp\",\n        \"Google Photos\",\n        \"Google Contacts\",\n        \"Google Messages\",\n        \"Google Maps\",\n        \"ChatGPT\",\n        \"YouTube\",\n        \"GitHub\",\n        \"X\",\n        \"Figma\",\n        \"Discord\",\n        \"Zoom\",\n        \"Fizzy\"\n      ]\n    }\n  },\n  \"apps\": [\n    {\n      \"id\": \"1password\",\n      \"decision\": \"keep\",\n      \"explicit\": false,\n      \"packages\": [\n        \"1password-beta\",\n        \"1password-cli\"\n      ],\n      \"webapp\": null,\n      \"replacement\": null\n    },\n    {\n      \"id\": \"basecamp\",\n      \"decision\": \"keep\",\n      \"explicit\": false,\n      \"packages\": [],\n      \"webapp\": \"Basecamp\",\n      \"replacement\": null\n    },\n    {\n      \"id\": \"chatgpt\",\n      \"decision\": \"keep\",\n      \"explicit\": false,\n      \"packages\": [],\n      \"webapp\": \"ChatGPT\",\n      \"replacement\": null\n    },\n    {\n      \"id\": \"chromium\",\n      \"decision\": \"keep\",\n      \"explicit\": false,\n      \"packages\": [\n        \"chromium\"\n      ],\n      \"webapp\": null,\n      \"replacement\": null\n    },\n    {\n      \"id\": \"claude-code\",\n      \"decision\": \"keep\",\n      \"explicit\": false,\n      \"packages\": [\n        \"claude-code\"\n      ],\n      \"webapp\": null,\n      \"replacement\": null\n    },\n    {\n      \"id\": \"discord\",\n      \"decision\": \"keep\",\n      \"explicit\": false,\n      \"packages\": [],\n      \"webapp\": \"Discord\",\n      \"replacement\": null\n    },\n    {\n      \"id\": \"docker\",\n      \"decision\": \"keep\",\n      \"explicit\": false,\n      \"packages\": [\n        \"ufw-docker\",\n        \"docker-compose\",\n        \"docker-buildx\",\n        \"docker\"\n      ],\n      \"webapp\": null,\n      \"replacement\": null\n    },\n    {\n      \"id\": \"figma\",\n      \"decision\": \"keep\",\n      \"explicit\": false,\n      \"packages\": [],\n      \"webapp\": \"Figma\",\n      \"replacement\": null\n    },\n    {\n      \"id\": \"fizzy\",\n      \"decision\": \"keep\",\n      \"explicit\": false,\n      \"packages\": [],\n      \"webapp\": \"Fizzy\",\n      \"replacement\": null\n    },\n    {\n      \"id\": \"github\",\n      \"decision\": \"keep\",\n      \"explicit\": false,\n      \"packages\": [],\n      \"webapp\": \"GitHub\",\n      \"replacement\": null\n    },\n    {\n      \"id\": \"google-contacts\",\n      \"decision\": \"keep\",\n      \"explicit\": false,\n      \"packages\": [],\n      \"webapp\": \"Google Contacts\",\n      \"replacement\": null\n    },\n    {\n      \"id\": \"google-maps\",\n      \"decision\": \"keep\",\n      \"explicit\": false,\n      \"packages\": [],\n      \"webapp\": \"Google Maps\",\n      \"replacement\": null\n    },\n    {\n      \"id\": \"google-messages\",\n      \"decision\": \"keep\",\n      \"explicit\": false,\n      \"packages\": [],\n      \"webapp\": \"Google Messages\",\n      \"replacement\": null\n    },\n    {\n      \"id\": \"google-photos\",\n      \"decision\": \"keep\",\n      \"explicit\": false,\n      \"packages\": [],\n      \"webapp\": \"Google Photos\",\n      \"replacement\": null\n    },\n    {\n      \"id\": \"grok\",\n      \"decision\": \"keep\",\n      \"explicit\": false,\n      \"packages\": [],\n      \"webapp\": null,\n      \"replacement\": null\n    },\n    {\n      \"id\": \"hey\",\n      \"decision\": \"keep\",\n      \"explicit\": false,\n      \"packages\": [],\n      \"webapp\": \"HEY\",\n      \"replacement\": null\n    },\n    {\n      \"id\": \"kdenlive\",\n      \"decision\": \"keep\",\n      \"explicit\": false,\n      \"packages\": [\n        \"kdenlive\"\n      ],\n      \"webapp\": null,\n      \"replacement\": null\n    },\n    {\n      \"id\": \"lazydocker\",\n      \"decision\": \"keep\",\n      \"explicit\": false,\n      \"packages\": [\n        \"lazydocker\"\n      ],\n      \"webapp\": null,\n      \"replacement\": null\n    },\n    {\n      \"id\": \"libreoffice\",\n      \"decision\": \"keep\",\n      \"explicit\": false,\n      \"packages\": [\n        \"libreoffice-fresh\"\n      ],\n      \"webapp\": null,\n      \"replacement\": null\n    },\n    {\n      \"id\": \"localsend\",\n      \"decision\": \"keep\",\n      \"explicit\": false,\n      \"packages\": [\n        \"localsend\"\n      ],\n      \"webapp\": null,\n      \"replacement\": null\n    },\n    {\n      \"id\": \"obs-studio\",\n      \"decision\": \"keep\",\n      \"explicit\": false,\n      \"packages\": [\n        \"obs-studio\"\n      ],\n      \"webapp\": null,\n      \"replacement\": null\n    },\n    {\n      \"id\": \"obsidian\",\n      \"decision\": \"keep\",\n      \"explicit\": false,\n      \"packages\": [\n        \"obsidian\"\n      ],\n      \"webapp\": null,\n      \"replacement\": null\n    },\n    {\n      \"id\": \"opencode\",\n      \"decision\": \"keep\",\n      \"explicit\": false,\n      \"packages\": [],\n      \"webapp\": null,\n      \"replacement\": null\n    },\n    {\n      \"id\": \"pinta\",\n      \"decision\": \"keep\",\n      \"explicit\": false,\n      \"packages\": [\n        \"pinta\"\n      ],\n      \"webapp\": null,\n      \"replacement\": null\n    },\n    {\n      \"id\": \"signal\",\n      \"decision\": \"keep\",\n      \"explicit\": false,\n      \"packages\": [\n        \"signal-desktop\"\n      ],\n      \"webapp\": null,\n      \"replacement\": null\n    },\n    {\n      \"id\": \"spotify\",\n      \"decision\": \"keep\",\n      \"explicit\": false,\n      \"packages\": [\n        \"spotify\"\n      ],\n      \"webapp\": null,\n      \"replacement\": null\n    },\n    {\n      \"id\": \"typora\",\n      \"decision\": \"keep\",\n      \"explicit\": false,\n      \"packages\": [\n        \"typora\"\n      ],\n      \"webapp\": null,\n      \"replacement\": null\n    },\n    {\n      \"id\": \"whatsapp\",\n      \"decision\": \"keep\",\n      \"explicit\": false,\n      \"packages\": [],\n      \"webapp\": \"WhatsApp\",\n      \"replacement\": null\n    },\n    {\n      \"id\": \"x\",\n      \"decision\": \"keep\",\n      \"explicit\": false,\n      \"packages\": [],\n      \"webapp\": \"X\",\n      \"replacement\": null\n    },\n    {\n      \"id\": \"xournal\",\n      \"decision\": \"keep\",\n      \"explicit\": false,\n      \"packages\": [\n        \"xournalpp\"\n      ],\n      \"webapp\": null,\n      \"replacement\": null\n    },\n    {\n      \"id\": \"youtube\",\n      \"decision\": \"keep\",\n      \"explicit\": false,\n      \"packages\": [],\n      \"webapp\": \"YouTube\",\n      \"replacement\": null\n    },\n    {\n      \"id\": \"zoom\",\n      \"decision\": \"keep\",\n      \"explicit\": false,\n      \"packages\": [],\n      \"webapp\": \"Zoom\",\n      \"replacement\": null\n    }\n  ],\n  \"install_components\": [],\n  \"default_browser\": null,\n  \"keep_removed_after_updates\": false,\n  \"preserve_unlisted\": true,\n  \"chromium_preserved\": true\n}\n"
+      },
+      "danger": "mutating",
+      "timeout_s": 600,
+      "phase": "finalise"
+    },
+    {
+      "id": "omarchy.defaults.policy",
+      "title": "omarchy defaults policy",
+      "action": {
+        "kind": "write_file",
+        "path": "/var/lib/borea/defaults.json",
+        "contents": "{\n  \"schema\": 1,\n  \"distro\": \"omarchy\",\n  \"upstream\": \"f4378f0de5b44d331ee943746a97872b718a6c18\",\n  \"package_manager\": \"pacman\",\n  \"update_window\": \"omarchy_update_lock\",\n  \"user\": \"tester\",\n  \"last_update_started\": 0,\n  \"items\": []\n}\n",
+        "mode": 384
+      },
+      "needs": [
+        "omarchy.selection"
+      ],
+      "probe": {
+        "kind": "file_contains",
+        "path": "/var/lib/borea/defaults.json",
+        "needle": "{\n  \"schema\": 1,\n  \"distro\": \"omarchy\",\n  \"upstream\": \"f4378f0de5b44d331ee943746a97872b718a6c18\",\n  \"package_manager\": \"pacman\",\n  \"update_window\": \"omarchy_update_lock\",\n  \"user\": \"tester\",\n  \"last_update_started\": 0,\n  \"items\": []\n}\n"
+      },
+      "danger": "mutating",
+      "timeout_s": 600,
+      "phase": "finalise"
+    },
+    {
+      "id": "finalise.receipt",
+      "title": "finalise receipt",
+      "action": {
+        "kind": "write_file",
+        "path": "/var/lib/borea/config-digest",
+        "contents": "993c4b3c3ccf9f360a2b177761aa5275dcfca5cfbc1d8d08f7412009c03330b7",
+        "mode": 384
+      },
+      "needs": [
+        "omarchy.defaults.policy"
+      ],
+      "probe": {
+        "kind": "file_contains",
+        "path": "/var/lib/borea/config-digest",
+        "needle": "993c4b3c3ccf9f360a2b177761aa5275dcfca5cfbc1d8d08f7412009c03330b7"
+      },
+      "danger": "mutating",
+      "timeout_s": 600,
+      "phase": "finalise"
+    }
+  ],
+  "checks": [
+    {
+      "kind": "file_contains",
+      "path": "/etc/fstab",
+      "needle": "UUID=20095b36-a9f0-55a0-b3a8-9737f8f3b009 / btrfs subvol=@,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=20095b36-a9f0-55a0-b3a8-9737f8f3b009 /home btrfs subvol=@home,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=20095b36-a9f0-55a0-b3a8-9737f8f3b009 /.snapshots btrfs subvol=@snapshots,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=20095b36-a9f0-55a0-b3a8-9737f8f3b009 /var/log btrfs subvol=@log,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=20095b36-a9f0-55a0-b3a8-9737f8f3b009 /var/cache btrfs subvol=@cache,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=cd75f471-ba89-5632-b5dc-41df6e6bfb70 /boot ext4 defaults 0 2\nPARTUUID=1738b98f-04a1-554f-a3f7-ce9775e0715a /boot/efi vfat umask=0077 0 2\n"
+    },
+    {
+      "kind": "file_contains",
+      "path": "/etc/hostname",
+      "needle": "borea-test"
+    },
+    {
+      "kind": "command_ok",
+      "argv": [
+        "id",
+        "-u",
+        "tester"
+      ]
+    },
+    {
+      "kind": "command_ok",
+      "argv": [
+        "systemctl",
+        "is-enabled",
+        "NetworkManager.service"
+      ]
+    },
+    {
+      "kind": "file_exists",
+      "path": "/boot/efi/EFI/BOOT/BOOTX64.EFI"
+    },
+    {
+      "kind": "file_exists",
+      "path": "/home/tester/.local/share/omarchy/install.sh"
+    },
+    {
+      "kind": "file_exists",
+      "path": "/usr/share/wayland-sessions/hyprland.desktop"
+    },
+    {
+      "kind": "command_ok",
+      "argv": [
+        "systemctl",
+        "is-enabled",
+        "sddm.service"
+      ]
+    }
+  ],
+  "secrets": [
+    {
+      "name": "account.password",
+      "file": "/run/borea/user.pass"
+    }
+  ],
+  "notes": [
+    "Experimental first implementation: no VM cell has passed. Live apply is gated pending storage probes, mount lifecycle and boot validation. Dry-run is available.",
+    "Omarchy is an Arch source profile following pinned Linutil/upstream defaults. Only explicitly selected apps change; unlisted apps and Chromium are preserved. The user-context installer/independent runtime and VM cell are not yet validated; apply remains gated."
+  ]
+}

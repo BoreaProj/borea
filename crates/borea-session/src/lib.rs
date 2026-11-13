@@ -20,6 +20,12 @@ pub fn select(
     deny_third_party: bool,
 ) -> Result<Selection> {
     c.validate()?;
+    if c.session.kind == "omarchy" && deny_third_party {
+        return Err(BoreaError::unsupported(
+            "Omarchy configures upstream third-party repositories; omit --deny-third-party or select a plain Arch profile",
+        ));
+    }
+
     let catalog = recipe::recipes()?;
     let mut ids = vec![
         "base.minimal".into(),
@@ -27,6 +33,7 @@ pub fn select(
         format!("boot.{}", loader.as_str()),
     ];
     let session_id = match c.session.kind.as_str() {
+        "omarchy" => Some("profile.omarchy".into()),
         "desktop" => c.session.desktop.as_ref().map(|s| format!("desktop.{s}")),
         "shell" => c
             .session
@@ -86,6 +93,17 @@ pub fn select(
         ids.push("system.codecs".into());
     }
     ids.extend(c.apps.enable.iter().map(|s| format!("app.{s}")));
+    if c.session.kind == "omarchy" {
+        ids.extend(
+            c.omarchy
+                .as_ref()
+                .cloned()
+                .unwrap_or_default()
+                .selection()?
+                .install_components,
+        );
+    }
+
     let components = recipe::resolve(&ids, &catalog)?;
     m.gate(c.target.family, &components, allow_source, deny_third_party)?;
     for id in &components {
@@ -128,6 +146,12 @@ pub fn packages(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn omarchy_respects_repository_denial() {
+        let c = Config::parse(include_str!("../../../examples/omarchy.toml")).unwrap();
+        let e = select(&c, &Matrix::embedded().unwrap(), Loader::Limine, true, true).unwrap_err();
+        assert!(e.message.contains("third-party"));
+    }
     #[test]
     fn minimal_selection() {
         let c = Config::parse(include_str!("../../../recipes/profiles/minimal.toml")).unwrap();

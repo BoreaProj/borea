@@ -34,8 +34,9 @@ borea v2 takes the opposite position:
    MangoWM with Noctalia / DUX (DMS) / end-4.
 3. **Customisable defaults** through TOML recipes and a user config, without
    forking code per distro.
-4. **Omarchy trim and default management** on existing Omarchy installs,
-   preserving the behaviour already designed in the old repository.
+4. **Omarchy as an optional Arch-family profile**, following Linutil/upstream
+   defaults with explicit Borea app controls, plus trim/default management on
+   existing Omarchy installs. Preserve unselected applications (D-033/E06).
 5. **Agent-executable**: every task has a file boundary, a verification command
    and a VM acceptance cell. Claude and Codex can work in parallel without
    stepping on each other.
@@ -56,7 +57,7 @@ borea v2 takes the opposite position:
 | Limine outside Arch | No package on Debian/Fedora; GRUB is better on openSUSE in v1 (D-026) |
 | ARM, RISC-V, BIOS/legacy | x86_64 UEFI only |
 | Wi-Fi setup in the installer | Use the execution host's existing network connection; no live environment is required |
-| Installing Omarchy itself | Omarchy has its own ISO; v1 trims/manages an existing install |
+| Omarchy on non-Arch families | Omarchy is an Arch profile; other families refuse it (D-033) |
 | Immutable distros, NixOS, Alpine (OpenRC) | systemd + package-manager model only |
 | A plugin system or scripting language | Recipes are declarative TOML, not code |
 
@@ -72,7 +73,7 @@ borea plan     --config C --out P [--json]  resolve, validate, emit
 borea apply    P [--dry-run] [--yes] [--resume] [--journal J]
 borea verify   P (--root DIR | --ssh TARGET) [--json]
 borea status   [--journal J]                last run summary
-borea omarchy  trim|defaults ...            existing Omarchy installs
+borea omarchy  configure|trim|defaults ...  Arch profile choices / existing installs
 ```
 
 Exit codes: `0` ok, `2` usage, `3` preflight/unsupported, `4` apply failed,
@@ -81,7 +82,7 @@ Exit codes: `0` ok, `2` usage, `3` preflight/unsupported, `4` apply failed,
 The config surface is one file, `borea.toml`:
 
 ```toml
-schema = 1
+schema = 2
 
 [target]
 family = "arch"              # arch | debian | fedora | suse

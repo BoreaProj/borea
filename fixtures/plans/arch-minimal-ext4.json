@@ -1,11 +1,11 @@
 {
-  "schema": 1,
-  "id": "c07aa6e4b0421be133d92df2907b0c76",
+  "schema": 2,
+  "id": "afe3d8fc83e9af972ee723af27e86a0b",
   "created": "1970-01-01T00:00:00Z",
   "borea_version": "0.1.0",
-  "digest": "c07aa6e4b0421be133d92df2907b0c7670f060ae06101377f5f54caf6ac1aed1",
-  "config_digest": "ebdbe52c576e19ca5ba881cca4d5aad15fd128600649147eae30bc64d4391e97",
-  "matrix_digest": "982a91cdef8827e2d42fce30441741f1ed9883eebc1f41f5aad556f90dae6238",
+  "digest": "afe3d8fc83e9af972ee723af27e86a0bbc23951ef3133051db0bb28df0045f9f",
+  "config_digest": "57ca951fcff74e4953747c8511aa9b668b5737973e77135050e71ce63cc17a8e",
+  "matrix_digest": "2c8e72b621a2407f672a030615d9fd7f732adb37cb06ae7dacfeaca926f5b593",
   "family": "arch",
   "disk": {
     "path": "/dev/vda",
@@ -28,13 +28,13 @@
           "--clear",
           "--new=1:0:+1024M",
           "--typecode=1:ef00",
-          "--partition-guid=1:7a05aa3f-cf6b-5932-8b61-06d8194782cb",
+          "--partition-guid=1:0d60fb2e-d569-53c1-989d-a4770f95b7b1",
           "--new=2:0:+2048M",
           "--typecode=2:8300",
-          "--partition-guid=2:f8384d3e-036a-5286-99de-0715517f006b",
+          "--partition-guid=2:52afff09-ba13-56d4-bdfd-8fcbc470f9e3",
           "--new=3:0:0",
           "--typecode=3:8300",
-          "--partition-guid=3:c2d6fb72-12c1-58f3-a6eb-2f2ddc0901bd",
+          "--partition-guid=3:e513dd83-0a3f-55ce-b7e9-567bfd4cbb13",
           "/dev/vda"
         ],
         "chroot": false,
@@ -85,7 +85,7 @@
           "mkfs.fat",
           "-F32",
           "-i",
-          "a2ea8d35",
+          "ca5c4aa9",
           "/dev/vda1"
         ],
         "chroot": false,
@@ -110,7 +110,7 @@
           "mkfs.ext4",
           "-F",
           "-U",
-          "7ebf85cc-e514-5275-a5d9-791713e26b00",
+          "6ad02c4c-9ae8-5e67-b1c6-6e811a1ce513",
           "/dev/vda2"
         ],
         "chroot": false,
@@ -135,7 +135,7 @@
           "mkfs.ext4",
           "-F",
           "-U",
-          "c780e3d7-001e-50ee-add8-ddf36bf8bb20",
+          "e6112ec1-d007-5e05-b3b1-4b6b1389273a",
           "/dev/vda3"
         ],
         "chroot": false,
@@ -397,7 +397,7 @@
       "action": {
         "kind": "write_file",
         "path": "/etc/fstab",
-        "contents": "UUID=c780e3d7-001e-50ee-add8-ddf36bf8bb20 / ext4 defaults 0 1\nUUID=7ebf85cc-e514-5275-a5d9-791713e26b00 /boot ext4 defaults 0 2\nPARTUUID=7a05aa3f-cf6b-5932-8b61-06d8194782cb /boot/efi vfat umask=0077 0 2\n",
+        "contents": "UUID=e6112ec1-d007-5e05-b3b1-4b6b1389273a / ext4 defaults 0 1\nUUID=6ad02c4c-9ae8-5e67-b1c6-6e811a1ce513 /boot ext4 defaults 0 2\nPARTUUID=0d60fb2e-d569-53c1-989d-a4770f95b7b1 /boot/efi vfat umask=0077 0 2\n",
         "mode": 420
       },
       "needs": [
@@ -406,7 +406,7 @@
       "probe": {
         "kind": "file_contains",
         "path": "/etc/fstab",
-        "needle": "UUID=c780e3d7-001e-50ee-add8-ddf36bf8bb20 / ext4 defaults 0 1\nUUID=7ebf85cc-e514-5275-a5d9-791713e26b00 /boot ext4 defaults 0 2\nPARTUUID=7a05aa3f-cf6b-5932-8b61-06d8194782cb /boot/efi vfat umask=0077 0 2\n"
+        "needle": "UUID=e6112ec1-d007-5e05-b3b1-4b6b1389273a / ext4 defaults 0 1\nUUID=6ad02c4c-9ae8-5e67-b1c6-6e811a1ce513 /boot ext4 defaults 0 2\nPARTUUID=0d60fb2e-d569-53c1-989d-a4770f95b7b1 /boot/efi vfat umask=0077 0 2\n"
       },
       "danger": "mutating",
       "timeout_s": 600,
@@ -656,7 +656,7 @@
       "action": {
         "kind": "write_file",
         "path": "/var/lib/borea/password-set",
-        "contents": "ebdbe52c576e19ca5ba881cca4d5aad15fd128600649147eae30bc64d4391e97",
+        "contents": "57ca951fcff74e4953747c8511aa9b668b5737973e77135050e71ce63cc17a8e",
         "mode": 384
       },
       "needs": [
@@ -665,7 +665,7 @@
       "probe": {
         "kind": "file_contains",
         "path": "/var/lib/borea/password-set",
-        "needle": "ebdbe52c576e19ca5ba881cca4d5aad15fd128600649147eae30bc64d4391e97"
+        "needle": "57ca951fcff74e4953747c8511aa9b668b5737973e77135050e71ce63cc17a8e"
       },
       "danger": "mutating",
       "timeout_s": 600,
@@ -876,7 +876,7 @@
       "action": {
         "kind": "write_file",
         "path": "/var/lib/borea/initramfs-generated",
-        "contents": "root=UUID=c780e3d7-001e-50ee-add8-ddf36bf8bb20",
+        "contents": "root=UUID=e6112ec1-d007-5e05-b3b1-4b6b1389273a",
         "mode": 420
       },
       "needs": [
@@ -885,7 +885,7 @@
       "probe": {
         "kind": "file_contains",
         "path": "/var/lib/borea/initramfs-generated",
-        "needle": "root=UUID=c780e3d7-001e-50ee-add8-ddf36bf8bb20"
+        "needle": "root=UUID=e6112ec1-d007-5e05-b3b1-4b6b1389273a"
       },
       "danger": "mutating",
       "timeout_s": 600,
@@ -995,7 +995,7 @@
       "action": {
         "kind": "write_file",
         "path": "/boot/efi/EFI/BOOT/limine.conf",
-        "contents": "timeout: 5\n/Borea\n    protocol: linux\n    path: guid(7ebf85cc-e514-5275-a5d9-791713e26b00)/vmlinuz-linux\n    module_path: guid(7ebf85cc-e514-5275-a5d9-791713e26b00)/initramfs-linux.img\n    cmdline: root=UUID=c780e3d7-001e-50ee-add8-ddf36bf8bb20\n/Borea fallback\n    protocol: linux\n    path: guid(7ebf85cc-e514-5275-a5d9-791713e26b00)/vmlinuz-linux\n    module_path: guid(7ebf85cc-e514-5275-a5d9-791713e26b00)/initramfs-linux-fallback.img\n    cmdline: root=UUID=c780e3d7-001e-50ee-add8-ddf36bf8bb20\n",
+        "contents": "timeout: 5\n/Borea\n    protocol: linux\n    path: guid(6ad02c4c-9ae8-5e67-b1c6-6e811a1ce513)/vmlinuz-linux\n    module_path: guid(6ad02c4c-9ae8-5e67-b1c6-6e811a1ce513)/initramfs-linux.img\n    cmdline: root=UUID=e6112ec1-d007-5e05-b3b1-4b6b1389273a\n/Borea fallback\n    protocol: linux\n    path: guid(6ad02c4c-9ae8-5e67-b1c6-6e811a1ce513)/vmlinuz-linux\n    module_path: guid(6ad02c4c-9ae8-5e67-b1c6-6e811a1ce513)/initramfs-linux-fallback.img\n    cmdline: root=UUID=e6112ec1-d007-5e05-b3b1-4b6b1389273a\n",
         "mode": 420
       },
       "needs": [
@@ -1004,7 +1004,7 @@
       "probe": {
         "kind": "file_contains",
         "path": "/boot/efi/EFI/BOOT/limine.conf",
-        "needle": "timeout: 5\n/Borea\n    protocol: linux\n    path: guid(7ebf85cc-e514-5275-a5d9-791713e26b00)/vmlinuz-linux\n    module_path: guid(7ebf85cc-e514-5275-a5d9-791713e26b00)/initramfs-linux.img\n    cmdline: root=UUID=c780e3d7-001e-50ee-add8-ddf36bf8bb20\n/Borea fallback\n    protocol: linux\n    path: guid(7ebf85cc-e514-5275-a5d9-791713e26b00)/vmlinuz-linux\n    module_path: guid(7ebf85cc-e514-5275-a5d9-791713e26b00)/initramfs-linux-fallback.img\n    cmdline: root=UUID=c780e3d7-001e-50ee-add8-ddf36bf8bb20\n"
+        "needle": "timeout: 5\n/Borea\n    protocol: linux\n    path: guid(6ad02c4c-9ae8-5e67-b1c6-6e811a1ce513)/vmlinuz-linux\n    module_path: guid(6ad02c4c-9ae8-5e67-b1c6-6e811a1ce513)/initramfs-linux.img\n    cmdline: root=UUID=e6112ec1-d007-5e05-b3b1-4b6b1389273a\n/Borea fallback\n    protocol: linux\n    path: guid(6ad02c4c-9ae8-5e67-b1c6-6e811a1ce513)/vmlinuz-linux\n    module_path: guid(6ad02c4c-9ae8-5e67-b1c6-6e811a1ce513)/initramfs-linux-fallback.img\n    cmdline: root=UUID=e6112ec1-d007-5e05-b3b1-4b6b1389273a\n"
       },
       "danger": "mutating",
       "timeout_s": 600,
@@ -1016,7 +1016,7 @@
       "action": {
         "kind": "write_file",
         "path": "/boot/limine/limine.conf",
-        "contents": "timeout: 5\n/Borea\n    protocol: linux\n    path: guid(7ebf85cc-e514-5275-a5d9-791713e26b00)/vmlinuz-linux\n    module_path: guid(7ebf85cc-e514-5275-a5d9-791713e26b00)/initramfs-linux.img\n    cmdline: root=UUID=c780e3d7-001e-50ee-add8-ddf36bf8bb20\n/Borea fallback\n    protocol: linux\n    path: guid(7ebf85cc-e514-5275-a5d9-791713e26b00)/vmlinuz-linux\n    module_path: guid(7ebf85cc-e514-5275-a5d9-791713e26b00)/initramfs-linux-fallback.img\n    cmdline: root=UUID=c780e3d7-001e-50ee-add8-ddf36bf8bb20\n",
+        "contents": "timeout: 5\n/Borea\n    protocol: linux\n    path: guid(6ad02c4c-9ae8-5e67-b1c6-6e811a1ce513)/vmlinuz-linux\n    module_path: guid(6ad02c4c-9ae8-5e67-b1c6-6e811a1ce513)/initramfs-linux.img\n    cmdline: root=UUID=e6112ec1-d007-5e05-b3b1-4b6b1389273a\n/Borea fallback\n    protocol: linux\n    path: guid(6ad02c4c-9ae8-5e67-b1c6-6e811a1ce513)/vmlinuz-linux\n    module_path: guid(6ad02c4c-9ae8-5e67-b1c6-6e811a1ce513)/initramfs-linux-fallback.img\n    cmdline: root=UUID=e6112ec1-d007-5e05-b3b1-4b6b1389273a\n",
         "mode": 420
       },
       "needs": [
@@ -1025,7 +1025,7 @@
       "probe": {
         "kind": "file_contains",
         "path": "/boot/limine/limine.conf",
-        "needle": "timeout: 5\n/Borea\n    protocol: linux\n    path: guid(7ebf85cc-e514-5275-a5d9-791713e26b00)/vmlinuz-linux\n    module_path: guid(7ebf85cc-e514-5275-a5d9-791713e26b00)/initramfs-linux.img\n    cmdline: root=UUID=c780e3d7-001e-50ee-add8-ddf36bf8bb20\n/Borea fallback\n    protocol: linux\n    path: guid(7ebf85cc-e514-5275-a5d9-791713e26b00)/vmlinuz-linux\n    module_path: guid(7ebf85cc-e514-5275-a5d9-791713e26b00)/initramfs-linux-fallback.img\n    cmdline: root=UUID=c780e3d7-001e-50ee-add8-ddf36bf8bb20\n"
+        "needle": "timeout: 5\n/Borea\n    protocol: linux\n    path: guid(6ad02c4c-9ae8-5e67-b1c6-6e811a1ce513)/vmlinuz-linux\n    module_path: guid(6ad02c4c-9ae8-5e67-b1c6-6e811a1ce513)/initramfs-linux.img\n    cmdline: root=UUID=e6112ec1-d007-5e05-b3b1-4b6b1389273a\n/Borea fallback\n    protocol: linux\n    path: guid(6ad02c4c-9ae8-5e67-b1c6-6e811a1ce513)/vmlinuz-linux\n    module_path: guid(6ad02c4c-9ae8-5e67-b1c6-6e811a1ce513)/initramfs-linux-fallback.img\n    cmdline: root=UUID=e6112ec1-d007-5e05-b3b1-4b6b1389273a\n"
       },
       "danger": "mutating",
       "timeout_s": 600,
@@ -1037,7 +1037,7 @@
       "action": {
         "kind": "write_file",
         "path": "/var/lib/borea/config-digest",
-        "contents": "ebdbe52c576e19ca5ba881cca4d5aad15fd128600649147eae30bc64d4391e97",
+        "contents": "57ca951fcff74e4953747c8511aa9b668b5737973e77135050e71ce63cc17a8e",
         "mode": 384
       },
       "needs": [
@@ -1046,7 +1046,7 @@
       "probe": {
         "kind": "file_contains",
         "path": "/var/lib/borea/config-digest",
-        "needle": "ebdbe52c576e19ca5ba881cca4d5aad15fd128600649147eae30bc64d4391e97"
+        "needle": "57ca951fcff74e4953747c8511aa9b668b5737973e77135050e71ce63cc17a8e"
       },
       "danger": "mutating",
       "timeout_s": 600,
@@ -1057,7 +1057,7 @@
     {
       "kind": "file_contains",
       "path": "/etc/fstab",
-      "needle": "UUID=c780e3d7-001e-50ee-add8-ddf36bf8bb20 / ext4 defaults 0 1\nUUID=7ebf85cc-e514-5275-a5d9-791713e26b00 /boot ext4 defaults 0 2\nPARTUUID=7a05aa3f-cf6b-5932-8b61-06d8194782cb /boot/efi vfat umask=0077 0 2\n"
+      "needle": "UUID=e6112ec1-d007-5e05-b3b1-4b6b1389273a / ext4 defaults 0 1\nUUID=6ad02c4c-9ae8-5e67-b1c6-6e811a1ce513 /boot ext4 defaults 0 2\nPARTUUID=0d60fb2e-d569-53c1-989d-a4770f95b7b1 /boot/efi vfat umask=0077 0 2\n"
     },
     {
       "kind": "file_contains",

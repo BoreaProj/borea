@@ -682,7 +682,7 @@ pub fn build(c: &Config, disk: DeviceIdentity, intent: Intent) -> Result<Plan> {
             argv: argv(&["systemctl", "is-enabled", &family.network_unit]),
         },
     ];
-    if let Some(session) = intent.session {
+    if let Some(session) = intent.session.filter(|_| c.session.kind != "omarchy") {
         let exec = session.exec.as_deref().unwrap_or("");
         if let Some(autostart) = intent.autostart {
             let dest = match c.session.compositor.as_deref() {
@@ -870,6 +870,166 @@ pub fn build(c: &Config, disk: DeviceIdentity, intent: Intent) -> Result<Plan> {
             path: family.grub_cfg.into(),
         });
     }
+    if c.session.kind == "omarchy" {
+        let selection = c
+            .omarchy
+            .as_ref()
+            .cloned()
+            .unwrap_or_default()
+            .selection()?;
+        // Do not let generic app requests contradict explicit keep/remove choices.
+        for app in selection.removals() {
+            for id in c
+                .apps
+                .enable
+                .iter()
+                .map(|id| format!("app.{id}"))
+                .chain(selection.install_components.iter().cloned())
+            {
+                if catalog
+                    .get(&id)
+                    .and_then(|r| r.packages.get(&c.target.family))
+                    .is_some_and(|ps| ps.iter().any(|pkg| app.packages.contains(pkg)))
+                {
+                    return Err(BoreaError::invalid(format!(
+                        "{} is both removed and requested for installation",
+                        app.id
+                    )));
+                }
+            }
+        }
+        let user = &c.account.username;
+        b.add(
+            "omarchy.install",
+            Phase::Finalise,
+            Action::InstallOmarchy {
+                user: user.clone(),
+                source: selection.upstream.omarchy.clone(),
+            },
+            Probe::OmarchyInstalled {
+                user: user.clone(),
+                commit: selection.upstream.omarchy.commit.clone(),
+            },
+            Danger::Mutating,
+        );
+        // Replacements/browser additions are installed after upstream defaults and before removals.
+        let additions = selection
+            .install_components
+            .iter()
+            .flat_map(|id| {
+                catalog[id]
+                    .packages
+                    .get(&c.target.family)
+                    .into_iter()
+                    .flatten()
+                    .cloned()
+            })
+            .collect::<BTreeSet<_>>()
+            .into_iter()
+            .collect::<Vec<_>>();
+        if !additions.is_empty() {
+            b.cmd(
+                "omarchy.apps.install",
+                Phase::Finalise,
+                install(c.target.family, &additions),
+                true,
+                Probe::CommandOk {
+                    argv: argv(&["pacman", "-Q"])
+                        .into_iter()
+                        .chain(additions.iter().cloned())
+                        .collect(),
+                    chroot: true,
+                },
+                Danger::Mutating,
+            );
+        }
+        for app in selection.removals() {
+            if !app.packages.is_empty() {
+                // Exact selected packages only: no dependency/orphan cascade and no --nodeps.
+                let args = argv(&["pacman", "-R", "--noconfirm"])
+                    .into_iter()
+                    .chain(app.packages.clone())
+                    .collect();
+                b.cmd(
+                    &format!("omarchy.apps.remove.{}", app.id),
+                    Phase::Finalise,
+                    args,
+                    true,
+                    Probe::PackagesAbsent {
+                        packages: app.packages.clone(),
+                    },
+                    Danger::Mutating,
+                );
+                checks.push(Check::PackagesAbsent {
+                    packages: app.packages.clone(),
+                });
+            } else if let Some(webapp) = &app.webapp {
+                let helper = format!("/home/{user}/.local/share/omarchy/bin/omarchy-webapp-remove");
+                let path = PathBuf::from(format!(
+                    "/home/{user}/.local/share/applications/{webapp}.desktop"
+                ));
+                b.cmd(
+                    &format!("omarchy.webapps.remove.{}", app.id),
+                    Phase::Finalise,
+                    argv(&["runuser", "-u", user, "--", &helper, webapp]),
+                    true,
+                    Probe::PathMissing { path: path.clone() },
+                    Danger::Mutating,
+                );
+                checks.push(Check::PathMissing { path });
+            }
+        }
+        if let Some(browser) = &selection.default_browser {
+            let desktop = format!("{browser}.desktop");
+            b.cmd(
+                "omarchy.browser.default",
+                Phase::Finalise,
+                argv(&[
+                    "runuser",
+                    "-u",
+                    user,
+                    "--",
+                    "xdg-settings",
+                    "set",
+                    "default-web-browser",
+                    &desktop,
+                ]),
+                true,
+                Probe::FileContains {
+                    path: format!("/home/{user}/.config/mimeapps.list").into(),
+                    needle: format!("x-scheme-handler/http={desktop}"),
+                },
+                Danger::Mutating,
+            );
+        }
+        let selection_json = format!("{}\n", serde_json::to_string_pretty(&selection)?);
+        b.file(
+            "omarchy.selection",
+            Phase::Finalise,
+            "/var/lib/borea/omarchy-selection.json",
+            selection_json,
+            0o600,
+        );
+        b.file(
+            "omarchy.defaults.policy",
+            Phase::Finalise,
+            "/var/lib/borea/defaults.json",
+            format!(
+                "{}\n",
+                serde_json::to_string_pretty(&selection.policy(user)?)?
+            ),
+            0o600,
+        );
+        checks.push(Check::FileExists {
+            path: format!("/home/{user}/.local/share/omarchy/install.sh").into(),
+        });
+        checks.push(Check::FileExists {
+            path: "/usr/share/wayland-sessions/hyprland.desktop".into(),
+        });
+        checks.push(Check::CommandOk {
+            argv: argv(&["systemctl", "is-enabled", "sddm.service"]),
+        });
+    }
     b.file(
         "finalise.receipt",
         Phase::Finalise,
@@ -877,7 +1037,10 @@ pub fn build(c: &Config, disk: DeviceIdentity, intent: Intent) -> Result<Plan> {
         config_digest.clone(),
         0o600,
     );
-    let mut plan=Plan{schema:1,id:String::new(),created:"1970-01-01T00:00:00Z".into(),borea_version:version().into(),digest:String::new(),config_digest,matrix_digest,family:c.target.family,disk,root_fs:c.disk.root_fs,loader:resolved,root:"/mnt".into(),steps:b.steps,checks,secrets,notes:vec!["Experimental first implementation: no VM cell has passed. Live apply is gated pending storage probes, mount lifecycle and boot validation. Dry-run is available.".into()]};
+    let mut plan=Plan{schema:2,id:String::new(),created:"1970-01-01T00:00:00Z".into(),borea_version:version().into(),digest:String::new(),config_digest,matrix_digest,family:c.target.family,disk,root_fs:c.disk.root_fs,loader:resolved,root:"/mnt".into(),steps:b.steps,checks,secrets,notes:vec!["Experimental first implementation: no VM cell has passed. Live apply is gated pending storage probes, mount lifecycle and boot validation. Dry-run is available.".into()]};
+    if c.session.kind == "omarchy" {
+        plan.notes.push("Omarchy is an Arch source profile following pinned Linutil/upstream defaults. Only explicitly selected apps change; unlisted apps and Chromium are preserved. The user-context installer/independent runtime and VM cell are not yet validated; apply remains gated.".into());
+    }
     plan.seal()?;
     Ok(plan)
 }
@@ -917,6 +1080,12 @@ mod tests {
             },
         )
         .unwrap()
+    }
+    #[test]
+    fn schema_one_plans_require_replanning() {
+        let mut p = plan(Filesystem::Btrfs, FamilyId::Arch);
+        p.schema = 1;
+        assert!(p.seal().is_err());
     }
     #[test]
     fn deterministic_all_families() {

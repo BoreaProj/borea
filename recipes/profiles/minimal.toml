@@ -1,6 +1,6 @@
 # Test profile: minimal, no session, no SSH by default.
 # `family` is overridden by `xtask e2e --family`.
-schema = 1
+schema = 2
 
 [target]
 family = "arch"

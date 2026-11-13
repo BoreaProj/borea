@@ -20,7 +20,11 @@ Borea owns its installation workflow and runtime tooling; the selected distro
 is the installation target, not the environment Borea must run inside. Runtime
 provisioning is still pending in this preview (see task G01).
 
-It also carries the Omarchy tools: a **trimmer** for Omarchy defaults and a
+The Arch family also offers an experimental **Omarchy profile**, following
+Linutil/upstream defaults with explicit `keep`, `remove`, replacement and browser
+choices. Unselected apps stay unchanged. See [Omarchy controls](docs/OMARCHY.md).
+
+It also carries the existing-system Omarchy tools: a **trimmer** for Omarchy defaults and a
 **default manager** that keeps removed defaults from coming back after updates.
 
 **Status: experimental implementation preview.** Config validation, matrix gates,
@@ -46,7 +50,8 @@ What is deliberately **not** here:
 - no live ISO, custom initramfs, USB writer or release attestation
 - no daemon, socket protocol or background worker
 - no simulation engine — `--dry-run` and golden plan tests replace it
-- no snapshot manager or automatic rollback — the Btrfs layout is snapshot-ready
+- no Borea snapshot manager or automatic rollback; the optional Omarchy profile
+  retains its upstream-managed defaults
 - no dual-boot, Secure Boot signing or ARM in v1
 
 ## The model
@@ -77,6 +82,7 @@ cargo run -p borea-cli -- plan \
   --fixture --identity fixtures/device.json --out /tmp/borea-plan.json
 cargo run -p borea-cli -- apply /tmp/borea-plan.json --dry-run
 cargo run -p borea-cli -- omarchy trim docker whatsapp --dry-run
+cargo run -p borea-cli -- omarchy configure --config examples/omarchy.toml --json
 cargo xtask matrix check
 cargo xtask recipe lint
 cargo xtask plan golden

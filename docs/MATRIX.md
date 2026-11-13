@@ -5,7 +5,7 @@ This is the source of truth for what `borea plan` may offer. It is data:
 will generate them once card F05 lands. If they disagree, the TOML wins and CI
 fails. Until then, a matrix change updates both the TOML and this file.
 
-**Revision:** `matrix-2026-11-13.2` (Btrfs/Limine)
+**Revision:** `matrix-2026-11-13.4` (Btrfs/Limine)
 **Evidence last checked:** 2026-11-13
 **Rule:** a `native` or `third-party` cell needs a passing VM artifact for that
 family before release. No artifact, no green.
@@ -227,3 +227,10 @@ from this restart plan, not newly verified upstream availability. No cell is
 VM-supported. `native` describes intended packaging, not installer validation.
 Third-party/source cells without reviewed keys/commits refuse planning even when
 the table lists a possible packaging path. See [IMPLEMENTATION.md](IMPLEMENTATION.md).
+
+## Arch Omarchy profile
+
+`profile.omarchy` is an Arch-only `source` cell, requiring `--allow-source`.
+Other families explicitly refuse it. It uses pinned Linutil/upstream defaults
+and manual Borea app choices; it is not VM-supported. The optional profile does
+not change the 29 required release cells. See [OMARCHY.md](OMARCHY.md).

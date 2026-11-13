@@ -63,7 +63,7 @@ impl Loader {
     }
 }
 fn schema() -> u16 {
-    1
+    2
 }
 fn hostname() -> String {
     "borea".into()
@@ -208,15 +208,7 @@ pub struct AppsConfig {
     #[serde(default)]
     pub flatpak: bool,
 }
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct OmarchyConfig {
-    #[serde(default)]
-    pub trim: Vec<String>,
-    #[serde(default)]
-    pub keep_removed_after_updates: bool,
-    pub default_browser: Option<String>,
-}
+pub use crate::omarchy::OmarchyConfig;
 pub fn safe_path(p: &Path) -> bool {
     p.is_absolute()
         && !p.components().any(|c| matches!(c, Component::ParentDir))
@@ -249,8 +241,10 @@ impl Config {
         Ok(c)
     }
     pub fn validate(&self) -> Result<()> {
-        if self.schema != 1 {
-            return Err(BoreaError::invalid("config schema must be 1"));
+        if ![1, 2].contains(&self.schema) {
+            return Err(BoreaError::invalid(
+                "config schema must be 1 or 2 (Omarchy requires 2)",
+            ));
         }
         if self.target.arch != "x86_64"
             || self.target.firmware != "uefi"
@@ -360,9 +354,13 @@ impl Config {
                         .shell
                         .as_deref()
                         .is_none_or(|s| ["none", "noctalia", "dms", "end4"].contains(&s)) => {}
+            "omarchy"
+                if self.session.desktop.is_none()
+                    && self.session.compositor.is_none()
+                    && self.session.shell.is_none() => {}
             _ => {
                 return Err(BoreaError::invalid(
-                    "session fields do not match type minimal, desktop or shell",
+                    "session fields do not match type minimal, desktop, shell or omarchy",
                 ));
             }
         }
@@ -371,11 +369,31 @@ impl Config {
                 return Err(BoreaError::invalid("invalid app id"));
             }
         }
-        if self.omarchy.as_ref().is_some_and(|o| {
-            !o.trim.is_empty() || o.default_browser.is_some() || o.keep_removed_after_updates
-        }) {
-            return Err(BoreaError::unsupported(
-                "Omarchy configuration is for existing installations; use borea omarchy separately and omit [omarchy] from install configs",
+        if self.session.kind == "omarchy" {
+            if self.schema != 2 {
+                return Err(BoreaError::invalid(
+                    "Omarchy selection requires config schema 2",
+                ));
+            }
+            crate::matrix::Matrix::embedded()?.gate(
+                self.target.family,
+                &["profile.omarchy".into()],
+                true,
+                false,
+            )?;
+            self.omarchy
+                .as_ref()
+                .cloned()
+                .unwrap_or_default()
+                .selection()?;
+            if !["auto", "sddm"].contains(&self.session.greeter.as_str()) {
+                return Err(BoreaError::invalid(
+                    "Omarchy uses its upstream SDDM session; choose greeter auto or sddm",
+                ));
+            }
+        } else if self.omarchy.is_some() {
+            return Err(BoreaError::invalid(
+                "[omarchy] choices require session.type = 'omarchy'; use borea omarchy configure for an existing system",
             ));
         }
         Ok(())
@@ -392,7 +410,7 @@ mod tests {
     #[test]
     fn config_unknown_and_unsafe() {
         for (a, b) in [
-            ("schema = 1", "unknown = 1"),
+            ("schema = 2", "unknown = 1"),
             ("username = \"tester\"", "username = \"root\""),
             ("/run/borea/user.pass", "relative"),
             ("encrypt = false", "encrypt = false\nextra = true"),

@@ -1,11 +1,11 @@
 {
-  "schema": 1,
-  "id": "2912af3dcaaba78d0666fbffa8c0f876",
+  "schema": 2,
+  "id": "630b5f818860da875943ae628a298e8a",
   "created": "1970-01-01T00:00:00Z",
   "borea_version": "0.1.0",
-  "digest": "2912af3dcaaba78d0666fbffa8c0f8765404772c9251112a4bdad73598e777a1",
-  "config_digest": "e321dad0e32c5a4e58eb528d30aa7677a1023e1ab73b1859bae899e4b6064317",
-  "matrix_digest": "982a91cdef8827e2d42fce30441741f1ed9883eebc1f41f5aad556f90dae6238",
+  "digest": "630b5f818860da875943ae628a298e8a3d6ebb27f5464827ca323d4b91d5b07d",
+  "config_digest": "dcb406c9c64223e93fc31b1af81e72717d2e4e4b55f1a88fa23c0437397300d9",
+  "matrix_digest": "2c8e72b621a2407f672a030615d9fd7f732adb37cb06ae7dacfeaca926f5b593",
   "family": "suse",
   "disk": {
     "path": "/dev/vda",
@@ -28,13 +28,13 @@
           "--clear",
           "--new=1:0:+1024M",
           "--typecode=1:ef00",
-          "--partition-guid=1:25eebdaf-68e9-519a-902f-3a34aa73b0b9",
+          "--partition-guid=1:7546f574-13da-50f7-8517-a0ee76753ca7",
           "--new=2:0:+2048M",
           "--typecode=2:8300",
-          "--partition-guid=2:5ecb9ada-75ba-5c12-ac9f-d59dc164a087",
+          "--partition-guid=2:21990406-d3c1-5b5d-82c8-f7f7b91754c0",
           "--new=3:0:0",
           "--typecode=3:8300",
-          "--partition-guid=3:d862004b-8006-5612-86ac-57e84323b1e8",
+          "--partition-guid=3:c4cf3199-a99d-58ba-b3ee-cc8827749c1d",
           "/dev/vda"
         ],
         "chroot": false,
@@ -85,7 +85,7 @@
           "mkfs.fat",
           "-F32",
           "-i",
-          "57a70200",
+          "05bb4b17",
           "/dev/vda1"
         ],
         "chroot": false,
@@ -110,7 +110,7 @@
           "mkfs.ext4",
           "-F",
           "-U",
-          "be805715-59fa-500c-b7e2-caa6d386c3e5",
+          "ed21e2f9-8b0c-5eab-8b01-0b37eff0d1b3",
           "/dev/vda2"
         ],
         "chroot": false,
@@ -135,7 +135,7 @@
           "mkfs.btrfs",
           "-f",
           "-U",
-          "1ff6d546-504b-5551-8aac-de21d8d6e690",
+          "2add30a9-d014-5ba8-82e7-81bc000e09f5",
           "/dev/vda3"
         ],
         "chroot": false,
@@ -811,7 +811,7 @@
       "action": {
         "kind": "write_file",
         "path": "/etc/fstab",
-        "contents": "UUID=1ff6d546-504b-5551-8aac-de21d8d6e690 / btrfs subvol=@,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=1ff6d546-504b-5551-8aac-de21d8d6e690 /home btrfs subvol=@home,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=1ff6d546-504b-5551-8aac-de21d8d6e690 /.snapshots btrfs subvol=@snapshots,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=1ff6d546-504b-5551-8aac-de21d8d6e690 /var/log btrfs subvol=@log,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=1ff6d546-504b-5551-8aac-de21d8d6e690 /var/cache btrfs subvol=@cache,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=be805715-59fa-500c-b7e2-caa6d386c3e5 /boot ext4 defaults 0 2\nPARTUUID=25eebdaf-68e9-519a-902f-3a34aa73b0b9 /boot/efi vfat umask=0077 0 2\n",
+        "contents": "UUID=2add30a9-d014-5ba8-82e7-81bc000e09f5 / btrfs subvol=@,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=2add30a9-d014-5ba8-82e7-81bc000e09f5 /home btrfs subvol=@home,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=2add30a9-d014-5ba8-82e7-81bc000e09f5 /.snapshots btrfs subvol=@snapshots,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=2add30a9-d014-5ba8-82e7-81bc000e09f5 /var/log btrfs subvol=@log,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=2add30a9-d014-5ba8-82e7-81bc000e09f5 /var/cache btrfs subvol=@cache,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=ed21e2f9-8b0c-5eab-8b01-0b37eff0d1b3 /boot ext4 defaults 0 2\nPARTUUID=7546f574-13da-50f7-8517-a0ee76753ca7 /boot/efi vfat umask=0077 0 2\n",
         "mode": 420
       },
       "needs": [
@@ -820,7 +820,7 @@
       "probe": {
         "kind": "file_contains",
         "path": "/etc/fstab",
-        "needle": "UUID=1ff6d546-504b-5551-8aac-de21d8d6e690 / btrfs subvol=@,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=1ff6d546-504b-5551-8aac-de21d8d6e690 /home btrfs subvol=@home,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=1ff6d546-504b-5551-8aac-de21d8d6e690 /.snapshots btrfs subvol=@snapshots,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=1ff6d546-504b-5551-8aac-de21d8d6e690 /var/log btrfs subvol=@log,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=1ff6d546-504b-5551-8aac-de21d8d6e690 /var/cache btrfs subvol=@cache,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=be805715-59fa-500c-b7e2-caa6d386c3e5 /boot ext4 defaults 0 2\nPARTUUID=25eebdaf-68e9-519a-902f-3a34aa73b0b9 /boot/efi vfat umask=0077 0 2\n"
+        "needle": "UUID=2add30a9-d014-5ba8-82e7-81bc000e09f5 / btrfs subvol=@,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=2add30a9-d014-5ba8-82e7-81bc000e09f5 /home btrfs subvol=@home,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=2add30a9-d014-5ba8-82e7-81bc000e09f5 /.snapshots btrfs subvol=@snapshots,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=2add30a9-d014-5ba8-82e7-81bc000e09f5 /var/log btrfs subvol=@log,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=2add30a9-d014-5ba8-82e7-81bc000e09f5 /var/cache btrfs subvol=@cache,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=ed21e2f9-8b0c-5eab-8b01-0b37eff0d1b3 /boot ext4 defaults 0 2\nPARTUUID=7546f574-13da-50f7-8517-a0ee76753ca7 /boot/efi vfat umask=0077 0 2\n"
       },
       "danger": "mutating",
       "timeout_s": 600,
@@ -1001,7 +1001,7 @@
       "action": {
         "kind": "write_file",
         "path": "/var/lib/borea/password-set",
-        "contents": "e321dad0e32c5a4e58eb528d30aa7677a1023e1ab73b1859bae899e4b6064317",
+        "contents": "dcb406c9c64223e93fc31b1af81e72717d2e4e4b55f1a88fa23c0437397300d9",
         "mode": 384
       },
       "needs": [
@@ -1010,7 +1010,7 @@
       "probe": {
         "kind": "file_contains",
         "path": "/var/lib/borea/password-set",
-        "needle": "e321dad0e32c5a4e58eb528d30aa7677a1023e1ab73b1859bae899e4b6064317"
+        "needle": "dcb406c9c64223e93fc31b1af81e72717d2e4e4b55f1a88fa23c0437397300d9"
       },
       "danger": "mutating",
       "timeout_s": 600,
@@ -1222,7 +1222,7 @@
       "action": {
         "kind": "write_file",
         "path": "/var/lib/borea/initramfs-generated",
-        "contents": "root=UUID=1ff6d546-504b-5551-8aac-de21d8d6e690 rootflags=subvol=@",
+        "contents": "root=UUID=2add30a9-d014-5ba8-82e7-81bc000e09f5 rootflags=subvol=@",
         "mode": 420
       },
       "needs": [
@@ -1231,7 +1231,7 @@
       "probe": {
         "kind": "file_contains",
         "path": "/var/lib/borea/initramfs-generated",
-        "needle": "root=UUID=1ff6d546-504b-5551-8aac-de21d8d6e690 rootflags=subvol=@"
+        "needle": "root=UUID=2add30a9-d014-5ba8-82e7-81bc000e09f5 rootflags=subvol=@"
       },
       "danger": "mutating",
       "timeout_s": 600,
@@ -1243,7 +1243,7 @@
       "action": {
         "kind": "write_file",
         "path": "/etc/default/grub.d/90-borea.cfg",
-        "contents": "GRUB_CMDLINE_LINUX=\"root=UUID=1ff6d546-504b-5551-8aac-de21d8d6e690 rootflags=subvol=@\"\n",
+        "contents": "GRUB_CMDLINE_LINUX=\"root=UUID=2add30a9-d014-5ba8-82e7-81bc000e09f5 rootflags=subvol=@\"\n",
         "mode": 420
       },
       "needs": [
@@ -1252,7 +1252,7 @@
       "probe": {
         "kind": "file_contains",
         "path": "/etc/default/grub.d/90-borea.cfg",
-        "needle": "GRUB_CMDLINE_LINUX=\"root=UUID=1ff6d546-504b-5551-8aac-de21d8d6e690 rootflags=subvol=@\"\n"
+        "needle": "GRUB_CMDLINE_LINUX=\"root=UUID=2add30a9-d014-5ba8-82e7-81bc000e09f5 rootflags=subvol=@\"\n"
       },
       "danger": "mutating",
       "timeout_s": 600,
@@ -1303,7 +1303,7 @@
       "probe": {
         "kind": "file_contains",
         "path": "/boot/grub2/grub.cfg",
-        "needle": "1ff6d546-504b-5551-8aac-de21d8d6e690"
+        "needle": "2add30a9-d014-5ba8-82e7-81bc000e09f5"
       },
       "danger": "mutating",
       "timeout_s": 600,
@@ -1315,7 +1315,7 @@
       "action": {
         "kind": "write_file",
         "path": "/var/lib/borea/config-digest",
-        "contents": "e321dad0e32c5a4e58eb528d30aa7677a1023e1ab73b1859bae899e4b6064317",
+        "contents": "dcb406c9c64223e93fc31b1af81e72717d2e4e4b55f1a88fa23c0437397300d9",
         "mode": 384
       },
       "needs": [
@@ -1324,7 +1324,7 @@
       "probe": {
         "kind": "file_contains",
         "path": "/var/lib/borea/config-digest",
-        "needle": "e321dad0e32c5a4e58eb528d30aa7677a1023e1ab73b1859bae899e4b6064317"
+        "needle": "dcb406c9c64223e93fc31b1af81e72717d2e4e4b55f1a88fa23c0437397300d9"
       },
       "danger": "mutating",
       "timeout_s": 600,
@@ -1335,7 +1335,7 @@
     {
       "kind": "file_contains",
       "path": "/etc/fstab",
-      "needle": "UUID=1ff6d546-504b-5551-8aac-de21d8d6e690 / btrfs subvol=@,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=1ff6d546-504b-5551-8aac-de21d8d6e690 /home btrfs subvol=@home,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=1ff6d546-504b-5551-8aac-de21d8d6e690 /.snapshots btrfs subvol=@snapshots,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=1ff6d546-504b-5551-8aac-de21d8d6e690 /var/log btrfs subvol=@log,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=1ff6d546-504b-5551-8aac-de21d8d6e690 /var/cache btrfs subvol=@cache,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=be805715-59fa-500c-b7e2-caa6d386c3e5 /boot ext4 defaults 0 2\nPARTUUID=25eebdaf-68e9-519a-902f-3a34aa73b0b9 /boot/efi vfat umask=0077 0 2\n"
+      "needle": "UUID=2add30a9-d014-5ba8-82e7-81bc000e09f5 / btrfs subvol=@,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=2add30a9-d014-5ba8-82e7-81bc000e09f5 /home btrfs subvol=@home,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=2add30a9-d014-5ba8-82e7-81bc000e09f5 /.snapshots btrfs subvol=@snapshots,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=2add30a9-d014-5ba8-82e7-81bc000e09f5 /var/log btrfs subvol=@log,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=2add30a9-d014-5ba8-82e7-81bc000e09f5 /var/cache btrfs subvol=@cache,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=ed21e2f9-8b0c-5eab-8b01-0b37eff0d1b3 /boot ext4 defaults 0 2\nPARTUUID=7546f574-13da-50f7-8517-a0ee76753ca7 /boot/efi vfat umask=0077 0 2\n"
     },
     {
       "kind": "file_contains",

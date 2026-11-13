@@ -1,0 +1,48 @@
+# Test profile: minimal, no session, no SSH by default.
+# `family` is overridden by `xtask e2e --family`.
+schema = 2
+
+[target]
+family = "arch"
+hostname = "borea-test"
+timezone = "UTC"
+locale = "en_US.UTF-8"
+keymap = "us"
+
+[disk]
+device = "/dev/vda"
+mode = "replace"
+root_fs = "btrfs"
+encrypt = false
+esp_size = "1GiB"
+boot_size = "2GiB"
+swap = "zram"
+
+[boot]
+loader = "auto"
+secure_boot = false
+
+[account]
+username = "tester"
+full_name = "Borea Test"
+password_file = "/run/borea/user.pass"
+sudo = "same"
+ssh_authorized_key_file = "/run/borea/test.pub"
+
+[session]
+type = "omarchy"
+greeter = "auto"
+
+[apps]
+enable = []
+codecs = false
+flatpak = false
+
+[omarchy]
+preset = "linutil"
+keep = []
+remove = []
+keep_removed_after_updates = false
+# default_browser = "firefox" # Chromium remains for web apps
+# [omarchy.replace]
+# obsidian = "neovim"        # installs Neovim before removing Obsidian

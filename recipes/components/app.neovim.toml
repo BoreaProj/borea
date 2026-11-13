@@ -1,0 +1,6 @@
+schema = 1
+id = "app.neovim"
+requires = []
+evidence = "https://github.com/ChrisTitusTech/linutil/blob/fda64ff50cd33f5cf12d5b68613f39ce6643e9d4/core/tabs/applications-setup/developer-tools/neovim.sh"
+[packages]
+arch = ["neovim"]

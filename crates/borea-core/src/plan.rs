@@ -74,6 +74,11 @@ pub struct Step {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
 pub enum Action {
+    /// Adapter intent: a pinned, user-context Omarchy install. Never a curl-to-shell command.
+    InstallOmarchy {
+        user: String,
+        source: crate::omarchy::SourcePin,
+    },
     Command {
         argv: Vec<String>,
         chroot: bool,
@@ -102,6 +107,8 @@ pub enum Action {
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
 pub enum Probe {
     None,
+    OmarchyInstalled { user: String, commit: String },
+    PackagesAbsent { packages: Vec<String> },
     FileExists { path: PathBuf },
     FileContains { path: PathBuf, needle: String },
     PathMissing { path: PathBuf },
@@ -110,6 +117,7 @@ pub enum Probe {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
 pub enum Check {
+    PackagesAbsent { packages: Vec<String> },
     FileExists { path: PathBuf },
     FileContains { path: PathBuf, needle: String },
     PathMissing { path: PathBuf },
@@ -130,7 +138,7 @@ impl Plan {
     }
     pub fn validate(&self) -> Result<()> {
         let bad = |s| BoreaError::new("E_PLAN", s);
-        if self.schema != 1 || self.digest != self.body_digest()? {
+        if self.schema != 2 || self.digest != self.body_digest()? {
             return Err(bad("plan schema or digest mismatch"));
         }
         if self.borea_version != crate::version() {
@@ -184,6 +192,20 @@ impl Plan {
                 return Err(bad("non-destructive step needs a probe"));
             }
             match &step.action {
+                Action::InstallOmarchy { user, source } => {
+                    if !crate::identifier(user)
+                        || *source != crate::omarchy::upstream()?.omarchy
+                        || step.phase != Phase::Finalise
+                        || crate::matrix::Matrix::embedded()?
+                            .cell(self.family, "profile.omarchy")?
+                            .tier
+                            == crate::matrix::Tier::Unsupported
+                        || self.root_fs != Filesystem::Btrfs
+                        || self.loader != Loader::Limine
+                    {
+                        return Err(bad("invalid Omarchy install target, source pin or phase"));
+                    }
+                }
                 Action::Command { argv, stdin, .. } => {
                     valid_argv(argv)?;
                     if stdin.as_ref().is_some_and(|s| !slots.contains(s.as_str())) {
@@ -207,6 +229,18 @@ impl Plan {
                 }
             }
             match &step.probe {
+                Probe::OmarchyInstalled { user, commit } => {
+                    if !crate::identifier(user)
+                        || commit != &crate::omarchy::upstream()?.omarchy.commit
+                    {
+                        return Err(bad("invalid Omarchy probe identity"));
+                    }
+                }
+                Probe::PackagesAbsent { packages } => {
+                    if packages.is_empty() || packages.iter().any(|s| !crate::identifier(s)) {
+                        return Err(bad("invalid package absence probe"));
+                    }
+                }
                 Probe::CommandOk { argv, .. } => valid_argv(argv)?,
                 Probe::FileExists { path }
                 | Probe::FileContains { path, .. }
@@ -220,6 +254,11 @@ impl Plan {
         }
         for check in &self.checks {
             match check {
+                Check::PackagesAbsent { packages } => {
+                    if packages.is_empty() || packages.iter().any(|s| !crate::identifier(s)) {
+                        return Err(bad("invalid package absence check"));
+                    }
+                }
                 Check::CommandOk { argv } => valid_argv(argv)?,
                 Check::FileExists { path }
                 | Check::FileContains { path, .. }

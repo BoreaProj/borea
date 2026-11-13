@@ -17,6 +17,7 @@ provisioning and Omarchy removals are not ready; no VM install cell has passed.
 - [Build plan](docs/PLAN.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Capability matrix](docs/MATRIX.md)
+- [Arch Omarchy app controls](docs/OMARCHY.md)
 - [Task cards](docs/TASKS.md)
 - [Testing](docs/TESTING.md)
 - [First-pass verification](docs/validation/first-pass.md)

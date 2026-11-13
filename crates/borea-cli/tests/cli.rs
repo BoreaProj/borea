@@ -5,7 +5,7 @@ fn borea() -> Command {
 }
 fn fixture_plan() -> Plan {
     let mut p = Plan {
-        schema: 1,
+        schema: 2,
         id: String::new(),
         created: "1970-01-01T00:00:00Z".into(),
         borea_version: version().into(),
@@ -244,4 +244,165 @@ fn fixture_plan_command_and_no_overwrite() {
     let p: Plan = serde_json::from_slice(&fs::read(&output).unwrap()).unwrap();
     p.validate().unwrap();
     assert!(!run().status.success());
+}
+
+fn omarchy_config() -> String {
+    include_str!("../../../examples/omarchy.toml").to_string()
+}
+fn omarchy_plan(text: &str, allow_source: bool) -> (std::process::Output, Option<Plan>) {
+    let d = tempfile::tempdir().unwrap();
+    let config = d.path().join("config.toml");
+    let identity = d.path().join("identity.json");
+    let plan = d.path().join("plan.json");
+    fs::write(&config, text).unwrap();
+    fs::write(&identity, serde_json::to_vec(&fixture_plan().disk).unwrap()).unwrap();
+    let mut cmd = borea();
+    cmd.arg("plan")
+        .arg("--config")
+        .arg(config)
+        .arg("--fixture")
+        .arg("--identity")
+        .arg(identity)
+        .arg("--out")
+        .arg(&plan);
+    if allow_source {
+        cmd.arg("--allow-source");
+    }
+    let output = cmd.output().unwrap();
+    let parsed = if plan.exists() {
+        Some(serde_json::from_slice(&fs::read(plan).unwrap()).unwrap())
+    } else {
+        None
+    };
+    (output, parsed)
+}
+#[test]
+fn omarchy_default_profile_keeps_apps_and_requires_source_opt_in() {
+    let text = omarchy_config();
+    let (out, p) = omarchy_plan(&text, false);
+    assert_eq!(out.status.code(), Some(3));
+    assert!(p.is_none());
+    assert!(String::from_utf8_lossy(&out.stderr).contains("--allow-source"));
+    let (out, p) = omarchy_plan(&text, true);
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let p = p.unwrap();
+    assert_eq!(p.schema, 2);
+    assert_eq!(p.family, FamilyId::Arch);
+    assert!(
+        p.steps
+            .iter()
+            .any(|s| matches!(s.action, Action::InstallOmarchy { .. }))
+    );
+    assert!(
+        !p.steps
+            .iter()
+            .any(|s| s.id.starts_with("omarchy.apps.remove.")
+                || s.id.starts_with("omarchy.webapps.remove."))
+    );
+    let policy = p
+        .steps
+        .iter()
+        .find(|s| s.id == "omarchy.defaults.policy")
+        .unwrap();
+    if let Action::WriteFile { contents, .. } = &policy.action {
+        let v: serde_json::Value = serde_json::from_str(contents).unwrap();
+        assert_eq!(v["items"], serde_json::json!([]));
+    } else {
+        panic!("policy must be a declarative file")
+    }
+}
+#[test]
+fn omarchy_custom_plan_only_changes_selected_apps() {
+    let text = omarchy_config()
+        .replace("keep = []", "keep = [\"spotify\", \"chromium\"]")
+        .replace("remove = []", "remove = [\"docker\", \"whatsapp\"]")
+        .replace(
+            "# default_browser = \"firefox\"",
+            "default_browser = \"firefox\"",
+        )
+        + "\n[omarchy.replace]\nobsidian = \"neovim\"\n";
+    let (out, p) = omarchy_plan(&text, true);
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let p = p.unwrap();
+    let ids = p
+        .steps
+        .iter()
+        .filter(|s| {
+            s.id.starts_with("omarchy.apps.remove.") || s.id.starts_with("omarchy.webapps.remove.")
+        })
+        .map(|s| s.id.as_str())
+        .collect::<Vec<_>>();
+    assert_eq!(
+        ids,
+        [
+            "omarchy.apps.remove.docker",
+            "omarchy.apps.remove.obsidian",
+            "omarchy.webapps.remove.whatsapp"
+        ]
+    );
+    let install = p
+        .steps
+        .iter()
+        .position(|s| s.id == "omarchy.apps.install")
+        .unwrap();
+    let remove = p
+        .steps
+        .iter()
+        .position(|s| s.id == "omarchy.apps.remove.obsidian")
+        .unwrap();
+    assert!(install < remove);
+    let docker = p
+        .steps
+        .iter()
+        .find(|s| s.id == "omarchy.apps.remove.docker")
+        .unwrap();
+    if let Action::Command { argv, .. } = &docker.action {
+        assert_eq!(&argv[..3], ["pacman", "-R", "--noconfirm"]);
+        assert!(!argv.iter().any(|a| a.contains("nodeps") || a == "-Rns"));
+    }
+    assert!(p.checks.iter().any(
+        |c| matches!(c,Check::PackagesAbsent{packages} if packages.contains(&"obsidian".into()))
+    ));
+}
+#[test]
+fn omarchy_wrong_family_layout_and_conflicts_fail_before_output() {
+    for text in [
+        omarchy_config().replace("family = \"arch\"", "family = \"debian\""),
+        omarchy_config().replace("root_fs = \"btrfs\"", "root_fs = \"ext4\""),
+        omarchy_config().replace("loader = \"auto\"", "loader = \"grub\""),
+        omarchy_config()
+            .replace("keep = []", "keep = [\"docker\"]")
+            .replace("remove = []", "remove = [\"docker\"]"),
+        omarchy_config().replace("remove = []", "remove = [\"chromium\"]"),
+    ] {
+        let (o, p) = omarchy_plan(&text, true);
+        assert!(!o.status.success());
+        assert!(p.is_none());
+    }
+}
+#[test]
+fn omarchy_configure_is_read_only_and_shows_preserved_apps() {
+    let d = tempfile::tempdir().unwrap();
+    let config = d.path().join("config.toml");
+    fs::write(&config, omarchy_config()).unwrap();
+    let o = borea()
+        .args(["omarchy", "configure", "--config"])
+        .arg(&config)
+        .arg("--json")
+        .output()
+        .unwrap();
+    assert!(o.status.success(), "{}", String::from_utf8_lossy(&o.stderr));
+    let v: serde_json::Value = serde_json::from_slice(&o.stdout).unwrap();
+    assert_eq!(v["executed"], false);
+    assert_eq!(v["selection"]["preserve_unlisted"], true);
+    assert_eq!(v["selection"]["chromium_preserved"], true);
+    assert_eq!(fs::read_dir(d.path()).unwrap().count(), 1);
 }

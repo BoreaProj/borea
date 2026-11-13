@@ -34,6 +34,8 @@ repeat them.
   ARM, BIOS/legacy or non-systemd families** in v1. Refuse, do not guess. Btrfs
   root and ext4 `/boot` are the supported storage layout; Limine is supported on
   Arch only, GRUB on all four (see `docs/DECISIONS.md` D-026/D-027).
+  The optional Arch Omarchy profile retains upstream-managed system/snapshot
+  defaults as an explicit exception (D-033); it adds no Borea snapshot manager.
 - **No new crate or dependency** without recording it in `docs/DECISIONS.md`.
   Prefer the standard library and the distro's own tools.
 - **No `if family == ...` outside `crates/borea-distro`.** Session and recipe

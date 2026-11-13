@@ -1,0 +1,9 @@
+schema = 1
+id = "profile.omarchy"
+requires = []
+evidence = "https://github.com/ChrisTitusTech/linutil/blob/fda64ff50cd33f5cf12d5b68613f39ce6643e9d4/core/tabs/system-setup/arch/omarchy.sh"
+exec = "start-hyprland"
+session_file = "hyprland.desktop"
+greeter = "sddm"
+[packages]
+arch = ["git", "curl"]

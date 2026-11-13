@@ -31,6 +31,9 @@ pub fn offline(plan: &Plan, root: &Path) -> Result<Report> {
                     .map(|s| s.contains(needle))
                     .map_err(BoreaError::from)
             }),
+            Check::PackagesAbsent { .. } => Err(BoreaError::unsupported(
+                "package checks require online --ssh verification; offline mode never executes target binaries",
+            )),
             Check::CommandOk { .. } => Err(BoreaError::unsupported(
                 "command checks require online --ssh verification; offline mode never executes target binaries",
             )),
@@ -68,6 +71,34 @@ pub fn ssh(plan: &Plan, host: &str) -> Result<Report> {
     }
     let mut checks = Vec::new();
     for check in &plan.checks {
+        if let Check::PackagesAbsent { packages } = check {
+            // Query the complete installed set once; query errors must never count as absence.
+            let output = Command::new("ssh")
+                .args([
+                    "-o",
+                    "BatchMode=yes",
+                    "-o",
+                    "ConnectTimeout=10",
+                    host,
+                    "pacman -Qq",
+                ])
+                .output()?;
+            let installed = String::from_utf8_lossy(&output.stdout);
+            let ok = output.status.success()
+                && packages
+                    .iter()
+                    .all(|p| !installed.lines().any(|line| line == p));
+            checks.push(CheckResult {
+                check: check.clone(),
+                ok,
+                detail: if ok {
+                    "selected packages absent".into()
+                } else {
+                    "package query failed or selected packages remain installed".into()
+                },
+            });
+            continue;
+        }
         let args = match check {
             Check::FileExists { path } => vec![
                 "test".into(),
@@ -88,6 +119,7 @@ pub fn ssh(plan: &Plan, host: &str) -> Result<Report> {
                 path.to_string_lossy().into_owned(),
             ],
             Check::CommandOk { argv } => argv.clone(),
+            Check::PackagesAbsent { .. } => unreachable!(),
         };
         let remote = args.iter().map(|s| quote(s)).collect::<Vec<_>>().join(" ");
         let status = Command::new("ssh")

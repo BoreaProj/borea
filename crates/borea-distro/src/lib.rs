@@ -14,6 +14,11 @@ pub fn loader(c: &Config, f: &FamilyRecipe, m: &borea_core::matrix::Matrix) -> R
         false,
         false,
     )?;
+    if c.session.kind == "omarchy" && (c.disk.root_fs != Filesystem::Btrfs || l != Loader::Limine) {
+        return Err(BoreaError::unsupported(
+            "pinned Omarchy requires Btrfs and Limine; choose root_fs = 'btrfs' and loader = 'auto' or 'limine'",
+        ));
+    }
     Ok(l)
 }
 pub fn install(f: FamilyId, packages: &[String]) -> Vec<String> {

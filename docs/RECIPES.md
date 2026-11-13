@@ -378,7 +378,7 @@ system. `borea plan --config borea.toml` is the only user path; `xtask e2e
 
 ```toml
 # recipes/profiles/hyprland-noctalia.toml
-schema = 1
+schema = 2
 [target]
 family = "arch"
 hostname = "borea-test"
@@ -459,3 +459,15 @@ cargo xtask e2e --family <family> --profile <profile>
 - every family lists `btrfs-progs` in `base_packages`; `/boot` is not listed as
   a configurable filesystem
 - `root_fs` is `btrfs` or `ext4`; `loader` is `auto`, `limine` or `grub`
+
+## Arch Omarchy source profile
+
+`components/profile.omarchy.toml` selects the Arch source profile; its package
+map holds bootstrap prerequisites, not the complete upstream app set.
+`omarchy/upstream.toml` holds the two upstream commits, entrypoint SHA-256 hashes
+and observed baseline in one place. Recipe lint verifies pin syntax and that
+catalogued package/webapp mappings belong to the pinned baseline. No Linutil
+script is executed or used to silently mutate application config.
+
+The profile uses config schema 2; recipe/matrix schemas stay 1. See
+[OMARCHY.md](OMARCHY.md) for the explicit app-choice fields and execution limits.

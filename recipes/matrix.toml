@@ -7,7 +7,7 @@
 # An unsupported cell requires reason, remedy and evidence.
 
 schema = 1
-revision = "matrix-2026-11-13.3"
+revision = "matrix-2026-11-13.4"
 
 # ---------------------------------------------------------------- base
 
@@ -535,4 +535,72 @@ family = "suse"
 component = "app.firefox"
 tier = "native"
 evidence = "https://www.mozilla.org/firefox/"
+checked = 2026-11-13
+
+[[cell]]
+family = "arch"
+component = "profile.omarchy"
+tier = "source"
+evidence = "https://github.com/omacom/omarchy"
+checked = 2026-11-13
+
+[[cell]]
+family = "debian"
+component = "profile.omarchy"
+tier = "unsupported"
+reason = "Omarchy is an Arch-family profile"
+remedy = "Choose the Arch family or another mapped component"
+evidence = "https://github.com/omacom/omarchy"
+checked = 2026-11-13
+
+[[cell]]
+family = "fedora"
+component = "profile.omarchy"
+tier = "unsupported"
+reason = "Omarchy is an Arch-family profile"
+remedy = "Choose the Arch family or another mapped component"
+evidence = "https://github.com/omacom/omarchy"
+checked = 2026-11-13
+
+[[cell]]
+family = "suse"
+component = "profile.omarchy"
+tier = "unsupported"
+reason = "Omarchy is an Arch-family profile"
+remedy = "Choose the Arch family or another mapped component"
+evidence = "https://github.com/omacom/omarchy"
+checked = 2026-11-13
+
+[[cell]]
+family = "arch"
+component = "app.neovim"
+tier = "native"
+evidence = "https://github.com/ChrisTitusTech/linutil"
+checked = 2026-11-13
+
+[[cell]]
+family = "debian"
+component = "app.neovim"
+tier = "unsupported"
+reason = "This app mapping is currently implemented for Arch only"
+remedy = "Choose the Arch family or another mapped component"
+evidence = "https://github.com/ChrisTitusTech/linutil"
+checked = 2026-11-13
+
+[[cell]]
+family = "fedora"
+component = "app.neovim"
+tier = "unsupported"
+reason = "This app mapping is currently implemented for Arch only"
+remedy = "Choose the Arch family or another mapped component"
+evidence = "https://github.com/ChrisTitusTech/linutil"
+checked = 2026-11-13
+
+[[cell]]
+family = "suse"
+component = "app.neovim"
+tier = "unsupported"
+reason = "This app mapping is currently implemented for Arch only"
+remedy = "Choose the Arch family or another mapped component"
+evidence = "https://github.com/ChrisTitusTech/linutil"
 checked = 2026-11-13

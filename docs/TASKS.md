@@ -43,6 +43,31 @@ the repository root.
 
 ---
 
+## E06 — Arch Omarchy profile and manual app selection
+- **Files:** `crates/borea-core/src/{config,omarchy,defaults,plan,recipe}.rs`,
+  `crates/borea-session/src/lib.rs`, `crates/borea-distro/src/{lib,planner}.rs`,
+  `crates/borea-cli/`, `crates/borea-run/src/{omarchy,verify}.rs`,
+  `crates/xtask/src/main.rs`, `recipes/`, `examples/`, golden fixtures and docs.
+- **Deliverable:** Arch-only Omarchy profile following pinned Linutil/upstream
+  defaults, a read-only configure preview, explicit keep/remove/replace/browser
+  controls, source consent, and deterministic install/customisation intent.
+- **Acceptance:** unselected apps remain untouched; conflicts and unsupported
+  families/layouts fail before output; browser retention and replacement ordering
+  have regression tests; schema changes and all golden fixtures are versioned.
+- **Current:** planning/selection and 2 optional golden cases implemented. No
+  application or host configuration was changed during development.
+- **Integration blocker:** upstream install.sh is user-context and interactive;
+  it changes system/boot state and dependencies. The independent runtime and
+  installer runner must handle these explicitly without mid-plan prompts,
+  unreviewed repository trust or automatic reboot before execution is enabled.
+- **Next experiment:** exact Arch/Omarchy VM cell from Borea's independent
+  runtime, followed by default-preserving and selected-only customisation runs.
+- **Verify:** workspace checks; `cargo xtask plan golden`;
+  `borea omarchy configure --config examples/omarchy.toml --json`;
+  `cargo xtask e2e --family arch --profile omarchy` (currently unsupported).
+
+---
+
 ## G — Independent runtime
 
 ### G01 — Standalone runtime/tool provisioning contract

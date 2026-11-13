@@ -1,11 +1,11 @@
 {
-  "schema": 1,
-  "id": "9ea59d6e55e6d9c4c9df8ef48e4b13c3",
+  "schema": 2,
+  "id": "7666815a43aedba88b1fcebf3df399ac",
   "created": "1970-01-01T00:00:00Z",
   "borea_version": "0.1.0",
-  "digest": "9ea59d6e55e6d9c4c9df8ef48e4b13c3a0e9429410c23a0a8b3b39836f17ed0f",
-  "config_digest": "0e821755012ac50792b5de1f451d3a7a1cc3067c138dfaf51092b46a4c164299",
-  "matrix_digest": "982a91cdef8827e2d42fce30441741f1ed9883eebc1f41f5aad556f90dae6238",
+  "digest": "7666815a43aedba88b1fcebf3df399ac8feba4aec0ec2db026f62295da4112bf",
+  "config_digest": "0969424263b342133580207366324c452b1b82f23ec46b6bdac6018613b19eb7",
+  "matrix_digest": "2c8e72b621a2407f672a030615d9fd7f732adb37cb06ae7dacfeaca926f5b593",
   "family": "suse",
   "disk": {
     "path": "/dev/vda",
@@ -28,13 +28,13 @@
           "--clear",
           "--new=1:0:+1024M",
           "--typecode=1:ef00",
-          "--partition-guid=1:dbc00294-cec4-527a-84be-6da9356a323e",
+          "--partition-guid=1:35980bc7-81a9-59b3-bd2b-b5ac7731fd4d",
           "--new=2:0:+2048M",
           "--typecode=2:8300",
-          "--partition-guid=2:2b012793-aa41-59f8-9a03-f503b9d5db07",
+          "--partition-guid=2:e23f01ce-87a7-5a44-bbf8-faf1ea3b9530",
           "--new=3:0:0",
           "--typecode=3:8300",
-          "--partition-guid=3:3a45f531-f175-5c16-9849-affc7e42cd04",
+          "--partition-guid=3:fa23c510-8adc-5dea-bcb5-a6e3bc367ff8",
           "/dev/vda"
         ],
         "chroot": false,
@@ -85,7 +85,7 @@
           "mkfs.fat",
           "-F32",
           "-i",
-          "0a7d3e5c",
+          "d5d5e6e5",
           "/dev/vda1"
         ],
         "chroot": false,
@@ -110,7 +110,7 @@
           "mkfs.ext4",
           "-F",
           "-U",
-          "a86fc892-65da-5714-afab-72ceeb588dc6",
+          "84681c86-9fd4-5f85-b332-53cc1e9d0093",
           "/dev/vda2"
         ],
         "chroot": false,
@@ -135,7 +135,7 @@
           "mkfs.ext4",
           "-F",
           "-U",
-          "166eab56-7065-5c7a-9ca3-4dc4769c615f",
+          "9fee0eb9-6016-575f-b7a6-570e4add780d",
           "/dev/vda3"
         ],
         "chroot": false,
@@ -398,7 +398,7 @@
       "action": {
         "kind": "write_file",
         "path": "/etc/fstab",
-        "contents": "UUID=166eab56-7065-5c7a-9ca3-4dc4769c615f / ext4 defaults 0 1\nUUID=a86fc892-65da-5714-afab-72ceeb588dc6 /boot ext4 defaults 0 2\nPARTUUID=dbc00294-cec4-527a-84be-6da9356a323e /boot/efi vfat umask=0077 0 2\n",
+        "contents": "UUID=9fee0eb9-6016-575f-b7a6-570e4add780d / ext4 defaults 0 1\nUUID=84681c86-9fd4-5f85-b332-53cc1e9d0093 /boot ext4 defaults 0 2\nPARTUUID=35980bc7-81a9-59b3-bd2b-b5ac7731fd4d /boot/efi vfat umask=0077 0 2\n",
         "mode": 420
       },
       "needs": [
@@ -407,7 +407,7 @@
       "probe": {
         "kind": "file_contains",
         "path": "/etc/fstab",
-        "needle": "UUID=166eab56-7065-5c7a-9ca3-4dc4769c615f / ext4 defaults 0 1\nUUID=a86fc892-65da-5714-afab-72ceeb588dc6 /boot ext4 defaults 0 2\nPARTUUID=dbc00294-cec4-527a-84be-6da9356a323e /boot/efi vfat umask=0077 0 2\n"
+        "needle": "UUID=9fee0eb9-6016-575f-b7a6-570e4add780d / ext4 defaults 0 1\nUUID=84681c86-9fd4-5f85-b332-53cc1e9d0093 /boot ext4 defaults 0 2\nPARTUUID=35980bc7-81a9-59b3-bd2b-b5ac7731fd4d /boot/efi vfat umask=0077 0 2\n"
       },
       "danger": "mutating",
       "timeout_s": 600,
@@ -588,7 +588,7 @@
       "action": {
         "kind": "write_file",
         "path": "/var/lib/borea/password-set",
-        "contents": "0e821755012ac50792b5de1f451d3a7a1cc3067c138dfaf51092b46a4c164299",
+        "contents": "0969424263b342133580207366324c452b1b82f23ec46b6bdac6018613b19eb7",
         "mode": 384
       },
       "needs": [
@@ -597,7 +597,7 @@
       "probe": {
         "kind": "file_contains",
         "path": "/var/lib/borea/password-set",
-        "needle": "0e821755012ac50792b5de1f451d3a7a1cc3067c138dfaf51092b46a4c164299"
+        "needle": "0969424263b342133580207366324c452b1b82f23ec46b6bdac6018613b19eb7"
       },
       "danger": "mutating",
       "timeout_s": 600,
@@ -809,7 +809,7 @@
       "action": {
         "kind": "write_file",
         "path": "/var/lib/borea/initramfs-generated",
-        "contents": "root=UUID=166eab56-7065-5c7a-9ca3-4dc4769c615f",
+        "contents": "root=UUID=9fee0eb9-6016-575f-b7a6-570e4add780d",
         "mode": 420
       },
       "needs": [
@@ -818,7 +818,7 @@
       "probe": {
         "kind": "file_contains",
         "path": "/var/lib/borea/initramfs-generated",
-        "needle": "root=UUID=166eab56-7065-5c7a-9ca3-4dc4769c615f"
+        "needle": "root=UUID=9fee0eb9-6016-575f-b7a6-570e4add780d"
       },
       "danger": "mutating",
       "timeout_s": 600,
@@ -830,7 +830,7 @@
       "action": {
         "kind": "write_file",
         "path": "/etc/default/grub.d/90-borea.cfg",
-        "contents": "GRUB_CMDLINE_LINUX=\"root=UUID=166eab56-7065-5c7a-9ca3-4dc4769c615f\"\n",
+        "contents": "GRUB_CMDLINE_LINUX=\"root=UUID=9fee0eb9-6016-575f-b7a6-570e4add780d\"\n",
         "mode": 420
       },
       "needs": [
@@ -839,7 +839,7 @@
       "probe": {
         "kind": "file_contains",
         "path": "/etc/default/grub.d/90-borea.cfg",
-        "needle": "GRUB_CMDLINE_LINUX=\"root=UUID=166eab56-7065-5c7a-9ca3-4dc4769c615f\"\n"
+        "needle": "GRUB_CMDLINE_LINUX=\"root=UUID=9fee0eb9-6016-575f-b7a6-570e4add780d\"\n"
       },
       "danger": "mutating",
       "timeout_s": 600,
@@ -890,7 +890,7 @@
       "probe": {
         "kind": "file_contains",
         "path": "/boot/grub2/grub.cfg",
-        "needle": "166eab56-7065-5c7a-9ca3-4dc4769c615f"
+        "needle": "9fee0eb9-6016-575f-b7a6-570e4add780d"
       },
       "danger": "mutating",
       "timeout_s": 600,
@@ -902,7 +902,7 @@
       "action": {
         "kind": "write_file",
         "path": "/var/lib/borea/config-digest",
-        "contents": "0e821755012ac50792b5de1f451d3a7a1cc3067c138dfaf51092b46a4c164299",
+        "contents": "0969424263b342133580207366324c452b1b82f23ec46b6bdac6018613b19eb7",
         "mode": 384
       },
       "needs": [
@@ -911,7 +911,7 @@
       "probe": {
         "kind": "file_contains",
         "path": "/var/lib/borea/config-digest",
-        "needle": "0e821755012ac50792b5de1f451d3a7a1cc3067c138dfaf51092b46a4c164299"
+        "needle": "0969424263b342133580207366324c452b1b82f23ec46b6bdac6018613b19eb7"
       },
       "danger": "mutating",
       "timeout_s": 600,
@@ -922,7 +922,7 @@
     {
       "kind": "file_contains",
       "path": "/etc/fstab",
-      "needle": "UUID=166eab56-7065-5c7a-9ca3-4dc4769c615f / ext4 defaults 0 1\nUUID=a86fc892-65da-5714-afab-72ceeb588dc6 /boot ext4 defaults 0 2\nPARTUUID=dbc00294-cec4-527a-84be-6da9356a323e /boot/efi vfat umask=0077 0 2\n"
+      "needle": "UUID=9fee0eb9-6016-575f-b7a6-570e4add780d / ext4 defaults 0 1\nUUID=84681c86-9fd4-5f85-b332-53cc1e9d0093 /boot ext4 defaults 0 2\nPARTUUID=35980bc7-81a9-59b3-bd2b-b5ac7731fd4d /boot/efi vfat umask=0077 0 2\n"
     },
     {
       "kind": "file_contains",

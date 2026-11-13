@@ -1,0 +1,16 @@
+schema = 1
+checked = "2026-11-13"
+# Pins record the upstream default observed through Linutil. No scripts execute during plan.
+[omarchy]
+repository = "https://github.com/omacom/omarchy"
+commit = "f4378f0de5b44d331ee943746a97872b718a6c18"
+entrypoint = "install.sh"
+entrypoint_sha256 = "37868b0885b9de0d6440addcfd99c9433da0299ecbfc2446937abb7b2297f98c"
+[linutil]
+repository = "https://github.com/ChrisTitusTech/linutil"
+commit = "fda64ff50cd33f5cf12d5b68613f39ce6643e9d4"
+entrypoint = "core/tabs/system-setup/arch/omarchy.sh"
+entrypoint_sha256 = "6789ccbd9be1272e5fc7cd3de323f321173fffbf093ef21b23d5e8b9df2cdf0e"
+[baseline]
+packages = ["1password-beta", "1password-cli", "aether", "alacritty", "alsa-utils", "asdcontrol", "avahi", "bash-completion", "bat", "bluetui", "bolt", "brightnessctl", "btop", "chromium", "clang", "claude-code", "cliamp", "cups", "cups-browsed", "cups-filters", "cups-pdf", "docker", "docker-buildx", "docker-compose", "dosfstools", "dotnet-runtime-9.0", "dust", "evince", "exfatprogs", "expac", "eza", "fastfetch", "fcitx5", "fcitx5-gtk", "fcitx5-qt", "fd", "ffmpegthumbnailer", "fontconfig", "fzf", "github-cli", "gnome-calculator", "gnome-disk-utility", "gnome-keyring", "gnome-themes-extra", "gpu-screen-recorder", "grim", "gum", "gvfs-mtp", "gvfs-nfs", "gvfs-smb", "hypridle", "hyprland", "hyprland-guiutils", "hyprland-preview-share-picker", "hyprlock", "hyprpicker", "hyprsunset", "imagemagick", "impala", "imv", "inetutils", "inxi", "iwd", "jq", "kdenlive", "kernel-modules-hook", "kvantum-qt5", "lazydocker", "lazygit", "less", "libqalculate", "libreoffice-fresh", "libsecret", "libyaml", "llvm", "localsend", "luarocks", "mako", "man-db", "mariadb-libs", "mise", "mpv", "nautilus", "nautilus-python", "neovim", "noto-fonts", "noto-fonts-cjk", "noto-fonts-emoji", "nss-mdns", "obs-studio", "obsidian", "omarchy-nvim", "omarchy-walker", "pamixer", "pinta", "playerctl", "plocate", "plymouth", "polkit-gnome", "postgresql-libs", "power-profiles-daemon", "python-gobject", "python-poetry-core", "python-terminaltexteffects", "qt5-wayland", "ripgrep", "ruby", "rust", "satty", "sddm", "signal-desktop", "slurp", "socat", "spotify", "starship", "sushi", "swaybg", "swayosd", "system-config-printer", "tesseract", "tesseract-data-eng", "tldr", "tmux", "tobi-try", "tree-sitter-cli", "ttf-ia-writer", "ttf-jetbrains-mono-nerd", "typora", "tzupdate", "ufw", "ufw-docker", "unzip", "usage", "uwsm", "waybar", "whois", "wireless-regdb", "wiremix", "wireplumber", "wl-clipboard", "woff2-font-awesome", "xdg-desktop-portal-gtk", "xdg-desktop-portal-hyprland", "xdg-terminal-exec", "xmlstarlet", "xournalpp", "yaru-icon-theme", "yay", "zoxide"]
+webapps = ["HEY", "Basecamp", "WhatsApp", "Google Photos", "Google Contacts", "Google Messages", "Google Maps", "ChatGPT", "YouTube", "GitHub", "X", "Figma", "Discord", "Zoom", "Fizzy"]

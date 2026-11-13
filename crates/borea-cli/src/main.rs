@@ -89,7 +89,7 @@ fn run() -> Result<()> {
     let mut raw = std::env::args().skip(1).collect::<Vec<_>>();
     if raw.is_empty() || raw == ["--help"] || raw == ["help"] {
         println!(
-            "borea {} — experimental installer planning and fixture tools\n\nCommands:\n  doctor --family FAMILY [--json]\n  catalogue --family FAMILY [--json]\n  explain COMPONENT --family FAMILY\n  plan --config FILE --out FILE [--dry-run] [--fixture --identity FILE]\n  apply PLAN --dry-run\n  apply PLAN --yes --device DEVICE (live execution gated)\n  apply PLAN --fixture-root DIR --journal FILE [--resume]\n  verify PLAN --root DIR | --ssh USER@HOST [--json]\n  status --journal FILE\n  omarchy trim --list | ID... --dry-run\n  omarchy defaults status --policy FILE\n\nNo VM cells are supported yet. See docs/IMPLEMENTATION.md.",
+            "borea {} — experimental installer planning and fixture tools\n\nCommands:\n  doctor --family FAMILY [--json]\n  catalogue --family FAMILY [--json]\n  explain COMPONENT --family FAMILY\n  plan --config FILE --out FILE [--dry-run] [--fixture --identity FILE]\n  apply PLAN --dry-run\n  apply PLAN --yes --device DEVICE (live execution gated)\n  apply PLAN --fixture-root DIR --journal FILE [--resume]\n  verify PLAN --root DIR | --ssh USER@HOST [--json]\n  status --journal FILE\n  omarchy configure --config FILE [--json]\n  omarchy trim --list | ID... --dry-run\n  omarchy defaults status --policy FILE\n\nNo VM cells are supported yet. See docs/IMPLEMENTATION.md.",
             version()
         );
         return Ok(());
@@ -327,6 +327,23 @@ fn run() -> Result<()> {
     Ok(())
 }
 fn omarchy(mut raw: Vec<String>) -> Result<()> {
+    if raw.first().is_some_and(|s| s == "configure") {
+        raw.remove(0);
+        let a = Args::parse(raw, &["config"], &["json"])?;
+        a.no_positionals()?;
+        let c = Config::parse(&std::fs::read_to_string(a.required("config")?)?)?;
+        if c.session.kind != "omarchy" {
+            return Err(BoreaError::invalid(
+                "configure requires an Omarchy profile config",
+            ));
+        }
+        let selection = c.omarchy.unwrap_or_default().selection()?;
+        return output(
+            &serde_json::json!({"schema":1,"family":c.target.family,"executed":false,"selection":selection}),
+            a.flag("json"),
+        );
+    }
+
     if raw.first().is_some_and(|s| s == "defaults") {
         raw.remove(0);
         let status =
@@ -339,7 +356,9 @@ fn omarchy(mut raw: Vec<String>) -> Result<()> {
         return Ok(());
     }
     if raw.first().is_none_or(|s| s != "trim") {
-        return Err(BoreaError::invalid("use omarchy trim or omarchy defaults"));
+        return Err(BoreaError::invalid(
+            "use omarchy configure, omarchy trim or omarchy defaults",
+        ));
     }
     raw.remove(0);
     let a = Args::parse(raw, &["group"], &["list", "dry-run", "json"])?;

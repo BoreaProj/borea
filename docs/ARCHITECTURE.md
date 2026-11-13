@@ -10,6 +10,16 @@ the executor, the family trait or the CLI.
 
 ---
 
+## Implemented schema versions
+
+Config/plan schema 2 adds `session.type = "omarchy"`, explicit Omarchy app
+choices, a typed `InstallOmarchy` source intent, Omarchy/package-absence probes,
+and a package-absence check. Omarchy/Linutil pins and baseline data are embedded
+under `recipes/omarchy/`. Basic config schema 1 remains readable, but Omarchy
+requires 2 and plan schema 1 requires replanning. Recipe/matrix and defaults
+policy schemas remain 1. The type sketches below describe the broader target;
+[OMARCHY.md](OMARCHY.md) documents the implemented profile behavior.
+
 ## 1. Crates
 
 Borea is an independent, standalone installer. Its execution host is separate
@@ -662,6 +672,7 @@ command to run. No raw `io::Error` reaches the terminal without context.
 
 No plugin ABI, no dynamic recipe loading from the network, no remote catalog,
 no telemetry, no update checker, no config daemon, no D-Bus, no Polkit helper,
-no GUI toolkit, no snapshot manager or automatic rollback (D-028), and no
+no GUI toolkit, no Borea snapshot manager or automatic rollback (D-028; the
+optional Omarchy profile retains upstream defaults under D-033), and no
 bootloader outside Limine-on-Arch and GRUB (D-026). The binary is a function
 from config to plan to target.

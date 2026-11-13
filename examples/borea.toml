@@ -7,7 +7,7 @@
 # Full schema: docs/ARCHITECTURE.md §3. Recipes and tiers: docs/RECIPES.md,
 # docs/MATRIX.md. Nothing here is installed by default except the base system.
 
-schema = 1
+schema = 2
 
 [target]
 family = "arch"              # arch | debian | fedora | suse
@@ -57,7 +57,4 @@ enable = ["firefox"]
 codecs = true
 flatpak = true
 
-[omarchy]
-trim = []
-keep_removed_after_updates = true
-default_browser = "chromium"
+# Omarchy is an Arch session option; see examples/omarchy.toml.
