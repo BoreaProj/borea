@@ -50,6 +50,7 @@ fn run() -> Result<()> {
         ["plan", "golden", "--update"] => golden(true)?,
         ["secret", "canary"] => canary()?,
         ["disk", "selftest", "--stage", "create"] => disk_create()?,
+        ["disk", "selftest", "--fs", fs] => disk_storage(fs)?,
         ["disk", ..] => {
             return Err(BoreaError::unsupported(
                 "disk mutation selftests are not implemented; only --stage create is available; image/loop validation is pending F01/B02/B03",
@@ -364,5 +365,47 @@ fn envrun(args: &[String]) -> Result<()> {
             "family container failed; prepare the documented tool image first",
         ));
     }
+    Ok(())
+}
+
+fn disk_storage(filesystem: &str) -> Result<()> {
+    let cache = std::env::var_os("BOREA_RUNTIME_CACHE")
+        .map(PathBuf::from)
+        .ok_or_else(|| {
+            BoreaError::invalid("set BOREA_RUNTIME_CACHE to the fetched runtime cache")
+        })?;
+    let temp = tempfile::Builder::new()
+        .prefix("borea-disk-selftest-")
+        .tempdir_in("/tmp")?;
+    let image = temp.path().join("disk.img");
+    let manifest = temp.path().join("manifest.json");
+    let journal = temp.path().join("journal");
+    let lock = borea_core::runtime::RuntimeLock::embedded()?;
+    let spec = lock.get(FamilyId::Arch)?;
+    let plan =
+        borea_run::image::create(&image, &manifest, filesystem, 20 * 1024 * 1024 * 1024, spec)?;
+    let result = (|| -> Result<()> {
+        borea_run::image::apply(&plan, spec, &cache, &journal, false, true)?;
+        borea_run::image::apply(&plan, spec, &cache, &journal, true, true)?;
+        let mut stale = plan.clone();
+        stale.inode += 1;
+        if borea_run::image::apply(&stale, spec, &cache, &journal, true, true).is_ok() {
+            return Err(BoreaError::new("E_TEST", "stale identity accepted"));
+        }
+        fs::rename(&image, temp.path().join("original.img"))?;
+        fs::File::create(&image)?.set_len(plan.bytes)?;
+        if borea_run::image::apply(&plan, spec, &cache, &journal, true, true).is_ok() {
+            return Err(BoreaError::new("E_TEST", "replacement image accepted"));
+        }
+        Ok(())
+    })();
+    if let Ok(receipts) = fs::read_to_string(&journal) {
+        println!("image receipts:\n{receipts}");
+    }
+    result?;
+    println!(
+        "{}",
+        serde_json::json!({"schema":1,"filesystem":filesystem,"size_gib":20,"storage":"passed","repeat_probes":"passed","stale_identity":"rejected","replacement_image":"rejected","bootable":false})
+    );
     Ok(())
 }

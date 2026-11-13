@@ -663,3 +663,12 @@ release. Deferred cards stay in this file marked `deferred`.
 | Limine on openSUSE | packaged, but GRUB is better integrated and no VM cell exists (O-21) | O-21 accepted + VM cell |
 | alongside/resize | dangerous, large | after v1 |
 | GUI | explicitly removed | never in this repo |
+
+### G02 — Closed image storage executor
+- **Scope:** Borea-created root-owned raw images only; private verified runtime
+  snapshot; held image/loop descriptors; GPT, ext4/Btrfs, subvolumes, fstab,
+  cleanup, durable receipts and probe-based repeat execution.
+- **Out:** physical disks, arbitrary plan commands, encryption, bootstrap and
+  bootloaders. These remain gated pending separate execution/VM validation.
+- **Verify:** privileged disposable-image CI for both filesystems; rejection
+  and stale-identity tests; existing workspace checks.

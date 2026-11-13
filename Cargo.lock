@@ -71,6 +71,7 @@ version = "0.1.0"
 dependencies = [
  "borea-core",
  "flate2",
+ "libc",
  "serde",
  "serde_json",
  "sha2",
@@ -604,6 +605,7 @@ dependencies = [
  "borea-run",
  "borea-session",
  "serde_json",
+ "tempfile",
 ]
 
 [[package]]

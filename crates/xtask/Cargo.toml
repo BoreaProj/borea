@@ -17,3 +17,5 @@ borea-core = { path = "../borea-core" }
 borea-distro = { path = "../borea-distro" }
 borea-session = { path = "../borea-session" }
 borea-run = { path = "../borea-run" }
+
+tempfile.workspace = true

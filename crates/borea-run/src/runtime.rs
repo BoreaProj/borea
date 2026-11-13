@@ -601,6 +601,44 @@ pub fn probe(spec: &RuntimeSpec, cache: &Path) -> Result<RuntimeStatus> {
     Ok(status)
 }
 
+/// Copy and authenticate bytes before extracting into root-private storage.
+/// Never elevate the mutable extracted tree in an unprivileged cache.
+pub(crate) fn private_snapshot(
+    spec: &RuntimeSpec,
+    cache: &Path,
+    private: &Path,
+) -> Result<PathBuf> {
+    spec.validate()?;
+    let source = location(spec, cache).join("runtime.tar.gz");
+    let mut source = OpenOptions::new()
+        .read(true)
+        .custom_flags(libc::O_NOFOLLOW | libc::O_NONBLOCK)
+        .open(source)?;
+    if !source.metadata()?.is_file() || source.metadata()?.len() != spec.size {
+        return Err(error(
+            "E_RUNTIME_INTEGRITY",
+            "runtime source must be a regular archive of the pinned size",
+        ));
+    }
+    let archive = private.join("runtime.tar.gz");
+    let mut dest = OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .mode(0o600)
+        .open(&archive)?;
+    let n = std::io::copy(&mut (&mut source).take(spec.size + 1), &mut dest)?;
+    if n != spec.size {
+        return Err(error("E_RUNTIME_INTEGRITY", "runtime copy size mismatch"));
+    }
+    dest.sync_all()?;
+    verify_archive(spec, &archive)?;
+    let root = private.join("rootfs");
+    fs::create_dir(&root)?;
+    archive_tree(spec, &archive, &root, true)?;
+    tool_paths(spec, &root)?;
+    Ok(root)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
