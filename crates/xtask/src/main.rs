@@ -387,6 +387,55 @@ fn disk_storage(filesystem: &str) -> Result<()> {
     let result = (|| -> Result<()> {
         borea_run::image::apply(&plan, spec, &cache, &journal, false, true)?;
         borea_run::image::apply(&plan, spec, &cache, &journal, true, true)?;
+        // Emulate a crash after format completed but before its durable `ok`.
+        let receipts = fs::read_to_string(&journal)?;
+        let pending = format!(
+            "{}start:root\n",
+            receipts.split("start:root\n").next().unwrap()
+        );
+        fs::write(&journal, &pending)?;
+        borea_run::image::apply(&plan, spec, &cache, &journal, true, true)?;
+        // An unknown destructive outcome with a failed UUID probe must not retry.
+        let pending_esp = format!(
+            "{}start:esp\n",
+            receipts.split("start:esp\n").next().unwrap()
+        );
+        fs::write(&journal, pending_esp)?;
+        {
+            use std::io::{Read, Seek, SeekFrom, Write};
+            let mut file = fs::OpenOptions::new().read(true).write(true).open(&image)?;
+            file.seek(SeekFrom::Start(1024 * 1024))?;
+            let mut sector = [0; 512];
+            file.read_exact(&mut sector)?;
+            file.seek(SeekFrom::Start(1024 * 1024))?;
+            file.write_all(&[0; 512])?;
+            file.sync_all()?;
+            if borea_run::image::apply(&plan, spec, &cache, &journal, true, true).is_ok() {
+                return Err(BoreaError::new(
+                    "E_TEST",
+                    "unknown destructive result replayed",
+                ));
+            }
+            let mut unchanged = [1; 512];
+            file.seek(SeekFrom::Start(1024 * 1024))?;
+            file.read_exact(&mut unchanged)?;
+            if unchanged != [0; 512] {
+                return Err(BoreaError::new(
+                    "E_TEST",
+                    "failed probe reformatted the ESP",
+                ));
+            }
+            file.seek(SeekFrom::Start(1024 * 1024))?;
+            file.write_all(&sector)?;
+            file.sync_all()?;
+        }
+        fs::write(&journal, &receipts)?;
+        let held = fs::File::open(&image)?;
+        held.lock()?;
+        if borea_run::image::apply(&plan, spec, &cache, &journal, true, true).is_ok() {
+            return Err(BoreaError::new("E_TEST", "concurrent image lock accepted"));
+        }
+        drop(held);
         let mut stale = plan.clone();
         stale.inode += 1;
         if borea_run::image::apply(&stale, spec, &cache, &journal, true, true).is_ok() {
@@ -405,7 +454,7 @@ fn disk_storage(filesystem: &str) -> Result<()> {
     result?;
     println!(
         "{}",
-        serde_json::json!({"schema":1,"filesystem":filesystem,"size_gib":20,"storage":"passed","repeat_probes":"passed","stale_identity":"rejected","replacement_image":"rejected","bootable":false})
+        serde_json::json!({"schema":1,"filesystem":filesystem,"size_gib":20,"storage":"passed","repeat_probes":"passed","pending_format_resume":"passed","unknown_format":"refused_without_rewrite","exclusive_lock":"passed","stale_identity":"rejected","replacement_image":"rejected","bootable":false})
     );
     Ok(())
 }

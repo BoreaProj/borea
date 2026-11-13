@@ -139,6 +139,7 @@ pub fn create(
     let mut out = locked(manifest, true)?;
     out.write_all(&serde_json::to_vec_pretty(&p)?)?;
     out.sync_all()?;
+    File::open(path.parent().ok_or_else(|| fail("image needs a parent"))?)?.sync_all()?;
     File::open(
         manifest
             .parent()
@@ -253,6 +254,22 @@ impl Drop for Loop {
     }
 }
 
+struct RunningChild {
+    child: std::process::Child,
+    running: bool,
+}
+impl Drop for RunningChild {
+    fn drop(&mut self) {
+        if self.running {
+            // SAFETY: the live child owns the process group established at spawn.
+            unsafe {
+                libc::kill(-(self.child.id() as i32), libc::SIGKILL);
+            }
+            let _ = self.child.wait();
+        }
+    }
+}
+
 /// Apply only the closed image storage program. No plan-supplied command executes.
 pub fn apply(
     plan: &ImagePlan,
@@ -273,6 +290,14 @@ pub fn apply(
         return Err(fail("image identity changed; recreate/replan"));
     }
     let mut receipt = locked(journal, !resume)?;
+    if !resume {
+        File::open(
+            journal
+                .parent()
+                .ok_or_else(|| fail("journal needs a parent"))?,
+        )?
+        .sync_all()?;
+    }
     if resume {
         let mut text = String::new();
         (&mut receipt).take(65537).read_to_string(&mut text)?;
@@ -385,8 +410,12 @@ pub fn apply(
         .stdout(Stdio::null())
         .stderr(Stdio::piped());
     cmd.process_group(0);
-    let mut child = cmd.spawn()?;
+    let mut child = RunningChild {
+        child: cmd.spawn()?,
+        running: true,
+    };
     let stderr = child
+        .child
         .stderr
         .take()
         .ok_or_else(|| fail("missing diagnostic pipe"))?;
@@ -407,15 +436,17 @@ pub fn apply(
     });
     let start = Instant::now();
     let status = loop {
-        if let Some(s) = child.try_wait()? {
+        if let Some(s) = child.child.try_wait()? {
+            child.running = false;
             break s;
         }
         if start.elapsed() > Duration::from_secs(600) {
             // SAFETY: child owns a new process group; negative pid targets only that group.
             unsafe {
-                libc::kill(-(child.id() as i32), libc::SIGKILL);
+                libc::kill(-(child.child.id() as i32), libc::SIGKILL);
             }
-            child.wait()?;
+            child.child.wait()?;
+            child.running = false;
             return Err(fail(
                 "image step timeout; inspect receipt and resume only if probes pass",
             ));
