@@ -148,7 +148,7 @@ jobs:
           jq -s -e 'any(.[]; .step == "storage.format.root" and .event == "skipped" and (.detail // "" | startswith("accepted")))
             and (any(.[]; .event == "failed") | not)' "$dir/journal.jsonl" >/dev/null
           jq . "$dir/verify.json"
-          grep -a -m1 'Kernel command line' "$dir/serial.log"
+          grep -a -m1 -o 'root=UUID=[^[:cntrl:]]*' "$dir/serial.log" || true
           ! ls target/e2e/$CELL/*/disk.img 2>/dev/null
           ! grep -rl 'canary-not-a-real-password' target/e2e
       - uses: actions/upload-artifact@v4
