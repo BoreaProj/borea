@@ -618,3 +618,61 @@ that create and plan pass and apply refuses. No matrix cell is promoted.
 G05 holds the follow-up work.
 **Rejected:** substituting `image bootstrap` for `apply`; weakening verify
 checks to fit the bootstrap; marking arch/minimal supported from the F03 run.
+
+### D-039 — Session scope, standalone flavours and the worker base
+
+**Date:** 2026-11-14
+**Context:** The owner narrowed the user-facing session list and added three
+standalone gaming/opinionated flavours. Evidence:
+[validation/scope-revision.md](validation/scope-revision.md).
+**Decision:**
+1. **Worker base.** Each family (Arch, Debian, Fedora, openSUSE) has a
+   `minimal` worker base. Every custom install builds on it. It is always
+   installed with the family's native bootstrap tool (`pacstrap`,
+   `mmdebstrap`/`debootstrap`, `dnf5 --installroot`, `zypper --root`) from
+   Borea's own runtime. No family ISO, live session or graphical installer is
+   used (D-031 independence holds).
+2. **Sessions** are exactly these:
+   - Desktops: KDE, GNOME, COSMIC.
+   - Shells: Noctalia v5, DMS (DUX Labs), End4.
+
+   Hyprland, Niri and MangoWM are no longer sessions in their own right. They
+   are installed only as a shell's compositor. Hyprland is the default for every
+   shell. A shell can use another compositor only if upstream supports it and
+   the family packages it: Noctalia → Niri or MangoWM; DMS → Niri; End4 →
+   Hyprland only. Noctalia v4 (`noctalia-shell`) is dropped.
+3. **End4** is Arch-only, as a pinned `source` cell. Other families refuse it
+   with evidence.
+4. **openSUSE** offers the worker base plus any desktop or shell (with that
+   shell's compositor options). It has no standalone flavour.
+5. **Standalone flavours** are a layer over a base family, not custom minimal
+   installs:
+   - Omarchy on Arch (E06, D-033)
+   - PikaOS on Debian (Sid base, x86-64-v3)
+   - Nobara on Fedora (snapshot repos)
+
+   Each is composed with the base family's native bootstrap tool, pointed at
+   the flavour's pinned repos and keys. Borea can customise each flavour
+   (keep, remove, replace) the same way as the Omarchy trim (E01–E06).
+   Flavour cells are `third-party`.
+6. **Third-party repositories** are enabled only when no native package exists
+   (for example RPM Fusion codecs, the DMS COPR, Noctalia/DMS OBS projects).
+   Each needs a pinned URL and key fingerprint (C07). `--nogpgcheck`, unpinned
+   `curl | sh` and AUR helpers for repo-available packages are refused.
+7. **Linutil** is a data reference for package names, repositories and
+   customisations (gaming, codecs, Flatpak, zram, apps). Its scripts are never
+   executed (AGENTS §4–5).
+
+**Release contract (supersedes PLAN §7's 29 cells):** v0.1 requires 29 cells:
+- Session cells on every family: minimal, KDE, GNOME, COSMIC,
+  Hyprland + Noctalia, Hyprland + DMS. Debian COSMIC is demoted to a gate
+  (no Debian 13 package), leaving 23 cells.
+- Arch Hyprland + End4.
+- Four ext4-root cells.
+- Arch GRUB.
+
+The three flavour cells and the non-default compositor pairs are v0.2 and
+`untested` until they have artifacts.
+**Rejected:** running flavour ISOs or their installers (not standalone);
+running Linutil or upstream install scripts; keeping Hyprland-only as a session.
+**Follow-up cards:** A11, C08, C09, D14, E07.

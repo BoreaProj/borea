@@ -90,6 +90,10 @@ tested Btrfs/snapper-aware path there (O-21). See `DECISIONS.md` D-026/D-027.
 
 ## 3. Session pairs promised in v0.1
 
+> Pending revision by [D-039](DECISIONS.md) / card A11. Compositor-only
+> sessions are being removed, and COSMIC and End4 (Arch) become required. The
+> tables below describe the current `recipes/matrix.toml` until A11 lands.
+
 A pair is the compositor + shell combination. The matrix gates components; a
 pair is only promised when its row has an artifact. v0.1 promises exactly these
 pairs, on every family, on the default storage layout (Btrfs root, ext4
