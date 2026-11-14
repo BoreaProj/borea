@@ -469,8 +469,9 @@ Limine is installed from the `limine` package. The adapter:
    `/boot` partition for offline inspection. Limine does not read this copy on
    the borea layout because it finds the ESP config first.
 
-The config references the ext4 `/boot` filesystem as partition 2 on the boot
-drive, matching Borea's fixed ESP/boot/root layout:
+The config loads kernel and initramfs copies from the ESP, which Limine can read.
+The installer synchronizes those copies after installation and installs a
+pacman hook to refresh them after Linux kernel upgrades:
 
 ```text
 timeout: 3
@@ -478,14 +479,14 @@ default_entry: 1
 
 /Arch Linux
     protocol: linux
-    path: boot(2):/vmlinuz-linux
-    module_path: boot(2):/initramfs-linux.img
+    path: boot():/vmlinuz-linux
+    module_path: boot():/initramfs-linux.img
     cmdline: root=UUID=<root-fs-uuid> rootflags=subvol=@ rw
 
 /Arch Linux (fallback initramfs)
     protocol: linux
-    path: boot(2):/vmlinuz-linux
-    module_path: boot(2):/initramfs-linux-fallback.img
+    path: boot():/vmlinuz-linux
+    module_path: boot():/initramfs-linux-fallback.img
     cmdline: root=UUID=<root-fs-uuid> rootflags=subvol=@ rw
 ```
 

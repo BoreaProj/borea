@@ -172,7 +172,10 @@ do_initramfs() {
 probe_bootloader() {
     test -f /target/boot/efi/EFI/BOOT/BOOTX64.EFI
     test -f /target/boot/efi/EFI/BOOT/limine.conf
-    grep -q 'boot(2):/vmlinuz-linux' /target/boot/efi/EFI/BOOT/limine.conf
+    test -s /target/boot/efi/vmlinuz-linux
+    test -s /target/boot/efi/initramfs-linux.img
+    test -s /target/boot/efi/initramfs-linux-fallback.img
+    grep -q 'boot():/vmlinuz-linux' /target/boot/efi/EFI/BOOT/limine.conf
 }
 do_bootloader() {
     mkdir -p /target/boot/efi/EFI/BOOT /target/boot/efi/EFI/borea /target/boot/limine
@@ -180,6 +183,32 @@ do_bootloader() {
         cp /target/usr/share/limine/BOOTX64.EFI /target/boot/efi/EFI/BOOT/BOOTX64.EFI
         cp /target/usr/share/limine/BOOTX64.EFI /target/boot/efi/EFI/borea/BOOTX64.EFI
     fi
+    cp /target/boot/vmlinuz-linux /target/boot/efi/vmlinuz-linux
+    cp /target/boot/initramfs-linux.img /target/boot/efi/initramfs-linux.img
+    cp /target/boot/initramfs-linux-fallback.img /target/boot/efi/initramfs-linux-fallback.img
+    mkdir -p /target/etc/pacman.d/hooks /target/usr/local/bin
+    cat << 'EOF' > /target/usr/local/bin/borea-limine-sync
+#!/bin/sh
+set -eu
+mountpoint -q /boot/efi || { echo 'Borea Limine ESP is not mounted at /boot/efi' >&2; exit 1; }
+for file in vmlinuz-linux initramfs-linux.img initramfs-linux-fallback.img; do
+    test -s "/boot/$file"
+    install -m 0644 "/boot/$file" "/boot/efi/$file"
+done
+EOF
+    chmod 0755 /target/usr/local/bin/borea-limine-sync
+    cat << 'EOF' > /target/etc/pacman.d/hooks/zzzz-borea-limine-sync.hook
+[Trigger]
+Operation = Install
+Operation = Upgrade
+Type = Package
+Target = linux
+
+[Action]
+Description = Sync kernel and initramfs to the Limine ESP
+When = PostTransaction
+Exec = /usr/local/bin/borea-limine-sync
+EOF
     cmdline_flags=""
     if [ "$fs" = "btrfs" ]; then
         cmdline_flags="rootflags=subvol=@"
@@ -190,14 +219,14 @@ serial: yes
 
 /Borea (Arch Linux)
     protocol: linux
-    path: boot(2):/vmlinuz-linux
-    module_path: boot(2):/initramfs-linux.img
+    path: boot():/vmlinuz-linux
+    module_path: boot():/initramfs-linux.img
     cmdline: root=UUID=${root_uuid} ${cmdline_flags} rw console=tty0 console=ttyS0,115200
 
 /Borea fallback
     protocol: linux
-    path: boot(2):/vmlinuz-linux
-    module_path: boot(2):/initramfs-linux-fallback.img
+    path: boot():/vmlinuz-linux
+    module_path: boot():/initramfs-linux-fallback.img
     cmdline: root=UUID=${root_uuid} ${cmdline_flags} rw console=tty0 console=ttyS0,115200
 EOF
     cp /target/boot/efi/EFI/BOOT/limine.conf /target/boot/limine/limine.conf

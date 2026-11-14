@@ -1,9 +1,9 @@
 {
   "schema": 2,
-  "id": "babd2e7bbc49587bd1df89bc595d8f28",
+  "id": "560213aca7e4a9357780ffb58e57661d",
   "created": "1970-01-01T00:00:00Z",
   "borea_version": "B-0.3",
-  "digest": "babd2e7bbc49587bd1df89bc595d8f2853d22560a19577313733f0f6eabb4887",
+  "digest": "560213aca7e4a9357780ffb58e57661d38d0e362f45ab40f7cb92363bdbf8f3a",
   "config_digest": "1d486533d64c4675bb0a8506bf781ae99752c2ef182e18e1528484e6abdc745d",
   "matrix_digest": "2c8e72b621a2407f672a030615d9fd7f732adb37cb06ae7dacfeaca926f5b593",
   "family": "arch",
@@ -1305,6 +1305,102 @@
       "phase": "boot"
     },
     {
+      "id": "boot.limine.copy.kernel",
+      "title": "boot limine copy kernel",
+      "action": {
+        "kind": "command",
+        "argv": [
+          "install",
+          "-m",
+          "0644",
+          "/boot/vmlinuz-linux",
+          "/boot/efi/vmlinuz-linux"
+        ],
+        "chroot": true,
+        "stdin": null
+      },
+      "needs": [
+        "boot.initramfs.receipt"
+      ],
+      "probe": {
+        "kind": "command_ok",
+        "argv": [
+          "cmp",
+          "-s",
+          "/boot/vmlinuz-linux",
+          "/boot/efi/vmlinuz-linux"
+        ],
+        "chroot": true
+      },
+      "danger": "mutating",
+      "timeout_s": 600,
+      "phase": "boot"
+    },
+    {
+      "id": "boot.limine.copy.initramfs",
+      "title": "boot limine copy initramfs",
+      "action": {
+        "kind": "command",
+        "argv": [
+          "install",
+          "-m",
+          "0644",
+          "/boot/initramfs-linux.img",
+          "/boot/efi/initramfs-linux.img"
+        ],
+        "chroot": true,
+        "stdin": null
+      },
+      "needs": [
+        "boot.limine.copy.kernel"
+      ],
+      "probe": {
+        "kind": "command_ok",
+        "argv": [
+          "cmp",
+          "-s",
+          "/boot/initramfs-linux.img",
+          "/boot/efi/initramfs-linux.img"
+        ],
+        "chroot": true
+      },
+      "danger": "mutating",
+      "timeout_s": 600,
+      "phase": "boot"
+    },
+    {
+      "id": "boot.limine.copy.fallback_initramfs",
+      "title": "boot limine copy fallback_initramfs",
+      "action": {
+        "kind": "command",
+        "argv": [
+          "install",
+          "-m",
+          "0644",
+          "/boot/initramfs-linux-fallback.img",
+          "/boot/efi/initramfs-linux-fallback.img"
+        ],
+        "chroot": true,
+        "stdin": null
+      },
+      "needs": [
+        "boot.limine.copy.initramfs"
+      ],
+      "probe": {
+        "kind": "command_ok",
+        "argv": [
+          "cmp",
+          "-s",
+          "/boot/initramfs-linux-fallback.img",
+          "/boot/efi/initramfs-linux-fallback.img"
+        ],
+        "chroot": true
+      },
+      "danger": "mutating",
+      "timeout_s": 600,
+      "phase": "boot"
+    },
+    {
       "id": "boot.limine.dir.fallback",
       "title": "boot limine dir fallback",
       "action": {
@@ -1313,7 +1409,7 @@
         "mode": 493
       },
       "needs": [
-        "boot.initramfs.receipt"
+        "boot.limine.copy.fallback_initramfs"
       ],
       "probe": {
         "kind": "file_exists",
@@ -1408,7 +1504,7 @@
       "action": {
         "kind": "write_file",
         "path": "/boot/efi/EFI/BOOT/limine.conf",
-        "contents": "timeout: 5\n/Borea\n    protocol: linux\n    path: guid(5bca32f4-42b8-5018-b454-0a6b5dab2a01)/vmlinuz-linux\n    module_path: guid(5bca32f4-42b8-5018-b454-0a6b5dab2a01)/initramfs-linux.img\n    cmdline: root=UUID=00418534-0f5b-5324-94c7-5bf8be6d96b3 rootflags=subvol=@\n/Borea fallback\n    protocol: linux\n    path: guid(5bca32f4-42b8-5018-b454-0a6b5dab2a01)/vmlinuz-linux\n    module_path: guid(5bca32f4-42b8-5018-b454-0a6b5dab2a01)/initramfs-linux-fallback.img\n    cmdline: root=UUID=00418534-0f5b-5324-94c7-5bf8be6d96b3 rootflags=subvol=@\n",
+        "contents": "timeout: 5\nserial: yes\n\n/Borea\n    protocol: linux\n    path: boot():/vmlinuz-linux\n    module_path: boot():/initramfs-linux.img\n    cmdline: root=UUID=00418534-0f5b-5324-94c7-5bf8be6d96b3 rootflags=subvol=@\n/Borea fallback\n    protocol: linux\n    path: boot():/vmlinuz-linux\n    module_path: boot():/initramfs-linux-fallback.img\n    cmdline: root=UUID=00418534-0f5b-5324-94c7-5bf8be6d96b3 rootflags=subvol=@\n",
         "mode": 420
       },
       "needs": [
@@ -1417,7 +1513,7 @@
       "probe": {
         "kind": "file_contains",
         "path": "/boot/efi/EFI/BOOT/limine.conf",
-        "needle": "timeout: 5\n/Borea\n    protocol: linux\n    path: guid(5bca32f4-42b8-5018-b454-0a6b5dab2a01)/vmlinuz-linux\n    module_path: guid(5bca32f4-42b8-5018-b454-0a6b5dab2a01)/initramfs-linux.img\n    cmdline: root=UUID=00418534-0f5b-5324-94c7-5bf8be6d96b3 rootflags=subvol=@\n/Borea fallback\n    protocol: linux\n    path: guid(5bca32f4-42b8-5018-b454-0a6b5dab2a01)/vmlinuz-linux\n    module_path: guid(5bca32f4-42b8-5018-b454-0a6b5dab2a01)/initramfs-linux-fallback.img\n    cmdline: root=UUID=00418534-0f5b-5324-94c7-5bf8be6d96b3 rootflags=subvol=@\n"
+        "needle": "timeout: 5\nserial: yes\n\n/Borea\n    protocol: linux\n    path: boot():/vmlinuz-linux\n    module_path: boot():/initramfs-linux.img\n    cmdline: root=UUID=00418534-0f5b-5324-94c7-5bf8be6d96b3 rootflags=subvol=@\n/Borea fallback\n    protocol: linux\n    path: boot():/vmlinuz-linux\n    module_path: boot():/initramfs-linux-fallback.img\n    cmdline: root=UUID=00418534-0f5b-5324-94c7-5bf8be6d96b3 rootflags=subvol=@\n"
       },
       "danger": "mutating",
       "timeout_s": 600,
@@ -1429,7 +1525,7 @@
       "action": {
         "kind": "write_file",
         "path": "/boot/limine/limine.conf",
-        "contents": "timeout: 5\n/Borea\n    protocol: linux\n    path: guid(5bca32f4-42b8-5018-b454-0a6b5dab2a01)/vmlinuz-linux\n    module_path: guid(5bca32f4-42b8-5018-b454-0a6b5dab2a01)/initramfs-linux.img\n    cmdline: root=UUID=00418534-0f5b-5324-94c7-5bf8be6d96b3 rootflags=subvol=@\n/Borea fallback\n    protocol: linux\n    path: guid(5bca32f4-42b8-5018-b454-0a6b5dab2a01)/vmlinuz-linux\n    module_path: guid(5bca32f4-42b8-5018-b454-0a6b5dab2a01)/initramfs-linux-fallback.img\n    cmdline: root=UUID=00418534-0f5b-5324-94c7-5bf8be6d96b3 rootflags=subvol=@\n",
+        "contents": "timeout: 5\nserial: yes\n\n/Borea\n    protocol: linux\n    path: boot():/vmlinuz-linux\n    module_path: boot():/initramfs-linux.img\n    cmdline: root=UUID=00418534-0f5b-5324-94c7-5bf8be6d96b3 rootflags=subvol=@\n/Borea fallback\n    protocol: linux\n    path: boot():/vmlinuz-linux\n    module_path: boot():/initramfs-linux-fallback.img\n    cmdline: root=UUID=00418534-0f5b-5324-94c7-5bf8be6d96b3 rootflags=subvol=@\n",
         "mode": 420
       },
       "needs": [
@@ -1438,7 +1534,68 @@
       "probe": {
         "kind": "file_contains",
         "path": "/boot/limine/limine.conf",
-        "needle": "timeout: 5\n/Borea\n    protocol: linux\n    path: guid(5bca32f4-42b8-5018-b454-0a6b5dab2a01)/vmlinuz-linux\n    module_path: guid(5bca32f4-42b8-5018-b454-0a6b5dab2a01)/initramfs-linux.img\n    cmdline: root=UUID=00418534-0f5b-5324-94c7-5bf8be6d96b3 rootflags=subvol=@\n/Borea fallback\n    protocol: linux\n    path: guid(5bca32f4-42b8-5018-b454-0a6b5dab2a01)/vmlinuz-linux\n    module_path: guid(5bca32f4-42b8-5018-b454-0a6b5dab2a01)/initramfs-linux-fallback.img\n    cmdline: root=UUID=00418534-0f5b-5324-94c7-5bf8be6d96b3 rootflags=subvol=@\n"
+        "needle": "timeout: 5\nserial: yes\n\n/Borea\n    protocol: linux\n    path: boot():/vmlinuz-linux\n    module_path: boot():/initramfs-linux.img\n    cmdline: root=UUID=00418534-0f5b-5324-94c7-5bf8be6d96b3 rootflags=subvol=@\n/Borea fallback\n    protocol: linux\n    path: boot():/vmlinuz-linux\n    module_path: boot():/initramfs-linux-fallback.img\n    cmdline: root=UUID=00418534-0f5b-5324-94c7-5bf8be6d96b3 rootflags=subvol=@\n"
+      },
+      "danger": "mutating",
+      "timeout_s": 600,
+      "phase": "boot"
+    },
+    {
+      "id": "boot.limine.sync.dir",
+      "title": "boot limine sync dir",
+      "action": {
+        "kind": "mkdir",
+        "path": "/etc/pacman.d/hooks",
+        "mode": 493
+      },
+      "needs": [
+        "boot.limine.config.copy"
+      ],
+      "probe": {
+        "kind": "file_exists",
+        "path": "/etc/pacman.d/hooks"
+      },
+      "danger": "mutating",
+      "timeout_s": 600,
+      "phase": "boot"
+    },
+    {
+      "id": "boot.limine.sync.script",
+      "title": "boot limine sync script",
+      "action": {
+        "kind": "write_file",
+        "path": "/usr/local/bin/borea-limine-sync",
+        "contents": "#!/bin/sh\nset -eu\nmountpoint -q /boot/efi || { echo 'Borea Limine ESP is not mounted at /boot/efi' >&2; exit 1; }\nfor file in vmlinuz-linux initramfs-linux.img initramfs-linux-fallback.img; do\n    test -s \"/boot/$file\"\n    install -m 0644 \"/boot/$file\" \"/boot/efi/$file\"\ndone\n",
+        "mode": 493
+      },
+      "needs": [
+        "boot.limine.sync.dir"
+      ],
+      "probe": {
+        "kind": "file_contains",
+        "path": "/usr/local/bin/borea-limine-sync",
+        "needle": "#!/bin/sh\nset -eu\nmountpoint -q /boot/efi || { echo 'Borea Limine ESP is not mounted at /boot/efi' >&2; exit 1; }\nfor file in vmlinuz-linux initramfs-linux.img initramfs-linux-fallback.img; do\n    test -s \"/boot/$file\"\n    install -m 0644 \"/boot/$file\" \"/boot/efi/$file\"\ndone\n"
+      },
+      "danger": "mutating",
+      "timeout_s": 600,
+      "phase": "boot"
+    },
+    {
+      "id": "boot.limine.sync.hook",
+      "title": "boot limine sync hook",
+      "action": {
+        "kind": "write_file",
+        "path": "/etc/pacman.d/hooks/zzzz-borea-limine-sync.hook",
+        "contents": "[Trigger]\nOperation = Install\nOperation = Upgrade\nType = Package\nTarget = linux\n\n[Action]\nDescription = Sync kernel and initramfs to the Limine ESP\nWhen = PostTransaction\nExec = /usr/local/bin/borea-limine-sync\n",
+        "mode": 420
+      },
+      "needs": [
+        "boot.limine.sync.script"
+      ],
+      "probe": {
+        "kind": "file_contains",
+        "path": "/etc/pacman.d/hooks/zzzz-borea-limine-sync.hook",
+        "needle": "[Trigger]\nOperation = Install\nOperation = Upgrade\nType = Package\nTarget = linux\n\n[Action]\nDescription = Sync kernel and initramfs to the Limine ESP\nWhen = PostTransaction\nExec = /usr/local/bin/borea-limine-sync\n"
       },
       "danger": "mutating",
       "timeout_s": 600,
@@ -1454,7 +1611,7 @@
         "mode": 384
       },
       "needs": [
-        "boot.limine.config.copy"
+        "boot.limine.sync.hook"
       ],
       "probe": {
         "kind": "file_contains",
@@ -1496,6 +1653,10 @@
     {
       "kind": "file_exists",
       "path": "/boot/efi/EFI/BOOT/BOOTX64.EFI"
+    },
+    {
+      "kind": "file_exists",
+      "path": "/boot/efi/vmlinuz-linux"
     }
   ],
   "secrets": [
