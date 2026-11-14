@@ -137,6 +137,18 @@ jobs:
             and .artifacts.serial_log == "serial.log"
             and .artifacts.verify == "verify.json"' "$result"
           test '${{ steps.e2e.outputs.status }}' = 0
+          dir=$(dirname "$result")
+          # The plan must have produced the system: the bootstrap, bootloader
+          # and final steps ran, and storage was accepted, not re-created.
+          jq -s -r 'group_by(.event) | map("\(.[0].event): \(length)") | .[]' "$dir/journal.jsonl"
+          jq -s -r '[.[] | select(.event == "skipped") | .step] | join(" ")' "$dir/journal.jsonl"
+          for step in bootstrap.arch base.packages base.user base.password boot.initramfs boot.limine.config finalise.receipt; do
+            jq -s -e --arg s "$step" 'any(.[]; .step == $s and .event == "ok")' "$dir/journal.jsonl" >/dev/null
+          done
+          jq -s -e 'any(.[]; .step == "storage.format.root" and .event == "skipped" and (.detail // "" | startswith("accepted")))
+            and (any(.[]; .event == "failed") | not)' "$dir/journal.jsonl" >/dev/null
+          jq . "$dir/verify.json"
+          grep -a -m1 'Kernel command line' "$dir/serial.log"
           ! ls target/e2e/$CELL/*/disk.img 2>/dev/null
           ! grep -rl 'canary-not-a-real-password' target/e2e
       - uses: actions/upload-artifact@v4
