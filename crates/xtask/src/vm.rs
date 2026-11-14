@@ -486,6 +486,8 @@ pub fn verify_plan(image: &ImagePlan) -> Result<Plan> {
         cmd(&["findmnt", "--mountpoint", "/boot", "--types", "ext4"]),
         cmd(&["findmnt", "--mountpoint", "/boot/efi", "--types", "vfat"]),
         cmd(&["id", "-u", "borea"]),
+        // Fails if any packaged file (e.g. /etc/pacman.conf) was not extracted.
+        cmd(&["pacman", "-Qk", "pacman", "pacman-mirrorlist", "filesystem", "glibc"]),
         cmd(&["systemctl", "is-enabled", "NetworkManager.service"]),
         cmd(&["systemctl", "is-active", "sshd.service"]),
         Check::FileExists {

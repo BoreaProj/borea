@@ -70,7 +70,10 @@ G03 extends image execution with closed target bootstrap and bootloader
 installation on the verified storage layout. It requires network access to
 retrieve upstream packages into `/target` and installs `base`, `linux`,
 `linux-firmware`, `btrfs-progs`, `networkmanager`, `sudo`, `zram-generator`,
-`openssh`, `limine` and `efibootmgr`.
+`openssh`, `limine` and `efibootmgr`. `pacstrap` runs with a copy of the
+runtime's `pacman.conf` without its container `NoExtract` rules. Those rules would
+otherwise leave the target without `/etc/pacman.conf`, its mirrorlist,
+documentation and most locales. The pacstrap probe rejects such a target.
 
 ```sh
 sudo borea image bootstrap --family arch --manifest /absolute/test.image.json \
@@ -112,8 +115,8 @@ lane has three steps:
    verification-only plan. Its checks come from the image manifest: fstab and
    Limine root/boot UUIDs, mounted filesystem types (plus the four Btrfs
    subvolume mounts on Btrfs), the `borea` account, NetworkManager and sshd,
-   the ESP kernel, initramfs and `BOOTX64.EFI`, and no GRUB package or
-   directory. The plan has no installation steps.
+   the ESP kernel, initramfs and `BOOTX64.EFI`, complete files for core
+   packages (`pacman -Qk`), and no GRUB package or directory. The plan has no installation steps.
 2. `vm boot --plan PLAN --report REPORT` boots the image and checks the serial
    log: the root UUID and Btrfs `rootflags=subvol=@` flag, the root mount and
    the `borea` login prompt. It then waits up to 180 s for SSH and runs
