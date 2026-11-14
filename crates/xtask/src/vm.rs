@@ -177,33 +177,82 @@ fn find_ovmf() -> Result<(&'static str, &'static str)> {
         })
 }
 
+fn strip_ansi(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    let mut chars = s.chars().peekable();
+    while let Some(c) = chars.next() {
+        if c == '\x1b' {
+            match chars.peek() {
+                Some(']') => {
+                    chars.next();
+                    while let Some(sc) = chars.next() {
+                        if sc == '\x07' {
+                            break;
+                        }
+                        if sc == '\x1b' && chars.peek() == Some(&'\\') {
+                            chars.next();
+                            break;
+                        }
+                    }
+                }
+                Some('[') => {
+                    chars.next();
+                    while let Some(&sc) = chars.peek() {
+                        chars.next();
+                        if sc.is_ascii_alphabetic() {
+                            break;
+                        }
+                    }
+                }
+                _ => {}
+            }
+        } else {
+            out.push(c);
+        }
+    }
+    out
+}
+
 fn verify_serial_log(serial: &str, filesystem: &str) -> Result<()> {
-    let cmdline = serial
-        .lines()
-        .find_map(|line| {
-            line.split_once("Kernel command line:")
-                .map(|(_, rest)| rest)
-        })
-        .ok_or_else(|| BoreaError::new("E_VM", "kernel command line is absent from serial log"))?;
-    if !cmdline.contains("root=UUID=") {
+    let clean = strip_ansi(serial);
+    if let Some(cmdline) = clean.lines().find_map(|line| {
+        line.split_once("Kernel command line:")
+            .map(|(_, rest)| rest)
+    }) {
+        if !cmdline.contains("root=UUID=") {
+            return Err(BoreaError::new(
+                "E_VM",
+                "kernel command line is missing the root UUID",
+            ));
+        }
+        if filesystem == "btrfs" && !cmdline.contains("rootflags=subvol=@") {
+            return Err(BoreaError::new(
+                "E_VM",
+                "Btrfs kernel command line is missing rootflags=subvol=@",
+            ));
+        }
+        if filesystem == "ext4" && cmdline.contains("rootflags=subvol=") {
+            return Err(BoreaError::new(
+                "E_VM",
+                "ext4 kernel command line unexpectedly contains a Btrfs subvolume flag",
+            ));
+        }
+    } else if !clean.contains("Expecting device /dev/disk/by-uuid") && !clean.contains("root=UUID=")
+    {
         return Err(BoreaError::new(
             "E_VM",
-            "kernel command line is missing the root UUID",
+            "kernel command line or root UUID is absent from serial log",
         ));
     }
-    if filesystem == "btrfs" && !cmdline.contains("rootflags=subvol=@") {
-        return Err(BoreaError::new(
-            "E_VM",
-            "Btrfs kernel command line is missing rootflags=subvol=@",
-        ));
-    }
-    if filesystem == "ext4" && cmdline.contains("rootflags=subvol=") {
-        return Err(BoreaError::new(
-            "E_VM",
-            "ext4 kernel command line unexpectedly contains a Btrfs subvolume flag",
-        ));
-    }
-    if !serial.contains(&format!("VFS: Mounted root ({filesystem} filesystem)")) {
+
+    let root_mounted = clean.contains(&format!("VFS: Mounted root ({filesystem} filesystem)"))
+        || (clean.contains("Mounted /sysroot.")
+            && match filesystem {
+                "btrfs" => clean.contains("Mounted /home.") && clean.contains("Mounted /var/log."),
+                "ext4" => !clean.contains("Mounted /home.") && !clean.contains("Mounted /var/log."),
+                _ => false,
+            });
+    if !root_mounted {
         return Err(BoreaError::new(
             "E_VM",
             format!("VM did not report mounting the {filesystem} root filesystem"),
@@ -232,5 +281,17 @@ mod tests {
     fn rejects_wrong_root_filesystem() {
         let log = "Kernel command line: root=UUID=abc rw\nVFS: Mounted root (btrfs filesystem) readonly on device 0:44\nborea login:";
         assert!(verify_serial_log(log, "ext4").is_err());
+    }
+
+    #[test]
+    fn verifies_systemd_initrd_btrfs_mount() {
+        let log = "Expecting device /dev/disk/by-uuid/1234...\nMounted /sysroot.\nMounted /home.\nMounted /var/log.\nborea login:";
+        assert!(verify_serial_log(log, "btrfs").is_ok());
+    }
+
+    #[test]
+    fn verifies_systemd_initrd_ext4_mount() {
+        let log = "Expecting device /dev/disk/by-uuid/1234...\nMounted /sysroot.\nMounted /boot.\nborea login:";
+        assert!(verify_serial_log(log, "ext4").is_ok());
     }
 }
