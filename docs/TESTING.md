@@ -177,6 +177,13 @@ qemu-system-x86_64 \
 The test SSH key is injected by the plan in test profiles only
 (`[account] ssh_authorized_key_file`). Production profiles do not enable SSH.
 
+F04 implements the orchestrator (`crates/xtask/src/e2e.rs`) for
+arch/minimal and arch/minimal-ext4. It creates a G02 image instead of steps 1–2,
+plans against the image identity, and stops at apply (D-038): no executor runs
+plan steps on an image yet, so every run reports `pass: false` with
+`failed_stage: "apply"`. Use `--out ABSOLUTE_DIR` to change the artifact root.
+G05 unblocks steps 4–7.
+
 F03 implements steps 6–7 for the Arch bootstrap image rather than a planned
 install. The disposable-image workflow boots Arch Btrfs and ext4 images with
 OVMF. It runs `borea verify --ssh` against a verification-only plan, using a

@@ -91,3 +91,55 @@ jobs:
           path: |
             target/bootstrap-validation/*.log
             target/bootstrap-validation/*.json
+
+  e2e:
+    needs: [storage]
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      CELL: arch/minimal
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.99.1
+      - uses: Swatinem/rust-cache@v2
+      - name: Namespace and VM prerequisites
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y bubblewrap ovmf qemu-system-x86 jq
+      - name: Build and fetch pinned independent Arch runtime
+        run: |
+          cargo build --release --locked -p borea-cli -p xtask
+          target/release/borea runtime fetch --family arch --cache "$RUNNER_TEMP/borea-image-runtime"
+      - name: e2e arch/minimal (btrfs, limine)
+        id: e2e
+        run: |
+          set -o pipefail
+          mkdir -p target/e2e
+          status=0
+          sudo env BOREA_RUNTIME_CACHE="$RUNNER_TEMP/borea-image-runtime" GITHUB_SHA="$GITHUB_SHA" \
+            target/release/xtask e2e --family arch --profile minimal --out "$PWD/target/e2e" \
+            2>&1 | tee target/e2e/run.log || status=$?
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          sudo chown -R "$(id -u):$(id -g)" target/e2e
+      - name: Check result.json against D-038
+        run: |
+          result=$(ls target/e2e/$CELL/*/result.json | tail -n 1)
+          jq . "$result"
+          # D-038: apply has no plan executor for images yet. Create and plan
+          # must pass and apply must refuse. When G05 lands, require pass=true.
+          jq -e '.pass == false and .failed_stage == "apply"
+            and (.stages[] | select(.stage == "create") | .status) == "ok"
+            and (.stages[] | select(.stage == "plan") | .status) == "ok"
+            and (.stages[] | select(.stage == "collect") | .status) == "ok"
+            and (.stages[] | select(.stage == "apply") | .error.code) == "E_UNSUPPORTED"
+            and .artifacts.plan == "plan.json"' "$result"
+          test '${{ steps.e2e.outputs.status }}' != 0
+          ! ls target/e2e/$CELL/*/disk.img 2>/dev/null
+          ! grep -rl 'canary-not-a-real-password' target/e2e
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-arch-minimal
+          path: target/e2e
