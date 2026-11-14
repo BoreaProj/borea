@@ -75,7 +75,14 @@ pub fn boot(image: &Path, filesystem: &str, serial_log: &Path) -> Result<()> {
             .arg("-drive")
             .arg(format!("if=pflash,format=raw,file={}", vars_copy.display()))
             .arg("-drive")
-            .arg(format!("file={},format=raw,if=virtio", image.display()))
+            .arg(format!(
+                "if=none,id=disk,format=raw,file={}",
+                image.display()
+            ))
+            .arg("-device")
+            .arg("virtio-blk-pci,drive=disk,bootindex=1")
+            .arg("-boot")
+            .arg("order=c,menu=off,strict=on")
             .args([
                 "-display",
                 "none",
