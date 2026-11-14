@@ -5,15 +5,17 @@
 //! first failure; later stages are recorded as `not_run`. Nothing here promotes
 //! a matrix cell: `matrix verify --strict` (F05) reads the `pass` field.
 //!
-//! The apply stage is gated (D-038): no executor yet runs a Plan's steps
-//! against a Borea disposable image, so an e2e run currently fails at `apply`.
+//! Create prepares image storage with the closed G02 program. Plan is made
+//! against that image's identity and UUIDs. Apply runs the plan's steps with
+//! the G05 image plan executor (D-040); the closed Arch bootstrap is not used.
 
 use crate::vm;
-use borea_core::{BoreaError, DeviceIdentity, FamilyId, Filesystem, Loader, Plan, Result};
+use borea_core::{BoreaError, Config, DeviceIdentity, FamilyId, Filesystem, Loader, Plan, Result};
 use std::{
     collections::BTreeMap,
     fs::{self, OpenOptions},
     io::Write,
+    os::unix::fs::{OpenOptionsExt, PermissionsExt},
     path::{Path, PathBuf},
     process::Command,
     time::{Instant, SystemTime, UNIX_EPOCH},
@@ -26,7 +28,10 @@ const CANARIES: &[&str] = &[
     "canary-not-a-real-password",
     "borea-bootstrap-ci-canary-not-a-real-password",
 ];
-const APPLY_GAP: &str = "e2e apply is gated (D-038): no executor runs a Plan's steps against a Borea disposable image. `borea apply` live mode is disabled, and `image apply`/`image bootstrap` run closed storage and Arch bootstrap programs that ignore the plan. The plan's UUIDs, hostname, account, fstab options and receipts also differ from the bootstrapped image (see identity in result.json). Next: the G05 image plan executor in borea-run/borea-distro";
+/// The VM lane reads the kernel log and login prompt from the serial port.
+const SERIAL_CONSOLE: &[&str] = &["console=tty0", "console=ttyS0,115200"];
+/// `vm::boot` waits for this host's login prompt.
+const VM_HOSTNAME: &str = "borea";
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct Args {
@@ -110,7 +115,7 @@ impl Args {
         }
         if !matches!(self.profile.as_str(), "minimal" | "minimal-ext4") {
             return Err(BoreaError::unsupported(format!(
-                "e2e profile {} is not runnable: session cells need the plan executor (D-038) plus package steps; only arch/minimal and arch/minimal-ext4 have an image lane",
+                "e2e profile {} is not runnable: session cells have not been run through the image plan executor yet; only arch/minimal and arch/minimal-ext4 have an image lane",
                 self.profile
             )));
         }
@@ -230,14 +235,13 @@ pub fn run(args: &Args) -> Result<()> {
 }
 
 fn pipeline(args: &Args, run: &mut Run, disk: &Path) -> Result<()> {
-    let image = run.stage("create", |run| {
-        let cache = std::env::var_os("BOREA_RUNTIME_CACHE")
-            .map(PathBuf::from)
-            .ok_or_else(|| {
-                BoreaError::invalid("set BOREA_RUNTIME_CACHE to the fetched runtime cache")
-            })?;
-        let lock = borea_core::runtime::RuntimeLock::embedded()?;
-        let spec = lock.get(args.family)?;
+    let cache = std::env::var_os("BOREA_RUNTIME_CACHE").map(PathBuf::from);
+    let lock = borea_core::runtime::RuntimeLock::embedded()?;
+    let spec = lock.get(args.family)?;
+    let (image, cache) = run.stage("create", |run| {
+        let cache = cache.ok_or_else(|| {
+            BoreaError::invalid("set BOREA_RUNTIME_CACHE to the fetched runtime cache")
+        })?;
         let manifest = run.dir.join("image.json");
         let image = borea_run::image::create(disk, &manifest, args.fs(), IMAGE_BYTES, spec)?;
         run.artifact("image_manifest", "image.json");
@@ -245,23 +249,33 @@ fn pipeline(args: &Args, run: &mut Run, disk: &Path) -> Result<()> {
         let applied = borea_run::image::apply(&image, spec, &cache, &journal, false, true);
         run.artifact("storage_journal", "storage.journal");
         applied?;
-        Ok(image)
+        Ok((image, cache))
     })?;
-    let plan = run.stage("plan", |run| {
-        let config = crate::case_config(args.family, &args.profile, args.root_fs, args.loader)?;
-        let identity = DeviceIdentity {
-            path: config.disk.device.clone(),
-            serial: format!("borea-image-{}", &image.seed[..16]),
-            size: image.bytes,
-            sector_size: 512,
-        };
-        let plan = crate::build_case_for(&config, identity)?;
+    let (config, plan) = run.stage("plan", |run| {
+        let (config, plan) = plan_for(args, &image)?;
         fs::write(run.dir.join("plan.json"), plan.json()?)?;
         run.artifact("plan", "plan.json");
         run.identity = identity_report(&plan, &image);
-        Ok(plan)
+        Ok((config, plan))
     })?;
-    run.stage("apply", |run| apply(&plan, &image, &run.dir))?;
+    run.stage("apply", |run| {
+        let staging = stage_inputs(&config)?;
+        let journal = run.dir.join("journal.jsonl");
+        let applied = borea_run::image::apply_plan(
+            &image,
+            &plan,
+            spec,
+            &cache,
+            &journal,
+            borea_run::image::PlanOptions {
+                staging: staging.path(),
+                resume: false,
+                yes: true,
+            },
+        );
+        run.artifact("journal", "journal.jsonl");
+        applied
+    })?;
     let boot = vm::BootArgs {
         image: disk.to_path_buf(),
         filesystem: args.fs().into(),
@@ -302,13 +316,80 @@ fn pipeline(args: &Args, run: &mut Run, disk: &Path) -> Result<()> {
     result
 }
 
-/// D-038: no executor runs plan steps on an image yet. Refuse explicitly; do
-/// not substitute the closed bootstrap, whose result the plan did not produce.
-fn apply(_plan: &Plan, _image: &borea_run::image::ImagePlan, _dir: &Path) -> Result<()> {
-    Err(BoreaError::unsupported(APPLY_GAP))
+/// Plan the cell against the image: its identity, its storage UUIDs, the VM
+/// lane's hostname and a serial console. Everything else is the golden config.
+fn plan_for(args: &Args, image: &borea_run::image::ImagePlan) -> Result<(Config, Plan)> {
+    let mut config = crate::case_config(args.family, &args.profile, args.root_fs, args.loader)?;
+    config.target.hostname = VM_HOSTNAME.into();
+    let matrix = borea_core::matrix::Matrix::embedded()?;
+    let family = borea_core::recipe::family(config.target.family)?;
+    let loader = borea_distro::loader(&config, &family, &matrix)?;
+    let session = borea_session::select(&config, &matrix, loader, false, false)?;
+    let plan = borea_distro::planner::build_with(
+        &config,
+        DeviceIdentity {
+            path: config.disk.device.clone(),
+            serial: format!("borea-image-{}", &image.seed[..16]),
+            size: image.bytes,
+            sector_size: 512,
+        },
+        borea_distro::planner::Intent {
+            components: session.components,
+            greeter: session.greeter,
+            session: session.session,
+            autostart: session.autostart,
+        },
+        &borea_distro::planner::Overrides {
+            storage_ids: Some(borea_distro::planner::StorageIds {
+                esp: image.uuid("esp"),
+                boot: image.uuid("boot"),
+                root: image.uuid("root"),
+            }),
+            kernel_args: SERIAL_CONSOLE.iter().map(|s| s.to_string()).collect(),
+        },
+    )?;
+    Ok((config, plan))
 }
 
-/// Compare the plan's storage identity with the image's, so the gap is visible.
+/// Root-private staging for the plan's host files: the account password (a
+/// canary, so a leak into any artifact is detectable) and a throwaway SSH key.
+fn stage_inputs(config: &Config) -> Result<tempfile::TempDir> {
+    let staging = tempfile::Builder::new()
+        .prefix("borea-e2e-staging-")
+        .tempdir()?;
+    fs::set_permissions(staging.path(), fs::Permissions::from_mode(0o700))?;
+    let host = |plan_path: &Path| -> Result<PathBuf> {
+        let rel = plan_path
+            .strip_prefix("/")
+            .map_err(|_| BoreaError::invalid("plan host paths must be absolute"))?;
+        let path = staging.path().join(rel);
+        fs::create_dir_all(path.parent().expect("staged file has a parent"))?;
+        Ok(path)
+    };
+    OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .mode(0o600)
+        .open(host(&config.account.password_file)?)?
+        .write_all(format!("{}\n", CANARIES[0]).as_bytes())?;
+    if let Some(key) = &config.account.ssh_authorized_key_file {
+        let private = staging.path().join("e2e-key");
+        let status = Command::new("ssh-keygen")
+            .args(["-q", "-t", "ed25519", "-N", "", "-C", "borea-e2e", "-f"])
+            .arg(&private)
+            .status()
+            .map_err(|_| {
+                BoreaError::unsupported("ssh-keygen is required; install openssh-client")
+            })?;
+        if !status.success() {
+            return Err(BoreaError::new("E_VM", "ssh-keygen failed"));
+        }
+        fs::copy(private.with_extension("pub"), host(key)?)?;
+    }
+    Ok(staging)
+}
+
+/// Record that the plan's storage identity matches the image's.
 fn identity_report(plan: &Plan, image: &borea_run::image::ImagePlan) -> serde_json::Value {
     let planned = |role: &str| {
         plan.steps
@@ -468,35 +549,29 @@ mod tests {
     }
 
     #[test]
-    fn apply_is_gated_with_the_decision() {
-        let c =
-            crate::case_config(FamilyId::Arch, "minimal", Filesystem::Btrfs, Loader::Auto).unwrap();
-        let plan = crate::build_case(&c).unwrap();
+    fn e2e_plan_is_made_for_the_image() {
+        let args = parse(&["--family", "arch", "--profile", "minimal"]).unwrap();
         let image = image_fixture();
-        let e = apply(&plan, &image, Path::new("/nonexistent")).unwrap_err();
-        assert_eq!(e.code, "E_UNSUPPORTED");
-        assert!(e.message.contains("D-038"));
-    }
-
-    #[test]
-    fn identity_report_shows_uuid_divergence() {
-        let c =
-            crate::case_config(FamilyId::Arch, "minimal", Filesystem::Btrfs, Loader::Auto).unwrap();
-        let image = image_fixture();
-        let plan = crate::build_case_for(
-            &c,
-            DeviceIdentity {
-                path: c.disk.device.clone(),
-                serial: format!("borea-image-{}", &image.seed[..16]),
-                size: image.bytes,
-                sector_size: 512,
-            },
-        )
-        .unwrap();
+        let (config, plan) = plan_for(&args, &image).unwrap();
+        assert_eq!(config.target.hostname, VM_HOSTNAME);
+        assert_eq!(
+            plan.disk.serial,
+            format!("borea-image-{}", &image.seed[..16])
+        );
         let r = identity_report(&plan, &image);
-        assert!(r["root"]["plan_uuid"].is_string());
-        assert_eq!(r["root"]["image_uuid"], image.uuid("root"));
-        assert_eq!(r["root"]["match"], false);
+        for role in ["root", "boot"] {
+            assert_eq!(r[role]["plan_uuid"], image.uuid(role));
+            assert_eq!(r[role]["match"], true);
+        }
+        let json = plan.json().unwrap();
+        // fstab, the ESP mount and the kernel command line all use image ids.
+        assert!(json.contains(&format!("UUID={} / btrfs", image.uuid("root"))));
+        assert!(json.contains(&format!("PARTUUID={} /boot/efi", image.uuid("esp"))));
+        assert!(json.contains(&format!(
+            "root=UUID={} rootflags=subvol=@ console=tty0 console=ttyS0,115200",
+            image.uuid("root")
+        )));
+        assert!(!json.contains(CANARIES[0]));
     }
 
     #[test]

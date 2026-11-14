@@ -123,19 +123,32 @@ jobs:
             2>&1 | tee target/e2e/run.log || status=$?
           echo "status=$status" >> "$GITHUB_OUTPUT"
           sudo chown -R "$(id -u):$(id -g)" target/e2e
-      - name: Check result.json against D-038
+      - name: Require a passing cell with its artifacts
         run: |
           result=$(ls target/e2e/$CELL/*/result.json | tail -n 1)
           jq . "$result"
-          # D-038: apply has no plan executor for images yet. Create and plan
-          # must pass and apply must refuse. When G05 lands, require pass=true.
-          jq -e '.pass == false and .failed_stage == "apply"
-            and (.stages[] | select(.stage == "create") | .status) == "ok"
-            and (.stages[] | select(.stage == "plan") | .status) == "ok"
-            and (.stages[] | select(.stage == "collect") | .status) == "ok"
-            and (.stages[] | select(.stage == "apply") | .error.code) == "E_UNSUPPORTED"
-            and .artifacts.plan == "plan.json"' "$result"
-          test '${{ steps.e2e.outputs.status }}' != 0
+          # G05: the plan's own steps installed the image. Every stage must
+          # pass and the evidence files must exist.
+          jq -e '.pass == true and .failed_stage == null
+            and ([.stages[] | select(.status != "ok")] | length) == 0
+            and .identity.root.match == true and .identity.boot.match == true
+            and .artifacts.plan == "plan.json"
+            and .artifacts.journal == "journal.jsonl"
+            and .artifacts.serial_log == "serial.log"
+            and .artifacts.verify == "verify.json"' "$result"
+          test '${{ steps.e2e.outputs.status }}' = 0
+          dir=$(dirname "$result")
+          # The plan must have produced the system: the bootstrap, bootloader
+          # and final steps ran, and storage was accepted, not re-created.
+          jq -s -r 'group_by(.event) | map("\(.[0].event): \(length)") | .[]' "$dir/journal.jsonl"
+          jq -s -r '[.[] | select(.event == "skipped") | .step] | join(" ")' "$dir/journal.jsonl"
+          for step in bootstrap.arch base.packages base.user base.password boot.initramfs boot.limine.config finalise.receipt; do
+            jq -s -e --arg s "$step" 'any(.[]; .step == $s and .event == "ok")' "$dir/journal.jsonl" >/dev/null
+          done
+          jq -s -e 'any(.[]; .step == "storage.format.root" and .event == "skipped" and (.detail // "" | startswith("accepted")))
+            and (any(.[]; .event == "failed") | not)' "$dir/journal.jsonl" >/dev/null
+          jq . "$dir/verify.json"
+          grep -a -m1 -o 'root=UUID=[^[:cntrl:]]*' "$dir/serial.log" || true
           ! ls target/e2e/$CELL/*/disk.img 2>/dev/null
           ! grep -rl 'canary-not-a-real-password' target/e2e
       - uses: actions/upload-artifact@v4

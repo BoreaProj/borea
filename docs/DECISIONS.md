@@ -676,3 +676,44 @@ The three flavour cells and the non-default compositor pairs are v0.2 and
 **Rejected:** running flavour ISOs or their installers (not standalone);
 running Linutil or upstream install scripts; keeping Hyprland-only as a session.
 **Follow-up cards:** A11, C08, C09, D14, E07.
+
+### D-040 — Image plan executor design
+
+**Date:** 2026-11-14
+**Context:** D-038 chose a plan executor for disposable images (G05).
+**Decision:**
+- `borea_run::image::apply_plan` runs a sealed Plan on a Borea image whose
+  storage was prepared by the closed G02 program. The plan must be made for
+  that image: disk serial `borea-image-<seed>`, size, filesystem and family.
+- **Storage prefix.** Destructive steps are never executed. Each is translated
+  into a read-only check (`sgdisk --info`, `blkid`) and accepted only if the
+  image already holds that partition GUID, type, size and filesystem UUID.
+  Anything else (LUKS, unknown tools, other devices) is refused before the
+  sandbox starts. To make the identities agree, the planner can plan against
+  prepared storage (`planner::Overrides::storage_ids`).
+- **Other steps** run literally. The loop devices are bound at the plan's own
+  device paths and the target at the plan's root, so no command is rewritten.
+  One sandbox holds the mount namespace for the whole plan. Each step's probe
+  runs first; a passing probe records `skipped`. File actions must also pass
+  their probe afterwards. Command steps are trusted on exit status, because the
+  planner pairs them with a following receipt step.
+- **Confinement.** Plan paths resolve inside the target; a symlink that leaves
+  it is refused. `chroot` steps get `/proc`, `/sys`, `/dev`, a tmpfs `/run` and
+  a bound resolver, all removed at teardown.
+- **Secrets and host files** come from a root-private staging directory that
+  mirrors the plan's host paths. A secret crosses a pipe into a shell variable
+  and reaches `chpasswd` on stdin; it is never in a program file, argv, the
+  environment or the journal. Diagnostics are redacted.
+- **Journal.** The existing plan/config/matrix-digest-bound JSON journal.
+  Resume re-evaluates every probe; a journal from another plan is refused.
+- **VM lane inputs.** e2e plans with hostname `borea` and
+  `console=tty0 console=ttyS0,115200` (`Overrides::kernel_args`), because
+  `vm::boot` reads the serial log. These are lane inputs, not config schema.
+
+**Known limits:** the plan's own partition/format commands are not exercised
+(real-disk apply must cover them). Arch only until other families have runtime
+bootstrap evidence. No LUKS. The arch/minimal plan does not lock root (B10).
+The closed Arch bootstrap (G03) stays until the F03 lanes move to plans.
+**Rejected:** running destructive plan steps on the image (weaker resume
+safety than G02's probed storage program); rewriting plan paths; a post-probe
+for every command (receipt-probed and always-run steps would fail).

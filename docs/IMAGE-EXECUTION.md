@@ -148,3 +148,20 @@ The VM runner needs `qemu-system-x86_64`, OVMF and `ssh`/`ssh-keygen`, and
 `borea` built next to `xtask`. It uses software emulation and QEMU snapshot
 mode. Without `--plan` there is no network device. The serial log, QEMU error
 log and verify report are the evidence.
+
+## Plan execution on an image (G05, D-040)
+
+`borea_run::image::apply_plan` installs a sealed Plan onto an image whose
+storage the closed program above prepared. It is reached through
+`cargo xtask e2e`; there is no `borea` CLI command for it yet.
+
+- The plan must be made for the image (`planner::Overrides::storage_ids`).
+  A plan for another disk, size, filesystem or family is refused.
+- Destructive storage steps are never run. Each must match what the image
+  already holds, or the run stops.
+- All other steps run in one sandbox in plan order: probe first, then the
+  action. Results go to a plan-digest-bound JSON journal.
+- Host files the plan names (the password slot, `copy_in` sources) are read
+  from a root-owned mode-0700 staging directory that mirrors those paths.
+- Supported today: Arch, unencrypted Btrfs or ext4, Limine. LUKS, the Omarchy
+  installer and package-absence probes are refused.

@@ -91,8 +91,50 @@ fn cmd_probe(args: &[&str], chroot: bool) -> Probe {
         chroot,
     }
 }
+/// Filesystem and partition identifiers of storage that already exists.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct StorageIds {
+    pub esp: String,
+    pub boot: String,
+    pub root: String,
+}
+/// Execution-lane inputs that are not part of the user's config.
+#[derive(Debug, Clone, Default)]
+pub struct Overrides {
+    /// Plan against prepared storage (a Borea disposable image) instead of
+    /// deriving identifiers from the config and disk serial.
+    pub storage_ids: Option<StorageIds>,
+    /// Extra kernel arguments, e.g. a serial console for the VM lane.
+    pub kernel_args: Vec<String>,
+}
 pub fn build(c: &Config, disk: DeviceIdentity, intent: Intent) -> Result<Plan> {
+    build_with(c, disk, intent, &Overrides::default())
+}
+pub fn build_with(
+    c: &Config,
+    disk: DeviceIdentity,
+    intent: Intent,
+    overrides: &Overrides,
+) -> Result<Plan> {
     c.validate()?;
+    if let Some(ids) = &overrides.storage_ids {
+        if c.disk.encrypt {
+            return Err(BoreaError::unsupported(
+                "prepared-storage planning does not support LUKS; plan without storage ids",
+            ));
+        }
+        if [&ids.esp, &ids.boot, &ids.root]
+            .iter()
+            .any(|u| Uuid::parse_str(u).is_err())
+        {
+            return Err(BoreaError::invalid("storage ids must be UUIDs"));
+        }
+    }
+    if overrides.kernel_args.iter().any(|a| {
+        a.is_empty() || a.contains(|c: char| c.is_whitespace() || c.is_control() || c == '"')
+    }) {
+        return Err(BoreaError::invalid("invalid extra kernel argument"));
+    }
     let matrix = Matrix::embedded()?;
     let family = recipe::family(c.target.family)?;
     let resolved = crate::loader(c, &family, &matrix)?;
@@ -105,6 +147,14 @@ pub fn build(c: &Config, disk: DeviceIdentity, intent: Intent) -> Result<Plan> {
     let config_digest = digest(c)?;
     let matrix_digest = digest(&matrix)?;
     let uuid = |role: &str| {
+        if let Some(ids) = &overrides.storage_ids {
+            match role {
+                "gpt.esp" | "fat" => return ids.esp.clone(),
+                "gpt.boot" | "fs.boot" => return ids.boot.clone(),
+                "gpt.root" | "fs.root" => return ids.root.clone(),
+                _ => {}
+            }
+        }
         Uuid::new_v5(
             &Uuid::NAMESPACE_OID,
             format!("{config_digest}:{}:{role}", disk.serial).as_bytes(),
@@ -755,7 +805,12 @@ pub fn build(c: &Config, disk: DeviceIdentity, intent: Intent) -> Result<Plan> {
     } else {
         String::new()
     };
-    let cmdline = format!("{rootarg}{subvol}{cryptarg}");
+    let extra: String = overrides
+        .kernel_args
+        .iter()
+        .map(|a| format!(" {a}"))
+        .collect();
+    let cmdline = format!("{rootarg}{subvol}{cryptarg}{extra}");
     b.cmd(
         "boot.initramfs",
         Phase::Boot,
@@ -1183,5 +1238,68 @@ mod tests {
         let mut p = plan(Filesystem::Btrfs, FamilyId::Arch);
         p.steps.last_mut().unwrap().danger = Danger::Destructive;
         assert!(p.seal().is_err());
+    }
+    #[test]
+    fn overrides_plan_against_prepared_storage() {
+        let mut c = Config::parse(include_str!("../../../recipes/profiles/minimal.toml")).unwrap();
+        c.target.family = FamilyId::Arch;
+        c.apps.codecs = false;
+        let disk = || DeviceIdentity {
+            path: c.disk.device.clone(),
+            serial: "fixture-disk".into(),
+            size: 20 * 1024 * 1024 * 1024,
+            sector_size: 512,
+        };
+        let intent = || Intent {
+            components: Vec::new(),
+            greeter: "none".into(),
+            session: None,
+            autostart: None,
+        };
+        let ids = StorageIds {
+            esp: "11111111-2222-8333-a444-555555555555".into(),
+            boot: "22222222-2222-8333-a444-555555555555".into(),
+            root: "33333333-2222-8333-a444-555555555555".into(),
+        };
+        let mut o = Overrides {
+            storage_ids: Some(ids.clone()),
+            kernel_args: vec!["console=ttyS0,115200".into()],
+        };
+        let json = build_with(&c, disk(), intent(), &o)
+            .unwrap()
+            .json()
+            .unwrap();
+        for needle in [
+            format!("--partition-guid=1:{}", ids.esp),
+            format!("--partition-guid=3:{}", ids.root),
+            "\"-i\",\n          \"11111111\"".to_string(),
+            format!("UUID={} /boot ext4", ids.boot),
+            format!("PARTUUID={} /boot/efi", ids.esp),
+            format!(
+                "root=UUID={} rootflags=subvol=@ console=ttyS0,115200",
+                ids.root
+            ),
+        ] {
+            assert!(json.contains(&needle), "{needle}");
+        }
+        // Defaults are unchanged: `build` is `build_with` without overrides.
+        assert_eq!(
+            build(&c, disk(), intent()).unwrap().digest,
+            build_with(&c, disk(), intent(), &Overrides::default())
+                .unwrap()
+                .digest
+        );
+        o.kernel_args = vec!["quiet splash".into()];
+        assert!(build_with(&c, disk(), intent(), &o).is_err());
+        o.kernel_args.clear();
+        o.storage_ids.as_mut().unwrap().root = "not-a-uuid".into();
+        assert!(build_with(&c, disk(), intent(), &o).is_err());
+        c.disk.encrypt = true;
+        c.disk.luks_password_file = Some("/run/borea/luks.pass".into());
+        o.storage_ids = Some(ids);
+        assert_eq!(
+            build_with(&c, disk(), intent(), &o).unwrap_err().code,
+            "E_UNSUPPORTED"
+        );
     }
 }

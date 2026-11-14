@@ -106,7 +106,7 @@ fn run() -> Result<()> {
             ));
         }
         [] | ["--help"] => println!(
-            "cargo xtask runtime check\ncargo xtask matrix check|render [--check]|verify --strict\ncargo xtask recipe lint\ncargo xtask plan golden [--update]\ncargo xtask secret canary\ncargo xtask disk selftest --stage create\ncargo xtask disk bootstrap --fs btrfs|ext4 [--out ABSOLUTE_IMAGE [--plan-out ABSOLUTE_PLAN]]\ncargo xtask vm boot --image ABSOLUTE_IMAGE --fs btrfs|ext4 --serial-log ABSOLUTE_LOG [--plan PLAN --report ABSOLUTE_REPORT] [--expect pass|fail]\ncargo xtask vm corrupt-root --image ABSOLUTE_IMAGE --out ABSOLUTE_COPY\ncargo xtask e2e --family FAMILY --profile PROFILE [--loader auto|limine|grub] [--root-fs btrfs|ext4] [--keep] [--out ABSOLUTE_DIR]\ncargo xtask env --family FAMILY -- COMMAND...\ne2e apply is gated (D-038); runs end at the apply stage with result.json pass=false."
+            "cargo xtask runtime check\ncargo xtask matrix check|render [--check]|verify --strict\ncargo xtask recipe lint\ncargo xtask plan golden [--update]\ncargo xtask secret canary\ncargo xtask disk selftest --stage create\ncargo xtask disk bootstrap --fs btrfs|ext4 [--out ABSOLUTE_IMAGE [--plan-out ABSOLUTE_PLAN]]\ncargo xtask vm boot --image ABSOLUTE_IMAGE --fs btrfs|ext4 --serial-log ABSOLUTE_LOG [--plan PLAN --report ABSOLUTE_REPORT] [--expect pass|fail]\ncargo xtask vm corrupt-root --image ABSOLUTE_IMAGE --out ABSOLUTE_COPY\ncargo xtask e2e --family FAMILY --profile PROFILE [--loader auto|limine|grub] [--root-fs btrfs|ext4] [--keep] [--out ABSOLUTE_DIR]\ncargo xtask env --family FAMILY -- COMMAND...\ne2e runs arch/minimal and arch/minimal-ext4 through the image plan executor (D-040)."
         ),
         _ => {
             return Err(BoreaError::invalid(

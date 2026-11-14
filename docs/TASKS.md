@@ -17,7 +17,7 @@ acceptance requires a live disk, package transaction or VM is marked done.
 | D01–D13 | Selection/package/greeter/autostart planning; unpinned paths refused | Verified pins, seeds, session entries and exact VM cells |
 | E01–E05 | Catalogue preview, documented policy model/operations and process tests | Old source/upstream commit unavailable; verify mapping, update flock and removals |
 | A11, C08, C09, D14, E07 | D-039 scope revision cards (2026-11-14) | Not started; evidence in validation/scope-revision.md |
-| F01–F05 | Sparse image creation, cached container runner, golden/render/release gates; F03 Arch Btrfs/ext4 QEMU boot, SSH verify and corrupted-image lane; F04 e2e orchestrator and artifacts | F04 apply stage gated on the G05 image plan executor (D-038); VM matrix |
+| F01–F05 | Sparse image creation, cached container runner, golden/render/release gates; F03 Arch Btrfs/ext4 QEMU boot, SSH verify and corrupted-image lane; F04 e2e orchestrator; G05 image plan executor; arch/minimal (btrfs, limine) passes e2e in CI | F05 matrix runner and validated-cell record; other cells |
 
 The exact unsupported errors are documented in IMPLEMENTATION.md. No checks,
 keys or matrix tiers were weakened to make a missing integration report green.
@@ -728,23 +728,15 @@ release. Deferred cards stay in this file marked `deferred`.
   and verify report.
 - **Verify:** `cargo xtask e2e --family arch --profile minimal`
 - **Out:** parallel scheduler, cloud runners.
-- **Status:** orchestrator done; blocked at apply (D-038).
-  `sudo env BOREA_RUNTIME_CACHE=/abs/cache target/release/xtask e2e --family arch --profile minimal`
-  creates a G02 image, plans against its identity, and writes `plan.json`,
-  `image.json`, `storage.journal` and `result.json`
-  `{cell, commit, pass, failed_stage, stages, artifacts, identity, duration_s}`
-  under `target/e2e/arch/minimal/<UTC timestamp>/`. Apply then refuses with
-  `E_UNSUPPORTED` (exit 3). No executor runs plan steps against an image, and
-  `identity` shows that plan and image UUIDs differ. Boot and verify reuse
-  `vm::boot` and are recorded as `not_run` until apply exists. Other families,
-  session profiles and GRUB are refused before an image is created. The
-  `disposable-image-storage` workflow's `e2e` job asserts this outcome and
+- **Status:** done with G05. `sudo env BOREA_RUNTIME_CACHE=/abs/cache target/release/xtask e2e --family arch --profile minimal`
+  creates a G02 image, plans against its identity and UUIDs, applies the plan
+  with the image plan executor (D-040), boots it and runs `borea verify --ssh`.
+  It writes `plan.json`, `image.json`, `storage.journal`, `journal.jsonl`,
+  `serial.log`, `verify.json` and `result.json` under
+  `target/e2e/arch/minimal/<UTC timestamp>/`. Other families, session profiles
+  and GRUB are refused before an image is created. The
+  `disposable-image-storage` workflow's `e2e` job requires `pass: true` and
   uploads `e2e-arch-minimal`.
-- **Blocker:** tried both D-038 options. Both need `borea-run` and
-  `borea-distro` changes. Exact error:
-  `E_UNSUPPORTED: e2e apply is gated (D-038): no executor runs a Plan's steps against a Borea disposable image`.
-  Smallest next experiment: G05 below. Start with `base.hostname` and
-  `base.fstab` as image-sandbox `write_file` steps with their probes, then boot.
 
 ### G06 — Loop attach must not carry the image lock
 - **WS:** G · **Dep:** G02
@@ -781,6 +773,11 @@ release. Deferred cards stay in this file marked `deferred`.
   absent from every artifact.
 - **Verify:** `sudo env BOREA_RUNTIME_CACHE=/abs/cache target/release/xtask e2e --family arch --profile minimal`
 - **Out:** physical disks, LUKS, non-Arch families, session packages.
+- **Status:** done (D-040). arch/minimal (btrfs, limine) passes in the e2e CI
+  job. Not done here: matrix promotion. `recipes/matrix.toml` has no field for
+  a VM-validated cell and `matrix verify --strict` has no artifact reader;
+  both belong to F05. Follow-ups: ext4 and GRUB lanes (B09/B11), root lock in
+  the plan (B10), moving the F03 bootstrap lanes onto plans.
 
 ### F05 — Matrix runner, render and nightly CI
 - **WS:** F · **Dep:** F04
