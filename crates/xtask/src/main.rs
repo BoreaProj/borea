@@ -9,6 +9,9 @@ use std::{
     os::unix::fs::OpenOptionsExt,
     path::{Path, PathBuf},
 };
+
+mod vm;
+
 fn main() {
     if let Err(e) = run() {
         eprintln!("{e}");
@@ -56,13 +59,26 @@ fn run() -> Result<()> {
         ["disk", "selftest", "--fs", fs, "--family", family] => {
             disk_storage(fs, FamilyId::parse(family)?)?
         }
-        ["disk", "bootstrap", "--fs", fs] => disk_bootstrap(fs)?,
-        ["disk", "bootstrap", "--fs", fs, "--pacman-cache", cache] => {
-            disk_bootstrap_cached(fs, Some(Path::new(cache)))?
+        ["disk", "bootstrap", "--fs", fs] => disk_bootstrap(fs, None)?,
+        ["disk", "bootstrap", "--fs", fs, "--out", image] => {
+            disk_bootstrap(fs, Some(Path::new(image)))?
         }
+        ["disk", "bootstrap", "--fs", fs, "--pacman-cache", cache] => {
+            disk_bootstrap_cached(fs, Some(Path::new(cache)), None)?
+        }
+        [
+            "vm",
+            "boot",
+            "--image",
+            image,
+            "--fs",
+            fs,
+            "--serial-log",
+            log,
+        ] => vm::boot(Path::new(image), fs, Path::new(log))?,
         ["disk", ..] => {
             return Err(BoreaError::unsupported(
-                "disk mutation selftests are not implemented; only --stage create is available; image/loop validation is pending F01/B02/B03",
+                "unknown disk task or option; see cargo xtask --help",
             ));
         }
         ["e2e", "--profile", "omarchy-trim"] => {
@@ -84,12 +100,12 @@ fn run() -> Result<()> {
         }
         ["env", ..] => envrun(&args[1..])?,
         ["vm", ..] => {
-            return Err(BoreaError::unsupported(
-                "QEMU boot/SSH orchestration is pending F03; no media pins or known-good disk image are present",
+            return Err(BoreaError::invalid(
+                "usage: cargo xtask vm boot --image ABSOLUTE_IMAGE --fs btrfs|ext4 --serial-log ABSOLUTE_LOG",
             ));
         }
         [] | ["--help"] => println!(
-            "cargo xtask runtime check\ncargo xtask matrix check|render [--check]|verify --strict\ncargo xtask recipe lint\ncargo xtask plan golden [--update]\ncargo xtask secret canary\ncargo xtask disk selftest --stage create\ncargo xtask env --family FAMILY -- COMMAND...\nDisk mutation, VM and installation e2e lanes remain gated; see docs/IMPLEMENTATION.md."
+            "cargo xtask runtime check\ncargo xtask matrix check|render [--check]|verify --strict\ncargo xtask recipe lint\ncargo xtask plan golden [--update]\ncargo xtask secret canary\ncargo xtask disk selftest --stage create\ncargo xtask disk bootstrap --fs btrfs|ext4 [--out ABSOLUTE_IMAGE]\ncargo xtask vm boot --image ABSOLUTE_IMAGE --fs btrfs|ext4 --serial-log ABSOLUTE_LOG\ncargo xtask env --family FAMILY -- COMMAND...\nFull installation e2e and SSH verification remain gated; see docs/IMPLEMENTATION.md."
         ),
         _ => {
             return Err(BoreaError::invalid(
@@ -545,11 +561,15 @@ fn disk_storage(filesystem: &str, family: FamilyId) -> Result<()> {
     Ok(())
 }
 
-fn disk_bootstrap(filesystem: &str) -> Result<()> {
-    disk_bootstrap_cached(filesystem, None)
+fn disk_bootstrap(filesystem: &str, image_out: Option<&Path>) -> Result<()> {
+    disk_bootstrap_cached(filesystem, None, image_out)
 }
 
-fn disk_bootstrap_cached(filesystem: &str, pacman_cache: Option<&Path>) -> Result<()> {
+fn disk_bootstrap_cached(
+    filesystem: &str,
+    pacman_cache: Option<&Path>,
+    image_out: Option<&Path>,
+) -> Result<()> {
     let cache = std::env::var_os("BOREA_RUNTIME_CACHE")
         .map(PathBuf::from)
         .ok_or_else(|| {
@@ -558,7 +578,14 @@ fn disk_bootstrap_cached(filesystem: &str, pacman_cache: Option<&Path>) -> Resul
     let temp = tempfile::Builder::new()
         .prefix("borea-bootstrap-selftest-")
         .tempdir_in("/tmp")?;
-    let image = temp.path().join("disk.img");
+    let image = image_out
+        .map(Path::to_path_buf)
+        .unwrap_or_else(|| temp.path().join("disk.img"));
+    if image_out.is_some() && (!image.is_absolute() || image.exists()) {
+        return Err(BoreaError::invalid(
+            "--out requires an absolute path that does not already exist",
+        ));
+    }
     let manifest = temp.path().join("manifest.json");
     let storage_journal = temp.path().join("storage.journal");
     let bootstrap_journal = temp.path().join("bootstrap.journal");

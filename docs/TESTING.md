@@ -177,6 +177,12 @@ qemu-system-x86_64 \
 The test SSH key is injected by the plan in test profiles only
 (`[account] ssh_authorized_key_file`). Production profiles do not enable SSH.
 
+The current F03 implementation is a narrower boot smoke, not this full VM
+pipeline: the disposable-image workflow boots Arch Btrfs and ext4 images with
+OVMF, then checks the mounted root type, kernel root arguments and serial login
+prompt. It does not run SSH verification or promote any matrix cell. See
+[IMAGE-EXECUTION.md](IMAGE-EXECUTION.md) for the exact command and limits.
+
 ### Pass criteria
 
 - `apply` exits 0 and the journal has no failed step.
