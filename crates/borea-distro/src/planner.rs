@@ -799,7 +799,7 @@ pub fn build(c: &Config, disk: DeviceIdentity, intent: Intent) -> Result<Plan> {
             );
         }
         let contents = format!(
-            "timeout: 5\n/Borea\n    protocol: linux\n    path: guid({}):/vmlinuz-linux\n    module_path: guid({}):/initramfs-linux.img\n    cmdline: {cmdline}\n/Borea fallback\n    protocol: linux\n    path: guid({}):/vmlinuz-linux\n    module_path: guid({}):/initramfs-linux-fallback.img\n    cmdline: {cmdline}\n",
+            "timeout: 5\nserial: yes\n\n/Borea\n    protocol: linux\n    path: guid({}):/vmlinuz-linux\n    module_path: guid({}):/initramfs-linux.img\n    cmdline: {cmdline}\n/Borea fallback\n    protocol: linux\n    path: guid({}):/vmlinuz-linux\n    module_path: guid({}):/initramfs-linux-fallback.img\n    cmdline: {cmdline}\n",
             uuid("fs.boot"),
             uuid("fs.boot"),
             uuid("fs.boot"),
@@ -1110,6 +1110,7 @@ mod tests {
                 _ => None,
             })
             .unwrap();
+        assert!(config.contains("serial: yes"));
         assert!(config.contains("path: guid(") && config.contains("):/vmlinuz-linux"));
         assert!(config.contains("module_path: guid(") && config.contains("):/initramfs-linux.img"));
     }

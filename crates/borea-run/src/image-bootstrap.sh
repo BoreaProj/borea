@@ -186,6 +186,7 @@ do_bootloader() {
     fi
     cat << EOF > /target/boot/efi/EFI/BOOT/limine.conf
 timeout: 3
+serial: yes
 
 /Borea (Arch Linux)
     protocol: linux
