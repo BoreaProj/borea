@@ -80,7 +80,9 @@ pub fn boot(image: &Path, filesystem: &str, serial_log: &Path) -> Result<()> {
                 image.display()
             ))
             .arg("-device")
-            .arg("virtio-blk-pci,drive=disk,bootindex=1")
+            .arg("ich9-ahci,id=sata")
+            .arg("-device")
+            .arg("ide-hd,drive=disk,bus=sata.0,bootindex=1")
             .arg("-boot")
             .arg("order=c,menu=off,strict=on")
             .args([
