@@ -106,6 +106,16 @@ fn fixture_apply_resume_verify_and_stale_journal() {
             .status
             .success()
     );
+    let mixed = borea()
+        .arg("verify")
+        .arg(&path)
+        .arg("--root")
+        .arg(&root)
+        .args(["--identity", "/tmp/key"])
+        .output()
+        .unwrap();
+    assert_eq!(mixed.status.code(), Some(2));
+    assert!(String::from_utf8_lossy(&mixed.stderr).contains("apply only to --ssh"));
     fs::write(root.join("etc/hostname"), "mutated").unwrap();
     assert_eq!(
         borea()
@@ -468,4 +478,40 @@ fn doctor_reports_missing_runtime_without_host_package_manager_fallback() {
             .unwrap()
             .contains("runtime fetch")
     );
+}
+#[test]
+fn ssh_verify_json_is_not_corrupted_by_remote_output() {
+    use std::os::unix::fs::PermissionsExt;
+    let dir = tempfile::tempdir().unwrap();
+    let bin = dir.path().join("bin");
+    fs::create_dir(&bin).unwrap();
+    let fake = bin.join("ssh");
+    // Prints like a real remote command; `pacman -Qq` lists one leftover package.
+    fs::write(
+        &fake,
+        "#!/bin/sh\nfor last; do :; done\necho noisy-remote-output\ncase \"$last\" in 'pacman -Qq') echo grub ;; esac\n",
+    )
+    .unwrap();
+    fs::set_permissions(&fake, fs::Permissions::from_mode(0o755)).unwrap();
+    let mut p = fixture_plan();
+    p.checks.push(Check::PackagesAbsent {
+        packages: vec!["grub".into()],
+    });
+    p.seal().unwrap();
+    let path = dir.path().join("plan.json");
+    fs::write(&path, p.json().unwrap()).unwrap();
+    let output = borea()
+        .arg("verify")
+        .arg(&path)
+        .args(["--ssh", "root@127.0.0.1", "--ssh-port", "2222", "--json"])
+        .env(
+            "PATH",
+            format!("{}:{}", bin.display(), std::env::var("PATH").unwrap()),
+        )
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(5));
+    let report: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+    assert_eq!(report["checks"][0]["ok"], true);
+    assert_eq!(report["checks"][1]["detail"], "still installed: grub");
 }

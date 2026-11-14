@@ -89,7 +89,7 @@ fn run() -> Result<()> {
     let mut raw = std::env::args().skip(1).collect::<Vec<_>>();
     if raw.is_empty() || raw == ["--help"] || raw == ["help"] {
         println!(
-            "borea {} — experimental installer planning, family runtimes and fixture tools\n\nCommands:\n  doctor --family FAMILY [--cache DIR] [--json]\n  image create|apply|bootstrap --family FAMILY --manifest FILE\n  image bootstrap --family arch --manifest FILE --password-file PRIVATE_FILE --journal FILE --yes\n  runtime list|fetch|verify|probe|exec [--family FAMILY] [--cache DIR]\n  catalogue --family FAMILY [--json]\n  explain COMPONENT --family FAMILY\n  plan --config FILE --out FILE [--dry-run] [--fixture --identity FILE]\n  apply PLAN --dry-run\n  apply PLAN --yes --device DEVICE (live execution gated)\n  apply PLAN --fixture-root DIR --journal FILE [--resume]\n  verify PLAN --root DIR | --ssh USER@HOST [--json]\n  status --journal FILE\n  omarchy configure --config FILE [--json]\n  omarchy trim --list | ID... --dry-run\n  omarchy defaults status --policy FILE\n\nNo VM cells are supported yet. See docs/IMPLEMENTATION.md.",
+            "borea {} — experimental installer planning, family runtimes and fixture tools\n\nCommands:\n  doctor --family FAMILY [--cache DIR] [--json]\n  image create|apply|bootstrap --family FAMILY --manifest FILE\n  image bootstrap --family arch --manifest FILE --password-file PRIVATE_FILE --journal FILE --yes\n  runtime list|fetch|verify|probe|exec [--family FAMILY] [--cache DIR]\n  catalogue --family FAMILY [--json]\n  explain COMPONENT --family FAMILY\n  plan --config FILE --out FILE [--dry-run] [--fixture --identity FILE]\n  apply PLAN --dry-run\n  apply PLAN --yes --device DEVICE (live execution gated)\n  apply PLAN --fixture-root DIR --journal FILE [--resume]\n  verify PLAN --root DIR | --ssh USER@HOST [--ssh-port N] [--identity KEY] [--known-hosts FILE] [--json]\n  status --journal FILE\n  omarchy configure --config FILE [--json]\n  omarchy trim --list | ID... --dry-run\n  omarchy defaults status --policy FILE\n\nNo VM cells are supported yet. See docs/IMPLEMENTATION.md.",
             version()
         );
         return Ok(());
@@ -125,7 +125,10 @@ fn run() -> Result<()> {
             &["device", "fixture-root", "journal"],
             &["json", "dry-run", "yes", "resume"],
         ),
-        "verify" => (&["root", "ssh"], &["json"]),
+        "verify" => (
+            &["root", "ssh", "ssh-port", "identity", "known-hosts"],
+            &["json"],
+        ),
         "status" => (&["journal"], &["json"]),
         _ => return Err(BoreaError::invalid("unknown command; run borea --help")),
     };
@@ -291,11 +294,32 @@ fn run() -> Result<()> {
                     "verify needs PLAN and exactly one of --root/--ssh",
                 ));
             }
+            if a.value("root").is_some()
+                && ["ssh-port", "identity", "known-hosts"]
+                    .iter()
+                    .any(|k| a.value(k).is_some())
+            {
+                return Err(BoreaError::invalid(
+                    "--ssh-port, --identity and --known-hosts apply only to --ssh",
+                ));
+            }
             let p = load_plan(&a.positionals[0])?;
             let r = if let Some(root) = a.value("root") {
                 borea_run::verify::offline(&p, Path::new(root))?
             } else {
-                borea_run::verify::ssh(&p, a.required("ssh")?)?
+                let port = a
+                    .value("ssh-port")
+                    .map(|v| {
+                        v.parse::<u16>()
+                            .map_err(|_| BoreaError::invalid("--ssh-port must be 1-65535"))
+                    })
+                    .transpose()?;
+                let options = borea_run::verify::SshOptions {
+                    port,
+                    identity: a.value("identity").map(Into::into),
+                    known_hosts: a.value("known-hosts").map(Into::into),
+                };
+                borea_run::verify::ssh_with(&p, a.required("ssh")?, &options)?
             };
             output(&serde_json::to_value(&r)?, json)?;
             if !r.passed {

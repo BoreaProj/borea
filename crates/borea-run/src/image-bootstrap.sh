@@ -72,6 +72,9 @@ probe_pacstrap() {
     test -x /target/usr/bin/bash
     test -x /target/usr/bin/pacman
     test -d /target/usr/lib/modules
+    test -s /target/etc/pacman.conf
+    grep -q '^[[:space:]]*Server[[:space:]]*=' /target/etc/pacman.d/mirrorlist
+    ! grep -q '^[[:space:]]*NoExtract' /target/etc/pacman.conf
 }
 do_pacstrap() {
     # Ensure active mirrors are present
@@ -83,8 +86,11 @@ Server = https://mirrors.kernel.org/archlinux/$repo/os/$arch
 Server = https://mirror.rackspace.com/archlinux/$repo/os/$arch
 EOF
     fi
+    # The runtime is built from a container image whose NoExtract rules strip
+    # pacman.conf, the mirrorlist, docs and locales. They must not reach the target.
+    grep -v '^[[:space:]]*NoExtract' /etc/pacman.conf > /tmp/borea-pacstrap.conf
     # Execute pacstrap for base system, kernel, tools, network and bootloader
-    pacstrap -K -c /target \
+    pacstrap -C /tmp/borea-pacstrap.conf -K -c /target \
         base \
         linux \
         linux-firmware \
