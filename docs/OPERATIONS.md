@@ -171,7 +171,7 @@ Production profiles do not enable SSH. Use the console for the first login.
 
 | Symptom | Likely cause | Action |
 | --- | --- | --- |
-| Limine prompt/menu but no boot | wrong `guid(...)` or kernel path | run Borea from a separate execution host, `blkid` the `/boot` partition, compare with `/boot/efi/EFI/BOOT/limine.conf`, re-run the Limine steps |
+| Limine prompt/menu but no boot | missing/stale kernel copy on the ESP | run Borea from a separate execution host, compare `/boot` with `/boot/efi` and inspect `/boot/efi/EFI/BOOT/limine.conf`, then run `borea-limine-sync` |
 | GRUB prompt, no menu | `grub.cfg` not generated or wrong path | run Borea from a separate execution host, `borea verify --root /mnt`, re-run the boot steps |
 | Kernel panic, no root | wrong `root=`/UUID, missing `rootflags=subvol=@`, or missing initramfs | check `fstab`, `crypttab`, cmdline and initramfs command in the journal |
 | `mount: unknown filesystem type 'btrfs'` | initramfs lacks the Btrfs module | chroot, add `btrfs` to the initramfs config, regenerate, re-verify |

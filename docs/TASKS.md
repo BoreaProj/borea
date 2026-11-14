@@ -16,7 +16,7 @@ acceptance requires a live disk, package transaction or VM is marked done.
 | C01–C07 | Four native argv adapters and base configuration intent | Live roots, package indexes/repos, family-native boot details |
 | D01–D13 | Selection/package/greeter/autostart planning; unpinned paths refused | Verified pins, seeds, session entries and exact VM cells |
 | E01–E05 | Catalogue preview, documented policy model/operations and process tests | Old source/upstream commit unavailable; verify mapping, update flock and removals |
-| F01–F05 | Sparse image creation, cached container runner, golden/render/release gates | Loop lifecycle, pinned tool images/media, QEMU orchestration and artifact producer |
+| F01–F05 | Sparse image creation, cached container runner, golden/render/release gates; F03 Arch Btrfs/ext4 boot-to-login smoke | SSH verification, generic e2e orchestration, and the remaining VM matrix |
 
 The exact unsupported errors are documented in IMPLEMENTATION.md. No checks,
 keys or matrix tiers were weakened to make a missing integration report green.
@@ -305,7 +305,7 @@ release. Deferred cards stay in this file marked `deferred`.
 - **Deliverable:** package set (`limine`, `efibootmgr`); copy `BOOTX64.EFI` to
   the ESP fallback and `/EFI/borea`; `efibootmgr` entry; write
   `/boot/efi/EFI/BOOT/limine.conf` (first EFI candidate) plus an informational
-  copy at `/boot/limine/limine.conf`, with `guid(<boot-fs-uuid>)` kernel paths,
+  copy at `/boot/limine/limine.conf`, with `boot()` kernel paths into the ESP,
   the fallback initramfs entry and `rootflags=subvol=@` (or the ext4 cmdline).
 - **Done when:** an Arch fixture root receives the expected EFI copy, entry and
   config bytes; a kernel package update leaves the config valid.
@@ -617,13 +617,19 @@ release. Deferred cards stay in this file marked `deferred`.
 
 ### F03 — QEMU boot and SSH verify
 - **WS:** F · **Dep:** F01
-- **Files:** `crates/xtask/src/vm.rs`
+- **Files:** `crates/xtask/src/{main,vm}.rs`,
+  `.github/workflows/image.yml`,
+  `docs/{IMAGE-EXECUTION,IMPLEMENTATION,TASKS,TESTING}.md`
 - **Deliverable:** boot a raw disk with OVMF, forward SSH, inject a test key,
   wait for the system, run `borea verify --ssh`, capture serial log and exit
   code.
+- **Current:** the disposable-image workflow boots Arch Btrfs and ext4 images
+  with OVMF and checks the expected root filesystem, kernel root arguments and
+  serial login prompt. SSH verification and the corrupted-image negative case
+  remain pending; this partial smoke does not support a matrix cell.
 - **Done when:** a known-good image passes; a corrupted image fails with the
   serial log attached.
-- **Verify:** `cargo xtask vm boot --image fixtures/images/minimal.img --expect pass`
+- **Verify:** `cargo xtask vm boot --image /absolute/minimal.img --fs btrfs --serial-log /absolute/minimal.serial.log`
 - **Out:** graphical console testing, screenshot comparison.
 
 ### F04 — e2e orchestrator and artifacts

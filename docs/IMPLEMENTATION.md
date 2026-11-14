@@ -44,12 +44,12 @@ Runtime delivery results are recorded in [validation/runtime.md](validation/runt
 | Plans | Canonical SHA-256, digest validation, UUIDv5 storage IDs, stable ordered phases, config/matrix fingerprints | Full typed action/probe model from architecture |
 | Storage | Closed image GPT/FAT/ext4/Btrfs execution, UUID/layout and filesystem probes, subvolumes and fstab; draft LUKS intent | Encrypted image execution, installation integration and VM boot validation |
 | Families | Verified independent tool bundles plus draft native argv, base files, account/package intent | Real bootstrap repository setup and chroot lifecycle |
-| Boot | Auto policy, Arch Limine/fallback configs, family GRUB/initramfs intent | Encryption hooks, native GRUB/BLS details, EFI entries, VM boot checks |
+| Boot | Auto policy, Arch Limine/fallback configs, family GRUB/initramfs intent; Arch boot-to-login smoke implemented, CI pending | Encryption hooks, native GRUB/BLS details, EFI entries, full VM verification |
 | Sessions/apps | KDE/GNOME/COSMIC, compositor/shell selection, greetd/greeter intent, Firefox/Flatpak/codec package maps | Shell seeds/ownership and upstream package validation; unpinned paths refuse |
-| Execution | Dry-run and file fixtures; image identity/locks, durable receipts, private runtime snapshot, mount namespace cleanup, timeout and bounded diagnostics; Arch image bootstrap uses stdin-only account credentials | General plan-based live installation, QEMU/SSH boot acceptance |
+| Execution | Dry-run and file fixtures; image identity/locks, durable receipts, private runtime snapshot, mount namespace cleanup, timeout and bounded diagnostics; Arch image bootstrap uses stdin-only account credentials | General plan-based live installation, SSH-based QEMU verification |
 | Verification | Offline file checks; SSH argv quoting and check reports; failures exit 5 | Offline native package/unit checks, remote timeouts and complete boot checks |
 | Omarchy | Full documented trim catalogue preview, browser protection, policy transitions, status/restore/note-install | Live removals, automatic update-window detection and hooks |
-| Harness | 29 golden cases, recipe/matrix checks, secret boundary canary, disposable-image storage selftests, restricted cached container runner | Known-good VM/media pins, QEMU/SSH e2e and artifact collection |
+| Harness | 29 golden cases, recipe/matrix checks, secret boundary canary, disposable-image storage selftests, restricted cached container runner; Arch Btrfs/ext4 boot smoke added, CI pending | SSH verification, generic e2e orchestration and full matrix artifacts |
 
 No area whose remaining column includes VM validation is claimed installable.
 The release gate `cargo xtask matrix verify --strict` intentionally exits nonzero
@@ -150,8 +150,9 @@ The Arch Omarchy addition is recorded in [validation/omarchy-profile.md](validat
 G01 runtime provisioning and G02 closed image storage execution are implemented.
 G03 adds Arch target bootstrap and Limine configuration on disposable images.
 G04 secures bootstrap credentials; neither the bootstrap receipt nor its
-filesystem probes establish that the image boots. QEMU/SSH boot acceptance,
-LUKS2, and other-family bootstrap remain separate cards.
+filesystem probes establish that the image boots. F03 now adds a partial Arch
+Btrfs/ext4 QEMU boot-to-login smoke; SSH verification and full matrix acceptance,
+LUKS2, and other-family bootstrap remain separate work.
 
 Before enabling live apply, also fix the known draft planner gaps: GRUB config
 integration on Arch/Fedora/openSUSE, Fedora signed-boot behavior, Debian package

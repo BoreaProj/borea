@@ -772,6 +772,33 @@ pub fn build(c: &Config, disk: DeviceIdentity, intent: Intent) -> Result<Plan> {
         0o644,
     );
     if resolved == Loader::Limine {
+        for (id, name) in [
+            ("kernel", "vmlinuz-linux"),
+            ("initramfs", "initramfs-linux.img"),
+        ] {
+            b.cmd(
+                &format!("boot.limine.copy.{id}"),
+                Phase::Boot,
+                argv(&[
+                    "install",
+                    "-m",
+                    "0644",
+                    &format!("/boot/{name}"),
+                    &format!("/boot/efi/{name}"),
+                ]),
+                true,
+                cmd_probe(
+                    &[
+                        "cmp",
+                        "-s",
+                        &format!("/boot/{name}"),
+                        &format!("/boot/efi/{name}"),
+                    ],
+                    true,
+                ),
+                Danger::Mutating,
+            );
+        }
         for (id, path) in [
             ("fallback", "/boot/efi/EFI/BOOT"),
             ("borea", "/boot/efi/EFI/borea"),
@@ -799,11 +826,7 @@ pub fn build(c: &Config, disk: DeviceIdentity, intent: Intent) -> Result<Plan> {
             );
         }
         let contents = format!(
-            "timeout: 5\n/Borea\n    protocol: linux\n    path: guid({})/vmlinuz-linux\n    module_path: guid({})/initramfs-linux.img\n    cmdline: {cmdline}\n/Borea fallback\n    protocol: linux\n    path: guid({})/vmlinuz-linux\n    module_path: guid({})/initramfs-linux-fallback.img\n    cmdline: {cmdline}\n",
-            uuid("fs.boot"),
-            uuid("fs.boot"),
-            uuid("fs.boot"),
-            uuid("fs.boot")
+            "timeout: 5\nserial: yes\n\n/Borea\n    protocol: linux\n    path: boot():/vmlinuz-linux\n    module_path: boot():/initramfs-linux.img\n    cmdline: {cmdline}\n/Borea fallback\n    protocol: linux\n    path: boot():/vmlinuz-linux\n    module_path: boot():/initramfs-linux-fallback.img\n    cmdline: {cmdline}\n"
         );
         b.file(
             "boot.limine.config",
@@ -819,8 +842,26 @@ pub fn build(c: &Config, disk: DeviceIdentity, intent: Intent) -> Result<Plan> {
             contents,
             0o644,
         );
+        b.mkdir("boot.limine.sync.dir", Phase::Boot, "/etc/pacman.d/hooks");
+        b.file(
+            "boot.limine.sync.script",
+            Phase::Boot,
+            "/usr/local/bin/borea-limine-sync",
+            "#!/bin/sh\nset -eu\nmountpoint -q /boot/efi || { echo 'Borea Limine ESP is not mounted at /boot/efi' >&2; exit 1; }\nfor file in vmlinuz-linux initramfs-linux.img; do\n    test -s \"/boot/$file\"\n    install -m 0644 \"/boot/$file\" \"/boot/efi/$file\"\ndone\nif [ -s \"/boot/initramfs-linux-fallback.img\" ]; then\n    install -m 0644 \"/boot/initramfs-linux-fallback.img\" \"/boot/efi/initramfs-linux-fallback.img\"\nfi\n".into(),
+            0o755,
+        );
+        b.file(
+            "boot.limine.sync.hook",
+            Phase::Boot,
+            "/etc/pacman.d/hooks/zzzz-borea-limine-sync.hook",
+            "[Trigger]\nOperation = Install\nOperation = Upgrade\nType = Package\nTarget = linux\n\n[Action]\nDescription = Sync kernel and initramfs to the Limine ESP\nWhen = PostTransaction\nExec = /usr/local/bin/borea-limine-sync\n".into(),
+            0o644,
+        );
         checks.push(Check::FileExists {
             path: "/boot/efi/EFI/BOOT/BOOTX64.EFI".into(),
+        });
+        checks.push(Check::FileExists {
+            path: "/boot/efi/vmlinuz-linux".into(),
         });
     } else {
         b.file(
@@ -1097,6 +1138,32 @@ mod tests {
                 assert!(p.steps.iter().any(|s| s.id == "base.fstab"));
             }
         }
+    }
+    #[test]
+    fn limine_kernel_paths_use_esp_and_install_update_sync() {
+        let p = plan(Filesystem::Ext4, FamilyId::Arch);
+        let config = p
+            .steps
+            .iter()
+            .find(|step| step.id == "boot.limine.config")
+            .and_then(|step| match &step.action {
+                Action::WriteFile { contents, .. } => Some(contents.as_str()),
+                _ => None,
+            })
+            .unwrap();
+        assert!(config.contains("serial: yes"));
+        assert!(config.contains("path: boot():/vmlinuz-linux"));
+        assert!(config.contains("module_path: boot():/initramfs-linux.img"));
+        assert!(
+            p.steps
+                .iter()
+                .any(|step| step.id == "boot.limine.copy.kernel")
+        );
+        assert!(
+            p.steps
+                .iter()
+                .any(|step| step.id == "boot.limine.sync.hook")
+        );
     }
     #[test]
     fn digest_tampering_rejected() {

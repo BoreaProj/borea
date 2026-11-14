@@ -101,3 +101,24 @@ The selftest uses a canary password and refuses to report success if that canary
 appears in the bootstrap receipt. Bootstrap success reports
 `bootloader_configured: true`, `bootable: false`, and
 `vm_boot_verified: false`; QEMU/SSH boot acceptance is a separate card.
+
+### Arch boot-to-login smoke (F03, partial)
+
+The ephemeral image workflow retains each Arch bootstrap image long enough to
+boot it with QEMU/OVMF, then removes the image. Btrfs and ext4 are tested
+separately. The smoke check requires the expected root filesystem to mount, a
+root UUID in the kernel command line, the Btrfs `rootflags=subvol=@` flag only
+on the Btrfs lane, and the `borea` serial login prompt. It does not yet test SSH,
+account login, service health, or any desktop/session matrix cell, so it does
+not promote a matrix cell to supported.
+
+For a prepared image, run:
+
+```sh
+sudo target/release/xtask vm boot --image /absolute/test.img --fs btrfs \
+  --serial-log /absolute/btrfs.serial.log
+```
+
+The VM runner requires `qemu-system-x86_64` and OVMF firmware. It uses software
+emulation, QEMU snapshot mode and no network device; serial and QEMU error logs
+are the boot evidence. The source image remains unchanged.
