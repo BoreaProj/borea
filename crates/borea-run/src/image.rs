@@ -249,8 +249,26 @@ struct Loop {
     file: File,
     path: PathBuf,
 }
+/// Open a second, unlocked description of the same file for the loop driver.
+///
+/// `flock` belongs to the open file description. If the locked descriptor were
+/// handed to `LOOP_CONFIGURE`, the kernel's reference would keep the image
+/// lock held until a lazy detach finished (for example while udev still probes
+/// the device), and the next stage would fail with "already locked" (G06).
+fn unlocked_backing(image: &File) -> Result<File> {
+    let backing = OpenOptions::new()
+        .read(true)
+        .write(true)
+        .open(format!("/proc/self/fd/{}", image.as_raw_fd()))?;
+    let (a, b) = (image.metadata()?, backing.metadata()?);
+    if a.dev() != b.dev() || a.ino() != b.ino() {
+        return Err(fail("loop backing file identity mismatch"));
+    }
+    Ok(backing)
+}
 impl Loop {
     fn attach(image: &File, offset: u64, size: u64) -> Result<Self> {
+        let backing = unlocked_backing(image)?;
         let ctl = OpenOptions::new()
             .read(true)
             .write(true)
@@ -275,7 +293,7 @@ impl Loop {
                 return Err(fail("loop device identity mismatch"));
             }
             let cfg = LoopConfig {
-                fd: image.as_raw_fd() as u32,
+                fd: backing.as_raw_fd() as u32,
                 block_size: 512,
                 info: LoopInfo {
                     offset,
@@ -869,6 +887,22 @@ mod tests {
         assert!(script.contains("path: boot():/vmlinuz-linux"));
         assert!(script.contains("module_path: boot():/initramfs-linux.img"));
         assert!(script.contains("borea-limine-sync.hook"));
+    }
+
+    #[test]
+    fn loop_backing_does_not_carry_the_image_lock() {
+        let d = tempfile::tempdir().unwrap();
+        let path = d.path().join("disk.img");
+        let image = File::create_new(&path).unwrap();
+        let lock = |f: &File| unsafe { libc::flock(f.as_raw_fd(), libc::LOCK_EX | libc::LOCK_NB) };
+        assert_eq!(lock(&image), 0);
+        let backing = unlocked_backing(&image).unwrap();
+        let next = File::open(&path).unwrap();
+        assert_ne!(lock(&next), 0, "image lock is held while the stage runs");
+        drop(image);
+        // The loop driver's reference outlives the stage; the lock must not.
+        assert_eq!(lock(&next), 0);
+        drop(backing);
     }
 
     #[test]
