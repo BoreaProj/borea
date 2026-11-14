@@ -3,7 +3,7 @@ use serde::Serialize;
 use std::{
     fs,
     path::{Path, PathBuf},
-    process::Command,
+    process::{Command, Stdio},
 };
 #[derive(Debug, Serialize)]
 pub struct CheckResult {
@@ -122,20 +122,35 @@ pub fn ssh_with(plan: &Plan, host: &str, options: &SshOptions) -> Result<Report>
     for check in &plan.checks {
         if let Check::PackagesAbsent { packages } = check {
             // Query the complete installed set once; query errors must never count as absence.
-            let output = options.command(host, "pacman -Qq").output()?;
+            let output = options
+                .command(host, "pacman -Qq")
+                .stdin(Stdio::null())
+                .output()?;
             let installed = String::from_utf8_lossy(&output.stdout);
-            let ok = output.status.success()
-                && packages
-                    .iter()
-                    .all(|p| !installed.lines().any(|line| line == p));
+            let remaining: Vec<&str> = packages
+                .iter()
+                .map(String::as_str)
+                .filter(|p| installed.lines().any(|line| line == *p))
+                .collect();
+            let (ok, detail) = if !output.status.success() {
+                let stderr = String::from_utf8_lossy(&output.stderr);
+                (
+                    false,
+                    format!(
+                        "package query exited {}: {}",
+                        output.status.code().unwrap_or(-1),
+                        stderr.lines().next().unwrap_or("").trim()
+                    ),
+                )
+            } else if remaining.is_empty() {
+                (true, "selected packages absent".into())
+            } else {
+                (false, format!("still installed: {}", remaining.join(" ")))
+            };
             checks.push(CheckResult {
                 check: check.clone(),
                 ok,
-                detail: if ok {
-                    "selected packages absent".into()
-                } else {
-                    "package query failed or selected packages remain installed".into()
-                },
+                detail,
             });
             continue;
         }
@@ -162,7 +177,12 @@ pub fn ssh_with(plan: &Plan, host: &str, options: &SshOptions) -> Result<Report>
             Check::PackagesAbsent { .. } => unreachable!(),
         };
         let remote = args.iter().map(|s| quote(s)).collect::<Vec<_>>().join(" ");
-        let status = options.command(host, &remote).status()?;
+        // Remote output must not corrupt the report on stdout.
+        let status = options
+            .command(host, &remote)
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .status()?;
         checks.push(CheckResult {
             check: check.clone(),
             ok: status.success(),
