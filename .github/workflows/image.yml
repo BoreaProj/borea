@@ -65,13 +65,29 @@ jobs:
         run: |
           mkdir -p target/bootstrap-validation
           set -o pipefail
-          image="$PWD/target/bootstrap-validation/${{ matrix.fs }}.img"
-          serial="$PWD/target/bootstrap-validation/${{ matrix.fs }}.serial.log"
-          sudo env BOREA_RUNTIME_CACHE="$RUNNER_TEMP/borea-image-runtime" target/release/xtask disk bootstrap --fs '${{ matrix.fs }}' --out "$image" 2>&1 | tee 'target/bootstrap-validation/${{ matrix.fs }}.bootstrap.log'
-          sudo target/release/xtask vm boot --image "$image" --fs '${{ matrix.fs }}' --serial-log "$serial" 2>&1 | tee 'target/bootstrap-validation/${{ matrix.fs }}.vm.log'
-          sudo rm -- "$image"
+          out="$PWD/target/bootstrap-validation"
+          fs='${{ matrix.fs }}'
+          sudo env BOREA_RUNTIME_CACHE="$RUNNER_TEMP/borea-image-runtime" target/release/xtask disk bootstrap --fs "$fs" --out "$out/$fs.img" --plan-out "$out/$fs.verify-plan.json" 2>&1 | tee "$out/$fs.bootstrap.log"
+      - name: QEMU boot and borea verify --ssh
+        run: |
+          set -o pipefail
+          out="$PWD/target/bootstrap-validation"
+          fs='${{ matrix.fs }}'
+          sudo target/release/xtask vm boot --image "$out/$fs.img" --fs "$fs" --serial-log "$out/$fs.serial.log" --plan "$out/$fs.verify-plan.json" --report "$out/$fs.verify.json" 2>&1 | tee "$out/$fs.vm.log"
+      - name: Corrupted root image must fail to boot
+        run: |
+          set -o pipefail
+          out="$PWD/target/bootstrap-validation"
+          fs='${{ matrix.fs }}'
+          sudo target/release/xtask vm corrupt-root --image "$out/$fs.img" --out "$out/$fs.corrupt.img"
+          sudo target/release/xtask vm boot --image "$out/$fs.corrupt.img" --fs "$fs" --serial-log "$out/$fs.corrupt.serial.log" --expect fail 2>&1 | tee "$out/$fs.corrupt.vm.log"
+      - name: Remove disposable images
+        if: always()
+        run: sudo rm -f -- target/bootstrap-validation/*.img
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: image-bootstrap-arch-${{ matrix.fs }}
-          path: target/bootstrap-validation/*.log
+          path: |
+            target/bootstrap-validation/*.log
+            target/bootstrap-validation/*.json

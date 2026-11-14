@@ -11,12 +11,12 @@ acceptance requires a live disk, package transaction or VM is marked done.
 | Cards | Preview state | Blocking evidence / next experiment |
 | --- | --- | --- |
 | A01–A08 | Workspace, validation, matrix, recipes, plan/CLI implemented in draft form | Full intended recipe/plan schemas and golden session installs |
-| A09/A10 | Secret boundary tests and file/SSH verification implemented | Command stdin/capture canary and complete offline/online checks |
+| A09/A10 | Secret boundary tests and file/SSH verification implemented; SSH backend VM-exercised by F03 | Command stdin/capture canary and complete offline/online checks |
 | B01–B11 | Read-only identity parser and storage/boot command planning | Image/loop tests, layout probes, chroot lifecycle and boot validation |
 | C01–C07 | Four native argv adapters and base configuration intent | Live roots, package indexes/repos, family-native boot details |
 | D01–D13 | Selection/package/greeter/autostart planning; unpinned paths refused | Verified pins, seeds, session entries and exact VM cells |
 | E01–E05 | Catalogue preview, documented policy model/operations and process tests | Old source/upstream commit unavailable; verify mapping, update flock and removals |
-| F01–F05 | Sparse image creation, cached container runner, golden/render/release gates; F03 Arch Btrfs/ext4 boot-to-login smoke | SSH verification, generic e2e orchestration, and the remaining VM matrix |
+| F01–F05 | Sparse image creation, cached container runner, golden/render/release gates; F03 Arch Btrfs/ext4 QEMU boot, SSH verify and corrupted-image lane | F04 e2e orchestration and the VM matrix |
 
 The exact unsupported errors are documented in IMPLEMENTATION.md. No checks,
 keys or matrix tiers were weakened to make a missing integration report green.
@@ -623,13 +623,19 @@ release. Deferred cards stay in this file marked `deferred`.
 - **Deliverable:** boot a raw disk with OVMF, forward SSH, inject a test key,
   wait for the system, run `borea verify --ssh`, capture serial log and exit
   code.
-- **Current:** the disposable-image workflow boots Arch Btrfs and ext4 images
-  with OVMF and checks the expected root filesystem, kernel root arguments and
-  serial login prompt. SSH verification and the corrupted-image negative case
-  remain pending; this partial smoke does not support a matrix cell.
+- **Status:** done for the Arch bootstrap image. The disposable-image workflow
+  boots Btrfs and ext4 images with OVMF and checks the serial log. It injects
+  a per-run ed25519 key as the systemd `ssh.authorized_keys.root` credential
+  (never written into the image), forwards SSH on loopback and runs
+  `borea verify PLAN --ssh` against a verification-only plan from
+  `disk bootstrap --plan-out`. It keeps the serial log, QEMU log, verify report
+  and exit code. A root-corrupted copy must fail after the kernel starts.
+  Planned-install VM runs belong to F04.
 - **Done when:** a known-good image passes; a corrupted image fails with the
   serial log attached.
-- **Verify:** `cargo xtask vm boot --image /absolute/minimal.img --fs btrfs --serial-log /absolute/minimal.serial.log`
+- **Verify:** `sudo target/release/xtask vm boot --image /abs/minimal.img --fs btrfs --serial-log /abs/serial.log --plan /abs/verify-plan.json --report /abs/verify.json`;
+  `sudo target/release/xtask vm corrupt-root --image /abs/minimal.img --out /abs/bad.img`;
+  `sudo target/release/xtask vm boot --image /abs/bad.img --fs btrfs --serial-log /abs/bad.serial.log --expect fail`
 - **Out:** graphical console testing, screenshot comparison.
 
 ### F04 — e2e orchestrator and artifacts

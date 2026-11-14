@@ -106,6 +106,16 @@ fn fixture_apply_resume_verify_and_stale_journal() {
             .status
             .success()
     );
+    let mixed = borea()
+        .arg("verify")
+        .arg(&path)
+        .arg("--root")
+        .arg(&root)
+        .args(["--identity", "/tmp/key"])
+        .output()
+        .unwrap();
+    assert_eq!(mixed.status.code(), Some(2));
+    assert!(String::from_utf8_lossy(&mixed.stderr).contains("apply only to --ssh"));
     fs::write(root.join("etc/hostname"), "mutated").unwrap();
     assert_eq!(
         borea()

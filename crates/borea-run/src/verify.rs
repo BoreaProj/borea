@@ -1,6 +1,10 @@
 use borea_core::*;
 use serde::Serialize;
-use std::{fs, path::Path, process::Command};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+    process::Command,
+};
 #[derive(Debug, Serialize)]
 pub struct CheckResult {
     pub check: Check,
@@ -59,8 +63,53 @@ pub fn offline(plan: &Plan, root: &Path) -> Result<Report> {
 fn quote(s: &str) -> String {
     format!("'{}'", s.replace('\'', "'\\''"))
 }
+/// Connection settings for online verification. `known_hosts` pins host keys to
+/// a caller-owned file and accepts only a first key for a new host there.
+#[derive(Debug, Default, Clone)]
+pub struct SshOptions {
+    pub port: Option<u16>,
+    pub identity: Option<PathBuf>,
+    pub known_hosts: Option<PathBuf>,
+}
+impl SshOptions {
+    fn validate(&self) -> Result<()> {
+        if self.port == Some(0) {
+            return Err(BoreaError::invalid("SSH port must be 1-65535"));
+        }
+        for path in [&self.identity, &self.known_hosts].into_iter().flatten() {
+            let text = path.to_string_lossy();
+            if !path.is_absolute() || text.contains([',', '"', ' ', '\n']) {
+                return Err(BoreaError::invalid(
+                    "SSH identity and known-hosts paths must be absolute without spaces, quotes or commas",
+                ));
+            }
+        }
+        Ok(())
+    }
+    fn command(&self, host: &str, remote: &str) -> Command {
+        let mut cmd = Command::new("ssh");
+        cmd.args(["-o", "BatchMode=yes", "-o", "ConnectTimeout=10"]);
+        if let Some(port) = self.port {
+            cmd.arg("-p").arg(port.to_string());
+        }
+        if let Some(identity) = &self.identity {
+            cmd.args(["-o", "IdentitiesOnly=yes", "-i"]).arg(identity);
+        }
+        if let Some(known_hosts) = &self.known_hosts {
+            cmd.arg("-o")
+                .arg(format!("UserKnownHostsFile={}", known_hosts.display()))
+                .args(["-o", "StrictHostKeyChecking=accept-new"]);
+        }
+        cmd.args(["--", host, remote]);
+        cmd
+    }
+}
 pub fn ssh(plan: &Plan, host: &str) -> Result<Report> {
+    ssh_with(plan, host, &SshOptions::default())
+}
+pub fn ssh_with(plan: &Plan, host: &str, options: &SshOptions) -> Result<Report> {
     plan.validate()?;
+    options.validate()?;
     if host.is_empty()
         || host.starts_with('-')
         || !host
@@ -73,16 +122,7 @@ pub fn ssh(plan: &Plan, host: &str) -> Result<Report> {
     for check in &plan.checks {
         if let Check::PackagesAbsent { packages } = check {
             // Query the complete installed set once; query errors must never count as absence.
-            let output = Command::new("ssh")
-                .args([
-                    "-o",
-                    "BatchMode=yes",
-                    "-o",
-                    "ConnectTimeout=10",
-                    host,
-                    "pacman -Qq",
-                ])
-                .output()?;
+            let output = options.command(host, "pacman -Qq").output()?;
             let installed = String::from_utf8_lossy(&output.stdout);
             let ok = output.status.success()
                 && packages
@@ -122,16 +162,7 @@ pub fn ssh(plan: &Plan, host: &str) -> Result<Report> {
             Check::PackagesAbsent { .. } => unreachable!(),
         };
         let remote = args.iter().map(|s| quote(s)).collect::<Vec<_>>().join(" ");
-        let status = Command::new("ssh")
-            .args([
-                "-o",
-                "BatchMode=yes",
-                "-o",
-                "ConnectTimeout=10",
-                host,
-                &remote,
-            ])
-            .status()?;
+        let status = options.command(host, &remote).status()?;
         checks.push(CheckResult {
             check: check.clone(),
             ok: status.success(),
@@ -151,5 +182,60 @@ mod tests {
     #[test]
     fn shell_arguments_are_quoted() {
         assert_eq!(quote("a'b;$()"), "'a'\\''b;$()'");
+    }
+    #[test]
+    fn ssh_options_build_pinned_command() {
+        let options = SshOptions {
+            port: Some(2222),
+            identity: Some("/tmp/key".into()),
+            known_hosts: Some("/tmp/known".into()),
+        };
+        options.validate().unwrap();
+        let cmd = options.command("root@127.0.0.1", "true");
+        let args: Vec<_> = cmd
+            .get_args()
+            .map(|a| a.to_string_lossy().into_owned())
+            .collect();
+        assert_eq!(
+            args,
+            [
+                "-o",
+                "BatchMode=yes",
+                "-o",
+                "ConnectTimeout=10",
+                "-p",
+                "2222",
+                "-o",
+                "IdentitiesOnly=yes",
+                "-i",
+                "/tmp/key",
+                "-o",
+                "UserKnownHostsFile=/tmp/known",
+                "-o",
+                "StrictHostKeyChecking=accept-new",
+                "--",
+                "root@127.0.0.1",
+                "true"
+            ]
+        );
+    }
+    #[test]
+    fn ssh_options_reject_unsafe_paths_and_port() {
+        for options in [
+            SshOptions {
+                port: Some(0),
+                ..Default::default()
+            },
+            SshOptions {
+                identity: Some("relative".into()),
+                ..Default::default()
+            },
+            SshOptions {
+                known_hosts: Some("/tmp/a b".into()),
+                ..Default::default()
+            },
+        ] {
+            assert!(options.validate().is_err());
+        }
     }
 }

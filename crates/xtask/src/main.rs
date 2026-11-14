@@ -61,21 +61,25 @@ fn run() -> Result<()> {
         }
         ["disk", "bootstrap", "--fs", fs] => disk_bootstrap(fs, None)?,
         ["disk", "bootstrap", "--fs", fs, "--out", image] => {
-            disk_bootstrap(fs, Some(Path::new(image)))?
+            disk_bootstrap(fs, Some((Path::new(image), None)))?
         }
+        [
+            "disk",
+            "bootstrap",
+            "--fs",
+            fs,
+            "--out",
+            image,
+            "--plan-out",
+            plan,
+        ] => disk_bootstrap(fs, Some((Path::new(image), Some(Path::new(plan)))))?,
         ["disk", "bootstrap", "--fs", fs, "--pacman-cache", cache] => {
             disk_bootstrap_cached(fs, Some(Path::new(cache)), None)?
         }
-        [
-            "vm",
-            "boot",
-            "--image",
-            image,
-            "--fs",
-            fs,
-            "--serial-log",
-            log,
-        ] => vm::boot(Path::new(image), fs, Path::new(log))?,
+        ["vm", "boot", rest @ ..] => vm::boot(&vm::BootArgs::parse(rest)?)?,
+        ["vm", "corrupt-root", "--image", image, "--out", out] => {
+            vm::corrupt_root(Path::new(image), Path::new(out))?
+        }
         ["disk", ..] => {
             return Err(BoreaError::unsupported(
                 "unknown disk task or option; see cargo xtask --help",
@@ -101,11 +105,11 @@ fn run() -> Result<()> {
         ["env", ..] => envrun(&args[1..])?,
         ["vm", ..] => {
             return Err(BoreaError::invalid(
-                "usage: cargo xtask vm boot --image ABSOLUTE_IMAGE --fs btrfs|ext4 --serial-log ABSOLUTE_LOG",
+                "usage: cargo xtask vm boot --image ABSOLUTE_IMAGE --fs btrfs|ext4 --serial-log ABSOLUTE_LOG [--plan PLAN --report ABSOLUTE_REPORT] [--expect pass|fail] | vm corrupt-root --image ABSOLUTE_IMAGE --out ABSOLUTE_COPY",
             ));
         }
         [] | ["--help"] => println!(
-            "cargo xtask runtime check\ncargo xtask matrix check|render [--check]|verify --strict\ncargo xtask recipe lint\ncargo xtask plan golden [--update]\ncargo xtask secret canary\ncargo xtask disk selftest --stage create\ncargo xtask disk bootstrap --fs btrfs|ext4 [--out ABSOLUTE_IMAGE]\ncargo xtask vm boot --image ABSOLUTE_IMAGE --fs btrfs|ext4 --serial-log ABSOLUTE_LOG\ncargo xtask env --family FAMILY -- COMMAND...\nFull installation e2e and SSH verification remain gated; see docs/IMPLEMENTATION.md."
+            "cargo xtask runtime check\ncargo xtask matrix check|render [--check]|verify --strict\ncargo xtask recipe lint\ncargo xtask plan golden [--update]\ncargo xtask secret canary\ncargo xtask disk selftest --stage create\ncargo xtask disk bootstrap --fs btrfs|ext4 [--out ABSOLUTE_IMAGE [--plan-out ABSOLUTE_PLAN]]\ncargo xtask vm boot --image ABSOLUTE_IMAGE --fs btrfs|ext4 --serial-log ABSOLUTE_LOG [--plan PLAN --report ABSOLUTE_REPORT] [--expect pass|fail]\ncargo xtask vm corrupt-root --image ABSOLUTE_IMAGE --out ABSOLUTE_COPY\ncargo xtask env --family FAMILY -- COMMAND...\nFull installation e2e remains gated; see docs/IMPLEMENTATION.md."
         ),
         _ => {
             return Err(BoreaError::invalid(
@@ -561,15 +565,24 @@ fn disk_storage(filesystem: &str, family: FamilyId) -> Result<()> {
     Ok(())
 }
 
-fn disk_bootstrap(filesystem: &str, image_out: Option<&Path>) -> Result<()> {
+fn disk_bootstrap(filesystem: &str, image_out: Option<(&Path, Option<&Path>)>) -> Result<()> {
     disk_bootstrap_cached(filesystem, None, image_out)
 }
 
 fn disk_bootstrap_cached(
     filesystem: &str,
     pacman_cache: Option<&Path>,
-    image_out: Option<&Path>,
+    image_out: Option<(&Path, Option<&Path>)>,
 ) -> Result<()> {
+    let (image_out, plan_out) = match image_out {
+        Some((image, plan)) => (Some(image), plan),
+        None => (None, None),
+    };
+    if plan_out.is_some_and(|p| !p.is_absolute() || p.exists()) {
+        return Err(BoreaError::invalid(
+            "--plan-out requires an absolute path that does not already exist",
+        ));
+    }
     let cache = std::env::var_os("BOREA_RUNTIME_CACHE")
         .map(PathBuf::from)
         .ok_or_else(|| {
@@ -656,6 +669,14 @@ fn disk_bootstrap_cached(
             "E_SECRET",
             "bootstrap password appeared in the selftest report",
         ));
+    }
+    if let Some(plan_out) = plan_out {
+        let verify_plan = vm::verify_plan(&plan)?;
+        fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(plan_out)?
+            .write_all(verify_plan.json()?.as_bytes())?;
     }
     println!("bootstrap receipts:\n{receipts}");
     println!("{report}");

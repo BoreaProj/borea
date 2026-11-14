@@ -109,6 +109,10 @@ pub struct ImagePlan {
     pub digest: String,
 }
 impl ImagePlan {
+    /// Deterministic GPT/filesystem UUID for `esp`, `boot`, `root` or `disk`.
+    pub fn uuid(&self, name: &str) -> String {
+        uuid(&self.seed, name)
+    }
     fn digest(&self) -> Result<String> {
         let mut p = self.clone();
         p.digest.clear();

@@ -100,25 +100,48 @@ Validation: `sudo env BOREA_RUNTIME_CACHE=/absolute/runtime-cache \
 The selftest uses a canary password and refuses to report success if that canary
 appears in the bootstrap receipt. Bootstrap success reports
 `bootloader_configured: true`, `bootable: false`, and
-`vm_boot_verified: false`; QEMU/SSH boot acceptance is a separate card.
+`vm_boot_verified: false`; QEMU/SSH boot acceptance is the F03 step below.
 
-### Arch boot-to-login smoke (F03, partial)
+### Arch QEMU boot and SSH verification (F03)
 
-The ephemeral image workflow retains each Arch bootstrap image long enough to
-boot it with QEMU/OVMF, then removes the image. Btrfs and ext4 are tested
-separately. The smoke check requires the expected root filesystem to mount, a
-root UUID in the kernel command line, the Btrfs `rootflags=subvol=@` flag only
-on the Btrfs lane, and the `borea` serial login prompt. It does not yet test SSH,
-account login, service health, or any desktop/session matrix cell, so it does
-not promote a matrix cell to supported.
+The ephemeral image workflow keeps each Arch bootstrap image long enough to
+boot it with QEMU/OVMF, then removes it. Btrfs and ext4 run separately. Each
+lane has three steps:
 
-For a prepared image, run:
+1. `disk bootstrap --out IMAGE --plan-out PLAN` also writes a
+   verification-only plan. Its checks come from the image manifest: fstab and
+   Limine root/boot UUIDs, mounted filesystem types (plus the four Btrfs
+   subvolume mounts on Btrfs), the `borea` account, NetworkManager and sshd,
+   the ESP kernel, initramfs and `BOOTX64.EFI`, and no GRUB package or
+   directory. The plan has no installation steps.
+2. `vm boot --plan PLAN --report REPORT` boots the image and checks the serial
+   log: the root UUID and Btrfs `rootflags=subvol=@` flag, the root mount and
+   the `borea` login prompt. It then waits up to 180 s for SSH and runs
+   `borea verify PLAN --ssh root@127.0.0.1` through a forwarded loopback port.
+   The JSON report and exit code are kept; any failed check fails the lane.
+3. `vm corrupt-root` makes a sparse copy and zeroes the first MiB of GPT
+   partition 3, which destroys the root superblock but leaves firmware, Limine
+   and the kernel intact. `vm boot --expect fail` passes only if that copy
+   reaches the kernel and then fails to reach the login prompt, either through
+   an emergency shell or panic marker, QEMU exiting, or the 240 s timeout.
+
+The test key is a fresh ed25519 key per boot. It reaches the guest only as the
+systemd `ssh.authorized_keys.root` credential over SMBIOS. It is never written
+into the image, and QEMU snapshot mode discards guest writes. Root keeps a
+locked password. Host keys go into a per-run known-hosts file and only a first
+key is accepted (`accept-new`). This exercises the bootstrap image only; it does
+not promote any matrix cell, which still needs the F04 plan/apply pipeline.
 
 ```sh
 sudo target/release/xtask vm boot --image /absolute/test.img --fs btrfs \
-  --serial-log /absolute/btrfs.serial.log
+  --serial-log /absolute/btrfs.serial.log \
+  --plan /absolute/btrfs.verify-plan.json --report /absolute/btrfs.verify.json
+sudo target/release/xtask vm corrupt-root --image /absolute/test.img --out /absolute/bad.img
+sudo target/release/xtask vm boot --image /absolute/bad.img --fs btrfs \
+  --serial-log /absolute/bad.serial.log --expect fail
 ```
 
-The VM runner requires `qemu-system-x86_64` and OVMF firmware. It uses software
-emulation, QEMU snapshot mode and no network device; serial and QEMU error logs
-are the boot evidence. The source image remains unchanged.
+The VM runner needs `qemu-system-x86_64`, OVMF and `ssh`/`ssh-keygen`, and
+`borea` built next to `xtask`. It uses software emulation and QEMU snapshot
+mode. Without `--plan` there is no network device. The serial log, QEMU error
+log and verify report are the evidence.
