@@ -113,6 +113,13 @@ impl ImagePlan {
     pub fn uuid(&self, name: &str) -> String {
         uuid(&self.seed, name)
     }
+    fn root_fs(&self) -> Result<Filesystem> {
+        match self.filesystem.as_str() {
+            "btrfs" => Ok(Filesystem::Btrfs),
+            "ext4" => Ok(Filesystem::Ext4),
+            _ => Err(fail("unknown image filesystem")),
+        }
+    }
     fn digest(&self) -> Result<String> {
         let mut p = self.clone();
         p.digest.clear();
@@ -839,6 +846,663 @@ pub fn validate_bootstrap_journal(text: &str, digest: &str) -> Result<()> {
         "bootstrap-complete",
     )
 }
+/// Inputs for [`apply_plan`].
+pub struct PlanOptions<'a> {
+    /// Root-private directory holding the plan's host files. A plan path such
+    /// as `/run/borea/user.pass` is read from `<staging>/run/borea/user.pass`.
+    pub staging: &'a Path,
+    pub resume: bool,
+    pub yes: bool,
+}
+
+/// One generated sandbox program set for a plan step.
+#[derive(Debug, PartialEq, Eq)]
+enum StepProgram {
+    /// Destructive storage step: never executed, only checked against the image.
+    Accept { check: String },
+    Run {
+        probe: String,
+        action: String,
+        /// Secret slot delivered over the control pipe for this action.
+        secret: Option<String>,
+        /// File actions must satisfy their own probe afterwards.
+        postcondition: bool,
+    },
+}
+
+fn sh_quote(s: &str) -> String {
+    format!("'{}'", s.replace('\'', "'\\''"))
+}
+fn sh_argv(argv: &[String]) -> String {
+    argv.iter()
+        .map(|a| sh_quote(a))
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+fn sh_path(path: &Path) -> Result<String> {
+    path.to_str()
+        .map(sh_quote)
+        .ok_or_else(|| fail("plan path is not UTF-8"))
+}
+/// Kernel partition naming: `/dev/vda1`, `/dev/nvme0n1p1`.
+fn partition_path(disk: &str, n: u8) -> String {
+    let p = if disk.ends_with(|c: char| c.is_ascii_digit()) {
+        "p"
+    } else {
+        ""
+    };
+    format!("{disk}{p}{n}")
+}
+fn flag_value<'a>(argv: &'a [String], flag: &str) -> Result<&'a str> {
+    argv.iter()
+        .position(|a| a == flag)
+        .and_then(|i| argv.get(i + 1))
+        .map(String::as_str)
+        .ok_or_else(|| BoreaError::unsupported(format!("storage step lacks {flag}")))
+}
+fn hex_id(s: &str) -> bool {
+    !s.is_empty() && s.chars().all(|c| c.is_ascii_hexdigit() || c == '-')
+}
+
+/// Translate a destructive storage command into a read-only check that the
+/// image already holds exactly that result. Unknown commands are refused.
+fn storage_check(argv: &[String], disk: &str) -> Result<String> {
+    let unsupported = |what: &str| {
+        BoreaError::unsupported(format!(
+            "image plan executor cannot accept destructive step `{what}`; only GPT partitioning and FAT/ext4/Btrfs formatting of a Borea image are supported (no LUKS)"
+        ))
+    };
+    let device = argv.last().map(String::as_str).unwrap_or_default();
+    let known = (1..=3).any(|n| partition_path(disk, n) == device);
+    let mut out = String::from("set -eu\n");
+    match argv[0].as_str() {
+        "sgdisk" if device == disk => {
+            for arg in &argv[1..argv.len() - 1] {
+                let Some((key, value)) = arg.split_once('=') else {
+                    if ["--zap-all", "--clear"].contains(&arg.as_str()) {
+                        continue;
+                    }
+                    return Err(unsupported(arg));
+                };
+                let (n, v) = value.split_once(':').ok_or_else(|| unsupported(arg))?;
+                if !["1", "2", "3"].contains(&n) {
+                    return Err(unsupported(arg));
+                }
+                let info = format!("sgdisk --info={n} {}", sh_quote(disk));
+                match key {
+                    "--partition-guid" if hex_id(v) => {
+                        out += &format!(
+                            "{info} | grep -qi {}\n",
+                            sh_quote(&format!("Partition unique GUID: {v}"))
+                        )
+                    }
+                    "--typecode" => {
+                        let code = match v {
+                            "ef00" => "C12A7328-F81F-11D2-BA4B-00A0C93EC93B",
+                            "8300" => "0FC63DAF-8483-4772-8E79-3D69D8477DE4",
+                            _ => return Err(unsupported(arg)),
+                        };
+                        out += &format!(
+                            "{info} | grep -qi {}\n",
+                            sh_quote(&format!("Partition GUID code: {code}"))
+                        );
+                    }
+                    "--new" => match v.strip_prefix("0:") {
+                        Some("0") => {}
+                        Some(size) => {
+                            let mib: u64 = size
+                                .strip_prefix('+')
+                                .and_then(|s| s.strip_suffix('M'))
+                                .and_then(|s| s.parse().ok())
+                                .ok_or_else(|| unsupported(arg))?;
+                            out += &format!(
+                                "{info} | grep -q {}\n",
+                                sh_quote(&format!("Partition size: {} sectors", mib * 2048))
+                            );
+                        }
+                        None => return Err(unsupported(arg)),
+                    },
+                    _ => return Err(unsupported(arg)),
+                }
+            }
+        }
+        tool @ ("mkfs.fat" | "mkfs.ext4" | "mkfs.btrfs") if known => {
+            let (fs, uuid) = match tool {
+                "mkfs.fat" => {
+                    let id = flag_value(argv, "-i")?;
+                    if id.len() != 8 || !hex_id(id) || id.contains('-') {
+                        return Err(unsupported("mkfs.fat -i"));
+                    }
+                    let id = id.to_ascii_uppercase();
+                    ("vfat", format!("{}-{}", &id[..4], &id[4..]))
+                }
+                _ => {
+                    let uuid = flag_value(argv, "-U")?;
+                    if !hex_id(uuid) {
+                        return Err(unsupported("mkfs -U"));
+                    }
+                    (&tool[5..], uuid.to_string())
+                }
+            };
+            let dev = sh_quote(device);
+            out += &format!(
+                "test \"$(blkid -p -s TYPE -o value {dev})\" = {fs}\ntest \"$(blkid -p -s UUID -o value {dev})\" = {}\n",
+                sh_quote(&uuid)
+            );
+        }
+        other => return Err(unsupported(other)),
+    }
+    Ok(out)
+}
+
+/// Generate the sandbox programs for every step. `files` receives payloads
+/// (`c<i>` contents, `n<i>` needles) to place beside the programs.
+fn plan_programs(
+    plan: &Plan,
+    staging: &Path,
+    files: &mut Vec<(String, Vec<u8>)>,
+) -> Result<Vec<StepProgram>> {
+    let disk = plan
+        .disk
+        .path
+        .to_str()
+        .ok_or_else(|| fail("plan disk path is not UTF-8"))?;
+    let mut out = Vec::new();
+    for (i, step) in plan.steps.iter().enumerate() {
+        if step.danger == Danger::Destructive {
+            let Action::Command {
+                argv,
+                chroot: false,
+                stdin: None,
+            } = &step.action
+            else {
+                return Err(BoreaError::unsupported(format!(
+                    "image plan executor cannot accept destructive step {}",
+                    step.id
+                )));
+            };
+            out.push(StepProgram::Accept {
+                check: storage_check(argv, disk)?,
+            });
+            continue;
+        }
+        let probe = match &step.probe {
+            Probe::FileExists { path } => {
+                format!("p=$(target {})\ntest -e \"$p\"\n", sh_path(path)?)
+            }
+            Probe::PathMissing { path } => format!(
+                "p=$(target {})\ntest ! -e \"$p\"\ntest ! -L \"$p\"\n",
+                sh_path(path)?
+            ),
+            Probe::FileContains { path, needle } if needle.is_empty() => {
+                format!("p=$(target {})\ntest -f \"$p\"\n", sh_path(path)?)
+            }
+            Probe::FileContains { path, needle } => {
+                files.push((format!("n{i}"), needle.as_bytes().to_vec()));
+                format!(
+                    "p=$(target {})\ntest -f \"$p\"\ncontains \"$p\" /plan/n{i} {}\n",
+                    sh_path(path)?,
+                    u8::from(!needle.ends_with('\n'))
+                )
+            }
+            Probe::CommandOk { argv, chroot: true } => format!("in_target {}\n", sh_argv(argv)),
+            Probe::CommandOk {
+                argv,
+                chroot: false,
+            } => format!("{}\n", sh_argv(argv)),
+            Probe::None | Probe::OmarchyInstalled { .. } | Probe::PackagesAbsent { .. } => {
+                return Err(BoreaError::unsupported(format!(
+                    "image plan executor has no probe for step {}",
+                    step.id
+                )));
+            }
+        };
+        let write = |files: &mut Vec<(String, Vec<u8>)>, dest: &Path, bytes: Vec<u8>, mode: u32| {
+            files.push((format!("c{i}"), bytes));
+            Ok::<_, BoreaError>(format!(
+                "p=$(target {})\nmkdir -p \"$(dirname \"$p\")\"\ninstall -m {mode:o} /plan/c{i} \"$p.borea-tmp\"\nmv -f \"$p.borea-tmp\" \"$p\"\n",
+                sh_path(dest)?
+            ))
+        };
+        let mut secret = None;
+        let mut postcondition = false;
+        let action = match &step.action {
+            Action::Command {
+                argv,
+                chroot,
+                stdin,
+            } => {
+                let run = if *chroot { "in_target " } else { "" };
+                match stdin {
+                    Some(slot) => {
+                        secret = Some(slot.clone());
+                        format!("printf '%s' \"$secret\" | {run}{}\n", sh_argv(argv))
+                    }
+                    None => format!("{run}{}\n", sh_argv(argv)),
+                }
+            }
+            Action::Password { user, secret: slot } => {
+                secret = Some(slot.clone());
+                format!(
+                    "printf '%s:%s\\n' {} \"$secret\" | in_target chpasswd\n",
+                    sh_quote(user)
+                )
+            }
+            Action::WriteFile {
+                path,
+                contents,
+                mode,
+            } => {
+                postcondition = true;
+                write(files, path, contents.as_bytes().to_vec(), *mode)?
+            }
+            Action::CopyIn { source, dest, mode } => {
+                postcondition = true;
+                let host = staging.join(
+                    source
+                        .strip_prefix("/")
+                        .map_err(|_| fail("copy_in source must be absolute"))?,
+                );
+                let bytes = fs::read(&host).map_err(|e| {
+                    fail(format!(
+                        "step {} needs {} in the staging directory: {e}",
+                        step.id,
+                        source.display()
+                    ))
+                })?;
+                write(files, dest, bytes, *mode)?
+            }
+            Action::Mkdir { path, mode } => {
+                postcondition = true;
+                format!(
+                    "p=$(target {})\nmkdir -p \"$p\"\nchmod {mode:o} \"$p\"\n",
+                    sh_path(path)?
+                )
+            }
+            Action::InstallOmarchy { .. } => {
+                return Err(BoreaError::unsupported(
+                    "image plan executor does not run the Omarchy installer (E06)",
+                ));
+            }
+        };
+        out.push(StepProgram::Run {
+            probe: format!("set -eu\n{probe}"),
+            action: format!("set -eu\n{action}"),
+            secret,
+            postcondition,
+        });
+    }
+    Ok(out)
+}
+
+/// A running plan sandbox: one operation in, one status out.
+struct Driver {
+    child: RunningChild,
+    stdin: Option<std::process::ChildStdin>,
+    status: std::sync::mpsc::Receiver<String>,
+    tail: std::sync::Arc<std::sync::Mutex<Vec<u8>>>,
+    /// Set when the protocol is out of step (timeout, dead sandbox).
+    broken: bool,
+}
+impl Driver {
+    fn run(&mut self, op: &str, secret: Option<&str>, timeout: Duration) -> Result<i32> {
+        let result = self.exchange(op, secret, timeout);
+        self.broken |= result.is_err();
+        result
+    }
+    fn exchange(&mut self, op: &str, secret: Option<&str>, timeout: Duration) -> Result<i32> {
+        if self.broken {
+            return Err(fail("plan sandbox is no longer usable"));
+        }
+        let stdin = self.stdin.as_mut().ok_or_else(|| fail("driver closed"))?;
+        self.tail
+            .lock()
+            .map_err(|_| fail("diagnostics lock"))?
+            .clear();
+        match secret {
+            Some(s) => {
+                let line = Zeroizing::new(format!("s:{op}\n{s}\n"));
+                stdin.write_all(line.as_bytes())?;
+            }
+            None => stdin.write_all(format!("{op}\n").as_bytes())?,
+        }
+        stdin.flush()?;
+        match self.status.recv_timeout(timeout) {
+            Ok(line) => line
+                .strip_prefix("rc ")
+                .and_then(|n| n.parse().ok())
+                .ok_or_else(|| fail("plan sandbox returned an invalid status")),
+            Err(std::sync::mpsc::RecvTimeoutError::Timeout) => {
+                Err(fail(format!("timed out after {}s", timeout.as_secs())))
+            }
+            Err(_) => Err(fail("plan sandbox exited unexpectedly")),
+        }
+    }
+    fn diagnostics(&self, secrets: &[Zeroizing<String>]) -> String {
+        let tail = self.tail.lock().map(|t| t.clone()).unwrap_or_default();
+        let text = Zeroizing::new(String::from_utf8_lossy(&tail).into_owned());
+        crate::redact(&text, secrets)
+    }
+}
+
+/// Execute a sealed Plan against a Borea disposable image whose storage was
+/// prepared by [`apply`] (D-040).
+///
+/// Destructive storage steps are never run: each is accepted only if the image
+/// already holds exactly that partition or filesystem identity. Every other
+/// step runs in order inside the runtime sandbox, with its probe evaluated
+/// first, and is recorded in the plan-digest-bound journal.
+pub fn apply_plan(
+    image: &ImagePlan,
+    plan: &Plan,
+    spec: &RuntimeSpec,
+    cache: &Path,
+    journal: &Path,
+    options: PlanOptions<'_>,
+) -> Result<()> {
+    root()?;
+    image.validate(spec)?;
+    plan.validate()?;
+    if !options.yes {
+        return Err(fail("image plan apply requires --yes"));
+    }
+    let disk = plan.disk.path.to_str().unwrap_or_default();
+    if spec.family != plan.family
+        || plan.disk.serial != format!("borea-image-{}", &image.seed[..16])
+        || plan.disk.size != image.bytes
+        || plan.disk.sector_size != 512
+        || plan.root_fs != image.root_fs()?
+        || Path::new(disk).parent() != Some(Path::new("/dev"))
+        || plan.root.parent() != Some(Path::new("/"))
+    {
+        return Err(fail(
+            "plan was not made for this image: family, disk identity, size, filesystem or target root differ; re-plan against the image",
+        ));
+    }
+    let staging = fs::symlink_metadata(options.staging)?;
+    if !staging.is_dir() || staging.uid() != 0 || staging.mode() & 0o077 != 0 {
+        return Err(fail("staging must be a root-owned mode-0700 directory"));
+    }
+    let mut files = Vec::new();
+    let programs = plan_programs(plan, options.staging, &mut files)?;
+    let mut secrets = Vec::new();
+    let mut slots = std::collections::BTreeMap::new();
+    for slot in &plan.secrets {
+        let used = programs
+            .iter()
+            .any(|p| matches!(p, StepProgram::Run { secret: Some(s), .. } if *s == slot.name));
+        if used {
+            let host = options.staging.join(
+                slot.file
+                    .strip_prefix("/")
+                    .map_err(|_| fail("secret slot file must be absolute"))?,
+            );
+            let value = read_bootstrap_password(&host)?;
+            slots.insert(slot.name.as_str(), secrets.len());
+            secrets.push(value);
+        }
+    }
+    let file = locked(&image.image, false)?;
+    let m = file.metadata()?;
+    if (m.dev(), m.ino(), m.len()) != (image.device, image.inode, image.bytes) {
+        return Err(fail("image identity changed; recreate/replan"));
+    }
+    let mut journal = crate::journal::Journal::open(journal, plan, options.resume)?;
+
+    let private = tempfile::Builder::new()
+        .prefix(&format!("borea-plan-{}-", std::process::id()))
+        .tempdir_in("/tmp")?;
+    fs::set_permissions(private.path(), fs::Permissions::from_mode(0o700))?;
+    let runtime = crate::runtime::private_snapshot(spec, cache, private.path())?;
+    let plan_dir = private.path().join("plan");
+    fs::create_dir(&plan_dir)?;
+    for (name, bytes) in &files {
+        fs::write(plan_dir.join(name), bytes)?;
+    }
+    for (i, program) in programs.iter().enumerate() {
+        match program {
+            StepProgram::Accept { check } => fs::write(plan_dir.join(format!("a{i}")), check)?,
+            StepProgram::Run { probe, action, .. } => {
+                fs::write(plan_dir.join(format!("p{i}")), probe)?;
+                fs::write(plan_dir.join(format!("a{i}")), action)?;
+            }
+        }
+    }
+    let driver_script = private.path().join("driver.sh");
+    fs::write(&driver_script, include_bytes!("image-plan.sh"))?;
+    // Mount points inside the read-only runtime root.
+    let target = runtime.join(plan.root.strip_prefix("/").unwrap_or(&plan.root));
+    fs::create_dir_all(&target)?;
+    fs::create_dir_all(runtime.join("plan"))?;
+    fs::write(runtime.join("driver.sh"), [])?;
+    // The runtime is built from a container image whose NoExtract rules strip
+    // configuration, documentation and locales. They must not reach the target.
+    let pacman_conf = runtime.join("etc/pacman.conf");
+    if let Ok(text) = fs::read_to_string(&pacman_conf) {
+        let kept: String = text
+            .lines()
+            .filter(|l| !l.trim_start().starts_with("NoExtract"))
+            .map(|l| format!("{l}\n"))
+            .collect();
+        fs::write(&pacman_conf, kept)?;
+    }
+
+    let whole = Loop::attach(&file, 0, 0)?;
+    let esp = Loop::attach(&file, MIB, GIB)?;
+    let boot = Loop::attach(&file, MIB + GIB, 2 * GIB)?;
+    let rootdev = Loop::attach(&file, MIB + 3 * GIB, image.bytes - 2 * MIB - 3 * GIB)?;
+    let mut cmd = Command::new("/usr/bin/bwrap");
+    cmd.env_clear().args([
+        "--die-with-parent",
+        "--unshare-pid",
+        "--unshare-ipc",
+        "--unshare-uts",
+        "--share-net",
+        "--cap-drop",
+        "ALL",
+    ]);
+    for cap in [
+        "CAP_SYS_ADMIN",
+        "CAP_SYS_CHROOT",
+        "CAP_MKNOD",
+        "CAP_CHOWN",
+        "CAP_FOWNER",
+        "CAP_DAC_OVERRIDE",
+        "CAP_SETUID",
+        "CAP_SETGID",
+        "CAP_FSETID",
+        "CAP_SETFCAP",
+    ] {
+        cmd.args(["--cap-add", cap]);
+    }
+    cmd.arg("--ro-bind").arg(&runtime).arg("/").args([
+        "--proc",
+        "/proc",
+        "--dev",
+        "/dev",
+        "--tmpfs",
+        "/tmp",
+        "--tmpfs",
+        "/run",
+        "--tmpfs",
+        "/var/tmp",
+        "--tmpfs",
+        "/var/log",
+        "--tmpfs",
+        "/var/cache",
+    ]);
+    if let Ok(resolv) = fs::canonicalize("/etc/resolv.conf") {
+        cmd.arg("--ro-bind").arg(resolv).arg("/etc/resolv.conf");
+    }
+    // The plan's own device paths resolve to the held loop mappings.
+    for (l, path) in [
+        (&whole, disk.to_string()),
+        (&esp, partition_path(disk, 1)),
+        (&boot, partition_path(disk, 2)),
+        (&rootdev, partition_path(disk, 3)),
+    ] {
+        cmd.arg("--dev-bind").arg(&l.path).arg(path);
+    }
+    cmd.arg("--ro-bind")
+        .arg(&plan_dir)
+        .arg("/plan")
+        .arg("--ro-bind")
+        .arg(&driver_script)
+        .arg("/driver.sh")
+        .args([
+            "--chdir",
+            "/",
+            "--clearenv",
+            "--setenv",
+            "PATH",
+            "/usr/sbin:/usr/bin:/sbin:/bin",
+            "--setenv",
+            "LC_ALL",
+            "C",
+            "--",
+            "/bin/sh",
+            "/driver.sh",
+        ])
+        .arg(&plan.root)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
+    cmd.process_group(0);
+    let mut process = cmd.spawn()?;
+    let stdin = process.stdin.take();
+    let stdout = process
+        .stdout
+        .take()
+        .ok_or_else(|| fail("missing status pipe"))?;
+    let stderr = process
+        .stderr
+        .take()
+        .ok_or_else(|| fail("missing diagnostic pipe"))?;
+    let (send, status) = std::sync::mpsc::channel();
+    std::thread::spawn(move || {
+        use std::io::BufRead;
+        for line in std::io::BufReader::new(stdout)
+            .lines()
+            .map_while(|l| l.ok())
+        {
+            if send.send(line).is_err() {
+                break;
+            }
+        }
+    });
+    let tail = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
+    let sink = tail.clone();
+    std::thread::spawn(move || {
+        let mut buf = [0; 4096];
+        let mut stream = stderr;
+        while let Ok(n) = stream.read(&mut buf) {
+            if n == 0 {
+                break;
+            }
+            if let Ok(mut tail) = sink.lock() {
+                tail.extend_from_slice(&buf[..n]);
+                let extra = tail.len().saturating_sub(16384);
+                tail.drain(..extra);
+            }
+        }
+    });
+    let mut driver = Driver {
+        child: RunningChild {
+            child: process,
+            running: true,
+        },
+        stdin,
+        status,
+        tail,
+        broken: false,
+    };
+
+    let result = (|| -> Result<()> {
+        for (i, (step, program)) in plan.steps.iter().zip(&programs).enumerate() {
+            let timeout = Duration::from_secs(step.timeout_s);
+            let failed = |driver: &Driver, journal: &mut crate::journal::Journal, what: String| {
+                journal.record(&step.id, "failed", Some(&what))?;
+                Err(BoreaError::new(
+                    "E_STEP",
+                    format!("step {} {what}: {}", step.id, driver.diagnostics(&secrets)),
+                ))
+            };
+            match program {
+                StepProgram::Accept { .. } => match driver.run(&format!("a{i}"), None, timeout) {
+                    Ok(0) => journal.record(
+                        &step.id,
+                        "skipped",
+                        Some("accepted: image storage matches this step"),
+                    )?,
+                    Ok(_) => {
+                        return failed(
+                            &driver,
+                            &mut journal,
+                            "is destructive and the image storage does not match it".into(),
+                        );
+                    }
+                    Err(e) => return failed(&driver, &mut journal, e.message),
+                },
+                StepProgram::Run {
+                    secret,
+                    postcondition,
+                    ..
+                } => {
+                    let probe = format!("p{i}");
+                    match driver.run(&probe, None, timeout) {
+                        Ok(0) => {
+                            journal.record(&step.id, "skipped", None)?;
+                            continue;
+                        }
+                        Ok(_) => {}
+                        Err(e) => return failed(&driver, &mut journal, e.message),
+                    }
+                    journal.record(&step.id, "start", None)?;
+                    let value = secret
+                        .as_ref()
+                        .and_then(|s| slots.get(s.as_str()))
+                        .map(|&n| secrets[n].as_str());
+                    match driver.run(&format!("a{i}"), value, timeout) {
+                        Ok(0) => {}
+                        Ok(code) => {
+                            return failed(&driver, &mut journal, format!("exited {code}"));
+                        }
+                        Err(e) => return failed(&driver, &mut journal, e.message),
+                    }
+                    if *postcondition && driver.run(&probe, None, timeout)? != 0 {
+                        return failed(&driver, &mut journal, "postcondition failed".into());
+                    }
+                    journal.record(&step.id, "ok", None)?;
+                }
+            }
+        }
+        Ok(())
+    })();
+    // Ask the driver to sync and unmount, even after a failed step. A sandbox
+    // that timed out or died is killed by `RunningChild` instead.
+    let teardown = if driver.broken {
+        Ok(())
+    } else {
+        driver
+            .run("quit", None, Duration::from_secs(300))
+            .and_then(|code| match code {
+                0 => Ok(()),
+                _ => Err(fail(format!(
+                    "target teardown failed: {}",
+                    driver.diagnostics(&secrets)
+                ))),
+            })
+    };
+    drop(driver.stdin.take());
+    if teardown.is_ok() && !driver.broken {
+        driver.child.child.wait()?;
+        driver.child.running = false;
+    }
+    drop(driver);
+    drop((whole, esp, boot, rootdev));
+    result.and(teardown)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -903,6 +1567,117 @@ mod tests {
         // The loop driver's reference outlives the stage; the lock must not.
         assert_eq!(lock(&next), 0);
         drop(backing);
+    }
+
+    fn golden(name: &str) -> Plan {
+        let path = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../fixtures/plans")
+            .join(name);
+        serde_json::from_str(&fs::read_to_string(path).unwrap()).unwrap()
+    }
+
+    #[test]
+    fn plan_programs_cover_the_arch_minimal_plan() {
+        let plan = golden("arch-minimal.json");
+        let staging = tempfile::tempdir().unwrap();
+        fs::create_dir_all(staging.path().join("run/borea")).unwrap();
+        fs::write(
+            staging.path().join("run/borea/test.pub"),
+            "ssh-ed25519 AAAA test\n",
+        )
+        .unwrap();
+        let mut files = Vec::new();
+        let programs = plan_programs(&plan, staging.path(), &mut files).unwrap();
+        assert_eq!(programs.len(), plan.steps.len());
+        for (step, program) in plan.steps.iter().zip(&programs) {
+            assert_eq!(
+                step.danger == Danger::Destructive,
+                matches!(program, StepProgram::Accept { .. }),
+                "{}",
+                step.id
+            );
+        }
+        let find = |id: &str| &programs[plan.steps.iter().position(|s| s.id == id).unwrap()];
+        // Destructive steps become read-only identity checks.
+        let StepProgram::Accept { check } = find("storage.format.root") else {
+            panic!()
+        };
+        assert!(check.contains("blkid -p -s TYPE -o value '/dev/vda3')\" = btrfs"));
+        assert!(!check.contains("mkfs"));
+        let StepProgram::Accept { check } = find("storage.partition") else {
+            panic!()
+        };
+        assert!(check.contains("Partition size: 2097152 sectors"));
+        assert!(check.contains("C12A7328-F81F-11D2-BA4B-00A0C93EC93B"));
+        assert!(!check.contains("--zap-all"));
+        // The password travels over the control pipe, never in a program file.
+        let StepProgram::Run { action, secret, .. } = find("base.password") else {
+            panic!()
+        };
+        assert_eq!(secret.as_deref(), Some("account.password"));
+        assert!(action.contains("\"$secret\" | in_target chpasswd"));
+        let StepProgram::Run {
+            action,
+            probe,
+            postcondition,
+            ..
+        } = find("base.hostname")
+        else {
+            panic!()
+        };
+        assert!(*postcondition && action.contains("target '/etc/hostname'"));
+        assert!(probe.contains("contains \"$p\" /plan/n"));
+        let StepProgram::Run { action, .. } = find("base.timezone") else {
+            panic!()
+        };
+        assert!(action.starts_with("set -eu\nin_target 'ln' '-sf'"));
+        assert!(files.iter().any(|(_, b)| b == b"ssh-ed25519 AAAA test\n"));
+    }
+
+    #[test]
+    fn plan_programs_refuse_what_the_image_lane_cannot_prove() {
+        let staging = tempfile::tempdir().unwrap();
+        let mut files = Vec::new();
+        // LUKS formatting is destructive and has no image identity check.
+        let mut luks = golden("arch-minimal.json");
+        let step = luks
+            .steps
+            .iter_mut()
+            .find(|s| s.id == "storage.format.root")
+            .unwrap();
+        step.action = Action::Command {
+            argv: vec!["cryptsetup".into(), "luksFormat".into(), "/dev/vda3".into()],
+            chroot: false,
+            stdin: None,
+        };
+        let e = plan_programs(&luks, staging.path(), &mut files).unwrap_err();
+        assert_eq!(e.code, "E_UNSUPPORTED");
+        // A missing copy_in source fails before anything runs.
+        let e =
+            plan_programs(&golden("arch-minimal.json"), staging.path(), &mut files).unwrap_err();
+        assert!(e.message.contains("staging"));
+        for argv in [
+            vec!["sgdisk", "--zap-all", "/dev/vdb"],
+            vec!["sgdisk", "--typecode=1:8309", "/dev/vda"],
+            vec!["mkfs.ext4", "-U", "x; rm -rf /", "/dev/vda2"],
+            vec![
+                "mkfs.ext4",
+                "-U",
+                "5bca32f4-42b8-5018-b454-0a6b5dab2a01",
+                "/dev/sda2",
+            ],
+            vec!["wipefs", "-a", "/dev/vda"],
+        ] {
+            let argv: Vec<String> = argv.into_iter().map(String::from).collect();
+            assert!(storage_check(&argv, "/dev/vda").is_err(), "{argv:?}");
+        }
+    }
+
+    #[test]
+    fn shell_quoting_and_partition_names() {
+        assert_eq!(sh_quote("a'b $(x)"), "'a'\\''b $(x)'");
+        assert_eq!(partition_path("/dev/vda", 3), "/dev/vda3");
+        assert_eq!(partition_path("/dev/nvme0n1", 1), "/dev/nvme0n1p1");
     }
 
     #[test]
