@@ -861,6 +861,8 @@ mod tests {
         assert!(script.contains("read -r account_password"));
         assert!(script.contains("printf 'borea:%s\\n' \"$account_password\""));
         assert!(script.contains("passwd --lock root"));
+        assert!(script.contains("path: guid(${boot_uuid}):/vmlinuz-linux"));
+        assert!(script.contains("module_path: guid(${boot_uuid}):/initramfs-linux.img"));
     }
 
     #[test]

@@ -799,7 +799,7 @@ pub fn build(c: &Config, disk: DeviceIdentity, intent: Intent) -> Result<Plan> {
             );
         }
         let contents = format!(
-            "timeout: 5\n/Borea\n    protocol: linux\n    path: guid({})/vmlinuz-linux\n    module_path: guid({})/initramfs-linux.img\n    cmdline: {cmdline}\n/Borea fallback\n    protocol: linux\n    path: guid({})/vmlinuz-linux\n    module_path: guid({})/initramfs-linux-fallback.img\n    cmdline: {cmdline}\n",
+            "timeout: 5\n/Borea\n    protocol: linux\n    path: guid({}):/vmlinuz-linux\n    module_path: guid({}):/initramfs-linux.img\n    cmdline: {cmdline}\n/Borea fallback\n    protocol: linux\n    path: guid({}):/vmlinuz-linux\n    module_path: guid({}):/initramfs-linux-fallback.img\n    cmdline: {cmdline}\n",
             uuid("fs.boot"),
             uuid("fs.boot"),
             uuid("fs.boot"),
@@ -1097,6 +1097,21 @@ mod tests {
                 assert!(p.steps.iter().any(|s| s.id == "base.fstab"));
             }
         }
+    }
+    #[test]
+    fn limine_kernel_paths_use_partition_guid_syntax() {
+        let p = plan(Filesystem::Ext4, FamilyId::Arch);
+        let config = p
+            .steps
+            .iter()
+            .find(|step| step.id == "boot.limine.config")
+            .and_then(|step| match &step.action {
+                Action::WriteFile { contents, .. } => Some(contents.as_str()),
+                _ => None,
+            })
+            .unwrap();
+        assert!(config.contains("path: guid(") && config.contains("):/vmlinuz-linux"));
+        assert!(config.contains("module_path: guid(") && config.contains("):/initramfs-linux.img"));
     }
     #[test]
     fn digest_tampering_rejected() {

@@ -189,14 +189,14 @@ timeout: 3
 
 /Borea (Arch Linux)
     protocol: linux
-    path: guid(${boot_uuid})/vmlinuz-linux
-    module_path: guid(${boot_uuid})/initramfs-linux.img
+    path: guid(${boot_uuid}):/vmlinuz-linux
+    module_path: guid(${boot_uuid}):/initramfs-linux.img
     cmdline: root=UUID=${root_uuid} ${cmdline_flags} rw console=tty0 console=ttyS0,115200
 
 /Borea fallback
     protocol: linux
-    path: guid(${boot_uuid})/vmlinuz-linux
-    module_path: guid(${boot_uuid})/initramfs-linux-fallback.img
+    path: guid(${boot_uuid}):/vmlinuz-linux
+    module_path: guid(${boot_uuid}):/initramfs-linux-fallback.img
     cmdline: root=UUID=${root_uuid} ${cmdline_flags} rw console=tty0 console=ttyS0,115200
 EOF
     cp /target/boot/efi/EFI/BOOT/limine.conf /target/boot/limine/limine.conf
