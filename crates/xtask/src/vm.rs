@@ -27,6 +27,13 @@ const FAILURE_MARKERS: &[&str] = &[
     "dependency failed for initrd root",
 ];
 
+/// Serial output that proves the kernel ran; quiet consoles omit "Linux version".
+const KERNEL_STARTED: &[&str] = &[
+    "Linux version",
+    "Booting initrd",
+    "Run /init as init process",
+];
+
 struct RunningVm(Child);
 
 impl RunningVm {
@@ -341,7 +348,7 @@ pub fn boot(args: &BootArgs) -> Result<()> {
                 "E_VM",
                 format!("image was expected to fail but reached the login prompt; {logs}"),
             )),
-            Err(_) if !serial.contains("Linux version") => Err(BoreaError::new(
+            Err(_) if !KERNEL_STARTED.iter().any(|m| serial.contains(m)) => Err(BoreaError::new(
                 "E_VM",
                 format!(
                     "expected failure did not reach the kernel, so the serial log proves nothing; {logs}"
