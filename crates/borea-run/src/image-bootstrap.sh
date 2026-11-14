@@ -88,9 +88,9 @@ EOF
     fi
     # The runtime is built from a container image whose NoExtract rules strip
     # pacman.conf, the mirrorlist, docs and locales. They must not reach the target.
-    grep -v '^[[:space:]]*NoExtract' /etc/pacman.conf > /etc/borea-pacstrap.conf
+    grep -v '^[[:space:]]*NoExtract' /etc/pacman.conf > /tmp/borea-pacstrap.conf
     # Execute pacstrap for base system, kernel, tools, network and bootloader
-    pacstrap -C /etc/borea-pacstrap.conf -K -c /target \
+    pacstrap -C /tmp/borea-pacstrap.conf -K -c /target \
         base \
         linux \
         linux-firmware \
