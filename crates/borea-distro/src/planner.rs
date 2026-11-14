@@ -775,7 +775,6 @@ pub fn build(c: &Config, disk: DeviceIdentity, intent: Intent) -> Result<Plan> {
         for (id, name) in [
             ("kernel", "vmlinuz-linux"),
             ("initramfs", "initramfs-linux.img"),
-            ("fallback_initramfs", "initramfs-linux-fallback.img"),
         ] {
             b.cmd(
                 &format!("boot.limine.copy.{id}"),
@@ -848,7 +847,7 @@ pub fn build(c: &Config, disk: DeviceIdentity, intent: Intent) -> Result<Plan> {
             "boot.limine.sync.script",
             Phase::Boot,
             "/usr/local/bin/borea-limine-sync",
-            "#!/bin/sh\nset -eu\nmountpoint -q /boot/efi || { echo 'Borea Limine ESP is not mounted at /boot/efi' >&2; exit 1; }\nfor file in vmlinuz-linux initramfs-linux.img initramfs-linux-fallback.img; do\n    test -s \"/boot/$file\"\n    install -m 0644 \"/boot/$file\" \"/boot/efi/$file\"\ndone\n".into(),
+            "#!/bin/sh\nset -eu\nmountpoint -q /boot/efi || { echo 'Borea Limine ESP is not mounted at /boot/efi' >&2; exit 1; }\nfor file in vmlinuz-linux initramfs-linux.img; do\n    test -s \"/boot/$file\"\n    install -m 0644 \"/boot/$file\" \"/boot/efi/$file\"\ndone\nif [ -s \"/boot/initramfs-linux-fallback.img\" ]; then\n    install -m 0644 \"/boot/initramfs-linux-fallback.img\" \"/boot/efi/initramfs-linux-fallback.img\"\nfi\n".into(),
             0o755,
         );
         b.file(

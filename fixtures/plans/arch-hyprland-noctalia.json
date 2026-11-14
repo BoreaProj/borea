@@ -1,9 +1,9 @@
 {
   "schema": 2,
-  "id": "2815c4ede7406af280ae9390566d0c16",
+  "id": "dc60d6636cedaca417b4096c6991ab7b",
   "created": "1970-01-01T00:00:00Z",
   "borea_version": "B-0.3",
-  "digest": "2815c4ede7406af280ae9390566d0c1691bb2b3c9ab312351462d83e02b67a67",
+  "digest": "dc60d6636cedaca417b4096c6991ab7b780f6a88261b2c21d0e880f56a1abf7e",
   "config_digest": "f4c09f9cc05548344ec9bbf3ba1faf1a78e470c8c0028b5bd84b4aa4c0da503b",
   "matrix_digest": "2c8e72b621a2407f672a030615d9fd7f732adb37cb06ae7dacfeaca926f5b593",
   "family": "arch",
@@ -1476,38 +1476,6 @@
       "phase": "boot"
     },
     {
-      "id": "boot.limine.copy.fallback_initramfs",
-      "title": "boot limine copy fallback_initramfs",
-      "action": {
-        "kind": "command",
-        "argv": [
-          "install",
-          "-m",
-          "0644",
-          "/boot/initramfs-linux-fallback.img",
-          "/boot/efi/initramfs-linux-fallback.img"
-        ],
-        "chroot": true,
-        "stdin": null
-      },
-      "needs": [
-        "boot.limine.copy.initramfs"
-      ],
-      "probe": {
-        "kind": "command_ok",
-        "argv": [
-          "cmp",
-          "-s",
-          "/boot/initramfs-linux-fallback.img",
-          "/boot/efi/initramfs-linux-fallback.img"
-        ],
-        "chroot": true
-      },
-      "danger": "mutating",
-      "timeout_s": 600,
-      "phase": "boot"
-    },
-    {
       "id": "boot.limine.dir.fallback",
       "title": "boot limine dir fallback",
       "action": {
@@ -1516,7 +1484,7 @@
         "mode": 493
       },
       "needs": [
-        "boot.limine.copy.fallback_initramfs"
+        "boot.limine.copy.initramfs"
       ],
       "probe": {
         "kind": "file_exists",
@@ -1672,7 +1640,7 @@
       "action": {
         "kind": "write_file",
         "path": "/usr/local/bin/borea-limine-sync",
-        "contents": "#!/bin/sh\nset -eu\nmountpoint -q /boot/efi || { echo 'Borea Limine ESP is not mounted at /boot/efi' >&2; exit 1; }\nfor file in vmlinuz-linux initramfs-linux.img initramfs-linux-fallback.img; do\n    test -s \"/boot/$file\"\n    install -m 0644 \"/boot/$file\" \"/boot/efi/$file\"\ndone\n",
+        "contents": "#!/bin/sh\nset -eu\nmountpoint -q /boot/efi || { echo 'Borea Limine ESP is not mounted at /boot/efi' >&2; exit 1; }\nfor file in vmlinuz-linux initramfs-linux.img; do\n    test -s \"/boot/$file\"\n    install -m 0644 \"/boot/$file\" \"/boot/efi/$file\"\ndone\nif [ -s \"/boot/initramfs-linux-fallback.img\" ]; then\n    install -m 0644 \"/boot/initramfs-linux-fallback.img\" \"/boot/efi/initramfs-linux-fallback.img\"\nfi\n",
         "mode": 493
       },
       "needs": [
@@ -1681,7 +1649,7 @@
       "probe": {
         "kind": "file_contains",
         "path": "/usr/local/bin/borea-limine-sync",
-        "needle": "#!/bin/sh\nset -eu\nmountpoint -q /boot/efi || { echo 'Borea Limine ESP is not mounted at /boot/efi' >&2; exit 1; }\nfor file in vmlinuz-linux initramfs-linux.img initramfs-linux-fallback.img; do\n    test -s \"/boot/$file\"\n    install -m 0644 \"/boot/$file\" \"/boot/efi/$file\"\ndone\n"
+        "needle": "#!/bin/sh\nset -eu\nmountpoint -q /boot/efi || { echo 'Borea Limine ESP is not mounted at /boot/efi' >&2; exit 1; }\nfor file in vmlinuz-linux initramfs-linux.img; do\n    test -s \"/boot/$file\"\n    install -m 0644 \"/boot/$file\" \"/boot/efi/$file\"\ndone\nif [ -s \"/boot/initramfs-linux-fallback.img\" ]; then\n    install -m 0644 \"/boot/initramfs-linux-fallback.img\" \"/boot/efi/initramfs-linux-fallback.img\"\nfi\n"
       },
       "danger": "mutating",
       "timeout_s": 600,

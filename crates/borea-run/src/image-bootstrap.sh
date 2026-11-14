@@ -174,7 +174,9 @@ probe_bootloader() {
     test -f /target/boot/efi/EFI/BOOT/limine.conf
     test -s /target/boot/efi/vmlinuz-linux
     test -s /target/boot/efi/initramfs-linux.img
-    test -s /target/boot/efi/initramfs-linux-fallback.img
+    if [ -f /target/boot/initramfs-linux-fallback.img ]; then
+        test -s /target/boot/efi/initramfs-linux-fallback.img
+    fi
     grep -q 'boot():/vmlinuz-linux' /target/boot/efi/EFI/BOOT/limine.conf
 }
 do_bootloader() {
@@ -185,16 +187,21 @@ do_bootloader() {
     fi
     cp /target/boot/vmlinuz-linux /target/boot/efi/vmlinuz-linux
     cp /target/boot/initramfs-linux.img /target/boot/efi/initramfs-linux.img
-    cp /target/boot/initramfs-linux-fallback.img /target/boot/efi/initramfs-linux-fallback.img
+    if [ -f /target/boot/initramfs-linux-fallback.img ]; then
+        cp /target/boot/initramfs-linux-fallback.img /target/boot/efi/initramfs-linux-fallback.img
+    fi
     mkdir -p /target/etc/pacman.d/hooks /target/usr/local/bin
     cat << 'EOF' > /target/usr/local/bin/borea-limine-sync
 #!/bin/sh
 set -eu
 mountpoint -q /boot/efi || { echo 'Borea Limine ESP is not mounted at /boot/efi' >&2; exit 1; }
-for file in vmlinuz-linux initramfs-linux.img initramfs-linux-fallback.img; do
+for file in vmlinuz-linux initramfs-linux.img; do
     test -s "/boot/$file"
     install -m 0644 "/boot/$file" "/boot/efi/$file"
 done
+if [ -s "/boot/initramfs-linux-fallback.img" ]; then
+    install -m 0644 "/boot/initramfs-linux-fallback.img" "/boot/efi/initramfs-linux-fallback.img"
+fi
 EOF
     chmod 0755 /target/usr/local/bin/borea-limine-sync
     cat << 'EOF' > /target/etc/pacman.d/hooks/zzzz-borea-limine-sync.hook
