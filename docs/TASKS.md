@@ -746,6 +746,23 @@ release. Deferred cards stay in this file marked `deferred`.
   Smallest next experiment: G05 below. Start with `base.hostname` and
   `base.fstab` as image-sandbox `write_file` steps with their probes, then boot.
 
+### G06 — Loop attach must not carry the image lock
+- **WS:** G · **Dep:** G02
+- **Files:** `crates/borea-run/src/image.rs`, `docs/TASKS.md`
+- **Deliverable:** `Loop::attach` gives the loop driver a second, unlocked open
+  of the image (same device and inode, via `/proc/self/fd`). Before, the locked
+  descriptor went to `LOOP_CONFIGURE`, so the kernel's reference kept the
+  `flock` held until a lazy detach finished. If udev was still probing the
+  device, the next stage failed with `E_IMAGE: image or journal is already locked`.
+- **Evidence:** PR #8 `bootstrap (ext4)` failed at once with that error on a
+  docs-only change
+  (https://github.com/BoreaProj/borea/actions/runs/43578386313/job/132555906795);
+  the rerun passed. The cause is read from the code, not reproduced.
+- **Done when:** the regression test proves the backing handle does not hold
+  the lock, and the storage, bootstrap and e2e jobs pass.
+- **Verify:** `cargo test -p borea-run loop_backing`; `disposable-image-storage` workflow
+- **Out:** waiting for udev, changing the lock model.
+
 ### G05 — Image plan executor (unblocks F04)
 - **WS:** G · **Dep:** G02, G03, G04, F04
 - **Files:** `crates/borea-run/src/{image,lib}.rs`, `crates/borea-run/src/image-*.sh`,
