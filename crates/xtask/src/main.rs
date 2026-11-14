@@ -10,6 +10,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
+mod e2e;
 mod vm;
 
 fn main() {
@@ -97,11 +98,7 @@ fn run() -> Result<()> {
                 "Omarchy trim preview fixture passed; no package removal or update-window integration tested"
             );
         }
-        ["e2e", ..] => {
-            return Err(BoreaError::unsupported(
-                "installation e2e is pending live executor, pinned family environments and VM lane; no result.json pass artifact was produced",
-            ));
-        }
+        ["e2e", rest @ ..] => e2e::run(&e2e::Args::parse(rest)?)?,
         ["env", ..] => envrun(&args[1..])?,
         ["vm", ..] => {
             return Err(BoreaError::invalid(
@@ -109,7 +106,7 @@ fn run() -> Result<()> {
             ));
         }
         [] | ["--help"] => println!(
-            "cargo xtask runtime check\ncargo xtask matrix check|render [--check]|verify --strict\ncargo xtask recipe lint\ncargo xtask plan golden [--update]\ncargo xtask secret canary\ncargo xtask disk selftest --stage create\ncargo xtask disk bootstrap --fs btrfs|ext4 [--out ABSOLUTE_IMAGE [--plan-out ABSOLUTE_PLAN]]\ncargo xtask vm boot --image ABSOLUTE_IMAGE --fs btrfs|ext4 --serial-log ABSOLUTE_LOG [--plan PLAN --report ABSOLUTE_REPORT] [--expect pass|fail]\ncargo xtask vm corrupt-root --image ABSOLUTE_IMAGE --out ABSOLUTE_COPY\ncargo xtask env --family FAMILY -- COMMAND...\nFull installation e2e remains gated; see docs/IMPLEMENTATION.md."
+            "cargo xtask runtime check\ncargo xtask matrix check|render [--check]|verify --strict\ncargo xtask recipe lint\ncargo xtask plan golden [--update]\ncargo xtask secret canary\ncargo xtask disk selftest --stage create\ncargo xtask disk bootstrap --fs btrfs|ext4 [--out ABSOLUTE_IMAGE [--plan-out ABSOLUTE_PLAN]]\ncargo xtask vm boot --image ABSOLUTE_IMAGE --fs btrfs|ext4 --serial-log ABSOLUTE_LOG [--plan PLAN --report ABSOLUTE_REPORT] [--expect pass|fail]\ncargo xtask vm corrupt-root --image ABSOLUTE_IMAGE --out ABSOLUTE_COPY\ncargo xtask e2e --family FAMILY --profile PROFILE [--loader auto|limine|grub] [--root-fs btrfs|ext4] [--keep] [--out ABSOLUTE_DIR]\ncargo xtask env --family FAMILY -- COMMAND...\ne2e apply is gated (D-038); runs end at the apply stage with result.json pass=false."
         ),
         _ => {
             return Err(BoreaError::invalid(
@@ -223,15 +220,21 @@ fn case_config(f: FamilyId, profile: &str, fs: Filesystem, l: Loader) -> Result<
     Ok(c)
 }
 fn build_case(c: &Config) -> Result<Plan> {
+    build_case_for(
+        c,
+        DeviceIdentity {
+            path: c.disk.device.clone(),
+            serial: "fixture-disk".into(),
+            size: 20 * 1024 * 1024 * 1024,
+            sector_size: 512,
+        },
+    )
+}
+/// Plan a golden case against a specific disk identity (e2e plans for the image).
+fn build_case_for(c: &Config, d: DeviceIdentity) -> Result<Plan> {
     let m = Matrix::embedded()?;
     let l = borea_distro::loader(c, &recipe::family(c.target.family)?, &m)?;
     let s = borea_session::select(c, &m, l, c.session.kind == "omarchy", false)?;
-    let d = DeviceIdentity {
-        path: c.disk.device.clone(),
-        serial: "fixture-disk".into(),
-        size: 20 * 1024 * 1024 * 1024,
-        sector_size: 512,
-    };
     borea_distro::planner::build(
         c,
         d,

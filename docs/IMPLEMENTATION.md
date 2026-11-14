@@ -49,7 +49,7 @@ Runtime delivery results are recorded in [validation/runtime.md](validation/runt
 | Execution | Dry-run and file fixtures; image identity/locks, durable receipts, private runtime snapshot, mount namespace cleanup, timeout and bounded diagnostics; Arch image bootstrap uses stdin-only account credentials | General plan-based live installation |
 | Verification | Offline file checks; SSH argv quoting, port/identity/known-hosts options and check reports, exercised against the Arch bootstrap VM; failures exit 5 | Offline native package/unit checks, remote timeouts and complete boot checks |
 | Omarchy | Full documented trim catalogue preview, browser protection, policy transitions, status/restore/note-install | Live removals, automatic update-window detection and hooks |
-| Harness | 29 golden cases, recipe/matrix checks, secret boundary canary, disposable-image storage selftests, restricted cached container runner; F03 Arch Btrfs/ext4 QEMU boot, `borea verify --ssh` and corrupted-root negative lane | Generic e2e orchestration (F04) and full matrix artifacts |
+| Harness | 29 golden cases, recipe/matrix checks, secret boundary canary, disposable-image storage selftests, restricted cached container runner; F03 Arch Btrfs/ext4 QEMU boot, `borea verify --ssh` and corrupted-root negative lane | F04 e2e apply stage, gated on the G05 image plan executor (D-038); full matrix artifacts |
 
 No area whose remaining column includes VM validation is claimed installable.
 The release gate `cargo xtask matrix verify --strict` intentionally exits nonzero
@@ -155,8 +155,10 @@ G03 adds Arch target bootstrap and Limine configuration on disposable images.
 G04 secures bootstrap credentials; neither the bootstrap receipt nor its
 filesystem probes establish that the image boots. F03 boots the Arch
 Btrfs/ext4 images in QEMU, runs `borea verify --ssh` and checks that a
-root-corrupted copy fails. Next is F04, the plan/apply e2e orchestrator that can
-promote a first matrix cell; LUKS2 and other-family bootstrap remain separate work.
+root-corrupted copy fails. F04 adds the e2e orchestrator. Its runs create an
+image and a plan, then stop at apply with `E_UNSUPPORTED` (D-038). Next is
+G05, the image plan executor that lets F04 promote a first matrix cell. LUKS2
+and other-family bootstrap remain separate work.
 
 Before enabling live apply, also fix the known draft planner gaps: GRUB config
 integration on Arch/Fedora/openSUSE, Fedora signed-boot behavior, Debian package
