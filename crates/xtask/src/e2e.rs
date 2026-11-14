@@ -15,7 +15,7 @@ use std::{
     collections::BTreeMap,
     fs::{self, OpenOptions},
     io::Write,
-    os::unix::fs::OpenOptionsExt,
+    os::unix::fs::{OpenOptionsExt, PermissionsExt},
     path::{Path, PathBuf},
     process::Command,
     time::{Instant, SystemTime, UNIX_EPOCH},
@@ -357,6 +357,7 @@ fn stage_inputs(config: &Config) -> Result<tempfile::TempDir> {
     let staging = tempfile::Builder::new()
         .prefix("borea-e2e-staging-")
         .tempdir()?;
+    fs::set_permissions(staging.path(), fs::Permissions::from_mode(0o700))?;
     let host = |plan_path: &Path| -> Result<PathBuf> {
         let rel = plan_path
             .strip_prefix("/")
