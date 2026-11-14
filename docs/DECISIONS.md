@@ -571,3 +571,50 @@ every generated image immediately compromisable; filesystem and config probes
 alone do not prove that an image boots.
 **Rejected:** default credentials, passwordless sudo, credentials in command
 arguments/environment, treating a configured Limine entry as boot evidence.
+
+### D-038 — e2e apply needs a plan executor for disposable images
+
+**Date:** 2026-11-14
+**Context:** F04 must run `create → plan → apply → boot → verify → collect`.
+`borea apply` cannot execute a Plan against an image. `apply_live` is gated,
+`apply_fixture` accepts file-only plans, and `image apply`/`image bootstrap`
+run closed storage and Arch bootstrap programs (D-035, D-037) that never read
+the plan. The F03 verify plan is synthetic and has no steps.
+
+Comparing `fixtures/plans/arch-minimal.json` with the bootstrapped image:
+
+| Item | Plan (borea-distro) | Image (image-storage.sh / image-bootstrap.sh) |
+| --- | --- | --- |
+| FS/GPT UUIDs | `sha(config_digest:serial:role)` | `sha(seed:name)` from `/dev/urandom` |
+| ESP volume id | `mkfs.fat -i <uuid prefix>` | not fixed |
+| Btrfs options | `subvol=@,compress=zstd:3,noatime,ssd,discard=async` | `defaults,subvol=@,compress=zstd` |
+| Hostname | `borea-test` (config) | `borea` |
+| Account | `tester`, comment, `wheel`, password slot `account.password` | `borea`, `users`+`wheel`, password over stdin |
+| sudoers | `%wheel ALL=(ALL:ALL) ALL` | `borea ALL=(ALL:ALL) ALL` |
+| Packages | no `e2fsprogs`/`dosfstools` in pacstrap; `limine`, `efibootmgr` via chroot `pacman -S` | all in one pacstrap |
+| zram | `/etc/systemd/zram-generator.conf` written | package only |
+| SSH access | `copy_in` key to `/home/tester/.ssh` | systemd credential for root (F03) |
+| Limine | `timeout: 5`, entry `/Borea` | `timeout: 3`, entry `/Borea (Arch Linux)`, console args |
+| Receipts | `/var/lib/borea/*` | none in target |
+
+**Options:**
+- (a) An image plan executor that runs the plan's post-storage steps inside the
+  G02 sandbox, reusing the image identity, lock and receipt machinery. The plan
+  is planned against the image identity; storage-prefix steps are only accepted
+  when their UUID/layout probes pass against the G02 result.
+- (b) Plan against the image identity only, so plan checks and UUIDs match the
+  bootstrapped target.
+
+**Decision:** (a). (b) is rejected because it is not honest: the closed
+bootstrap, not the plan, would have produced the target, so a passing verify
+would prove nothing about `apply`. It would also need the planner's UUID
+scheme changed, and the hostname, account, fstab and Limine differences above
+would still fail the plan's own checks.
+
+Both options need code outside F04's file boundary (`crates/borea-run`,
+`crates/borea-distro`). F04 therefore ships the orchestrator with the apply
+stage refused (`E_UNSUPPORTED`, citing this entry). The e2e CI job asserts
+that create and plan pass and apply refuses. No matrix cell is promoted.
+G05 holds the follow-up work.
+**Rejected:** substituting `image bootstrap` for `apply`; weakening verify
+checks to fit the bootstrap; marking arch/minimal supported from the F03 run.

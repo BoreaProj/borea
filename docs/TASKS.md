@@ -16,7 +16,7 @@ acceptance requires a live disk, package transaction or VM is marked done.
 | C01–C07 | Four native argv adapters and base configuration intent | Live roots, package indexes/repos, family-native boot details |
 | D01–D13 | Selection/package/greeter/autostart planning; unpinned paths refused | Verified pins, seeds, session entries and exact VM cells |
 | E01–E05 | Catalogue preview, documented policy model/operations and process tests | Old source/upstream commit unavailable; verify mapping, update flock and removals |
-| F01–F05 | Sparse image creation, cached container runner, golden/render/release gates; F03 Arch Btrfs/ext4 QEMU boot, SSH verify and corrupted-image lane | F04 e2e orchestration and the VM matrix |
+| F01–F05 | Sparse image creation, cached container runner, golden/render/release gates; F03 Arch Btrfs/ext4 QEMU boot, SSH verify and corrupted-image lane; F04 e2e orchestrator and artifacts | F04 apply stage gated on the G05 image plan executor (D-038); VM matrix |
 
 The exact unsupported errors are documented in IMPLEMENTATION.md. No checks,
 keys or matrix tiers were weakened to make a missing integration report green.
@@ -648,6 +648,42 @@ release. Deferred cards stay in this file marked `deferred`.
   and verify report.
 - **Verify:** `cargo xtask e2e --family arch --profile minimal`
 - **Out:** parallel scheduler, cloud runners.
+- **Status:** orchestrator done; blocked at apply (D-038).
+  `sudo env BOREA_RUNTIME_CACHE=/abs/cache target/release/xtask e2e --family arch --profile minimal`
+  creates a G02 image, plans against its identity, and writes `plan.json`,
+  `image.json`, `storage.journal` and `result.json`
+  `{cell, commit, pass, failed_stage, stages, artifacts, identity, duration_s}`
+  under `target/e2e/arch/minimal/<UTC timestamp>/`. Apply then refuses with
+  `E_UNSUPPORTED` (exit 3). No executor runs plan steps against an image, and
+  `identity` shows that plan and image UUIDs differ. Boot and verify reuse
+  `vm::boot` and are recorded as `not_run` until apply exists. Other families,
+  session profiles and GRUB are refused before an image is created. The
+  `disposable-image-storage` workflow's `e2e` job asserts this outcome and
+  uploads `e2e-arch-minimal`.
+- **Blocker:** tried both D-038 options. Both need `borea-run` and
+  `borea-distro` changes. Exact error:
+  `E_UNSUPPORTED: e2e apply is gated (D-038): no executor runs a Plan's steps against a Borea disposable image`.
+  Smallest next experiment: G05 below. Start with `base.hostname` and
+  `base.fstab` as image-sandbox `write_file` steps with their probes, then boot.
+
+### G05 — Image plan executor (unblocks F04)
+- **WS:** G · **Dep:** G02, G03, G04, F04
+- **Files:** `crates/borea-run/src/{image,lib}.rs`, `crates/borea-run/src/image-*.sh`,
+  `crates/borea-distro/src/planner.rs`, `crates/xtask/src/e2e.rs`, golden fixtures,
+  `docs/{DECISIONS,IMAGE-EXECUTION,TASKS,TESTING}.md`
+- **Deliverable:** execute a sealed Plan's post-storage steps (`bootstrap`,
+  `base`, `boot`, `finalise`) against a Borea-created image inside the G02/G03
+  sandbox. Map plan device paths to the held loop mappings. Accept the storage
+  prefix only when its UUID/layout probes pass. Run `chroot` steps in the
+  target and evaluate every `probe` there. Deliver `password` actions through a
+  secret slot over stdin, and `copy_in` from a root-private staging dir. Keep
+  journals digest-bound and resumable. The planner takes the image's UUIDs (or
+  the image takes the plan's) so the two agree.
+- **Done when:** the F04 e2e job reports `pass: true` for arch/minimal (btrfs,
+  limine) with plan, journal, serial log and verify report, and the canary is
+  absent from every artifact.
+- **Verify:** `sudo env BOREA_RUNTIME_CACHE=/abs/cache target/release/xtask e2e --family arch --profile minimal`
+- **Out:** physical disks, LUKS, non-Arch families, session packages.
 
 ### F05 — Matrix runner, render and nightly CI
 - **WS:** F · **Dep:** F04
