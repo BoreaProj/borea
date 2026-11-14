@@ -188,6 +188,12 @@ Steps are JSON objects. Destructive steps must appear before the first
 
 ## 7. Coverage contract
 
+> **Superseded in part by [D-039](DECISIONS.md) (2026-11-14).** The sessions
+> are now KDE, GNOME and COSMIC, plus the Noctalia v5, DMS and End4 shells on
+> Hyprland by default. Each family's `minimal` is the worker base. Omarchy,
+> PikaOS and Nobara are standalone flavours planned for v0.2. The tier
+> definitions below still apply; card A11 updates the cell list.
+
 Tier definitions:
 
 | Tier | Meaning |

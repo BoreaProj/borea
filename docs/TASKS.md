@@ -16,6 +16,7 @@ acceptance requires a live disk, package transaction or VM is marked done.
 | C01–C07 | Four native argv adapters and base configuration intent | Live roots, package indexes/repos, family-native boot details |
 | D01–D13 | Selection/package/greeter/autostart planning; unpinned paths refused | Verified pins, seeds, session entries and exact VM cells |
 | E01–E05 | Catalogue preview, documented policy model/operations and process tests | Old source/upstream commit unavailable; verify mapping, update flock and removals |
+| A11, C08, C09, D14, E07 | D-039 scope revision cards (2026-11-14) | Not started; evidence in validation/scope-revision.md |
 | F01–F05 | Sparse image creation, cached container runner, golden/render/release gates; F03 Arch Btrfs/ext4 QEMU boot, SSH verify and corrupted-image lane; F04 e2e orchestrator and artifacts | F04 apply stage gated on the G05 image plan executor (D-038); VM matrix |
 
 The exact unsupported errors are documented in IMPLEMENTATION.md. No checks,
@@ -215,6 +216,27 @@ release. Deferred cards stay in this file marked `deferred`.
   check name.
 - **Verify:** `cargo test -p borea-run verify`
 - **Out:** remediation, a second installer, remote agents.
+
+### A11 — Session catalogue revision (D-039)
+- **WS:** A · **Dep:** A05, A06, D01
+- **Files:** `recipes/matrix.toml`, `recipes/components/*.toml`,
+  `recipes/profiles/`, `crates/borea-core/src/{config,recipe,matrix}.rs`,
+  `crates/borea-session/src/lib.rs`, golden fixtures,
+  `docs/{MATRIX,PLAN,DECISIONS}.md`
+- **Deliverable:** sessions become desktop ∈ {KDE, GNOME, COSMIC} or
+  shell ∈ {Noctalia v5, DMS, End4} plus a compositor from the shell's
+  `compatible_compositors` (default Hyprland). Remove compositor-only sessions.
+  Repin Noctalia to v5 (`noctalia`, autostart `noctalia`). Apply the matrix
+  corrections in `validation/scope-revision.md` §1: Arch package name,
+  Fedora/openSUSE Noctalia tiers, DMS repos, openSUSE COSMIC re-verify.
+  Bump the config/matrix schema and make `matrix verify --strict` count the
+  D-039 contract.
+- **Done when:** `matrix verify --strict` lists exactly the D-039 required
+  cells. A compositor-only config is refused with a remedy. A shell with an
+  incompatible compositor is refused. Golden fixtures are regenerated.
+- **Verify:** workspace checks; `cargo xtask matrix check`; `cargo xtask plan golden`;
+  `cargo xtask matrix render --check`
+- **Out:** VM promotion (F04/F05); flavours (C09).
 
 ---
 
@@ -416,6 +438,38 @@ release. Deferred cards stay in this file marked `deferred`.
 - **Verify:** `cargo test -p borea-distro repo::fingerprint`
 - **Out:** automatic key discovery, trust-on-first-use.
 
+### C08 — Fedora release re-pin to 45
+- **WS:** C · **Dep:** C04, G01
+- **Files:** `recipes/families/fedora.toml`, `recipes/families/runtime*.json`,
+  `crates/borea-distro/src/` (Fedora adapter only), golden fixtures,
+  `docs/{MATRIX,DECISIONS}.md`
+- **Deliverable:** pin Fedora 45 (released 2026-11-03). F43 is end of life about
+  six weeks later. Refresh the runtime bundle and repository keys. Record the
+  F45 default signature enforcement.
+- **Done when:** `plan golden` regenerates with release 45, the runtime lock
+  verifies, and the Noctalia Fedora cell is `native` with F45 evidence.
+- **Verify:** workspace checks; `cargo xtask plan golden`; `cargo xtask matrix check`
+- **Out:** Rawhide, Fedora Atomic.
+
+### C09 — Standalone flavour layer (Omarchy, PikaOS, Nobara)
+- **WS:** C · **Dep:** C02, C03, C04, C07, G05
+- **Files:** `recipes/flavours/{omarchy,pikaos,nobara}.toml`,
+  `crates/borea-distro/src/flavour.rs`, `crates/borea-core/src/{config,recipe}.rs`,
+  golden fixtures, `docs/{MATRIX,DECISIONS,ARCHITECTURE}.md`
+- **Deliverable:** a flavour is base family + pinned repos/keys + default
+  package set + customisation catalogue, installed with the base family's
+  native bootstrap tool. Omarchy wraps E06. PikaOS runs `mmdebstrap` against
+  `ppa.pika-os.com` (Sid suite) with a CPU x86-64-v3 preflight. Nobara runs
+  `dnf5 --installroot` with `nobara-repos`/`nobara-gpg-keys`. Every flavour cell
+  is `third-party`. Flavour logic stays inside `borea-distro` (AGENTS §2).
+- **Done when:** golden plans exist for the three flavours. A non-v3 CPU is
+  refused for PikaOS. A wrong key fingerprint is refused before any package
+  install. The e2e cell for each flavour boots to its default greeter and
+  `/etc/os-release` names it (v0.2).
+- **Verify:** workspace checks; `cargo xtask plan golden`;
+  `cargo xtask e2e --family debian --flavour pikaos` (after G05)
+- **Out:** flavour ISOs or installers; a flavour on openSUSE; flavour updaters.
+
 ---
 
 ## D — Sessions
@@ -538,6 +592,19 @@ release. Deferred cards stay in this file marked `deferred`.
 - **Verify:** `cargo test -p borea-session seed`
 - **Out:** dotfile managers, chezmoi, user-supplied archives.
 
+### D14 — Linutil-derived customisation catalogue
+- **WS:** D · **Dep:** D12, C07
+- **Files:** `recipes/components/{gaming,app.*}.toml`, `recipes/matrix.toml`,
+  `docs/validation/scope-revision.md`
+- **Deliverable:** port Linutil's package and repository data (gaming setup,
+  multilib/i386, codecs, Flatpak frontends, zram, optional apps) into Borea
+  recipes. Each cell gets fresh evidence and a tier. No Linutil script runs, and
+  `curl | sh`, `--nogpgcheck` and AUR helpers are refused (D-039).
+- **Done when:** `borea catalogue --family X` lists the gaming and app options
+  with tiers. Each option has a golden plan fragment.
+- **Verify:** `cargo xtask matrix check`; `cargo xtask plan golden`
+- **Out:** game mods, emulators, interactive tweaks.
+
 ---
 
 ## E — Omarchy
@@ -592,6 +659,19 @@ release. Deferred cards stay in this file marked `deferred`.
   with a reason).
 - **Verify:** `cargo xtask e2e --profile omarchy-trim`
 - **Out:** Omarchy ISO download in CI by default (manual profile only).
+
+### E07 — Flavour customisation (generalise the Omarchy trim)
+- **WS:** E · **Dep:** E01–E06, C09
+- **Files:** `crates/borea-core/src/{omarchy,defaults}.rs` → shared
+  `customise` module, `recipes/flavours/*.toml`, `crates/borea-cli/`, fixtures
+- **Deliverable:** keep/remove/replace catalogues per flavour (PikaOS and Nobara
+  default apps, gaming metas, updaters), using the same policy model, browser
+  protection and preview as the Omarchy trim. Selected items only; unselected
+  defaults are left alone.
+- **Done when:** `borea customise --flavour pikaos --list` and `--dry-run`
+  produce deterministic plans with regression tests for protected packages.
+- **Verify:** workspace checks; `cargo xtask plan golden`
+- **Out:** live removals before G05/C09 pass in a VM.
 
 ---
 
