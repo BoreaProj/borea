@@ -172,7 +172,7 @@ do_initramfs() {
 probe_bootloader() {
     test -f /target/boot/efi/EFI/BOOT/BOOTX64.EFI
     test -f /target/boot/efi/EFI/BOOT/limine.conf
-    grep -q "guid(${boot_uuid})" /target/boot/efi/EFI/BOOT/limine.conf
+    grep -q 'boot(2):/vmlinuz-linux' /target/boot/efi/EFI/BOOT/limine.conf
 }
 do_bootloader() {
     mkdir -p /target/boot/efi/EFI/BOOT /target/boot/efi/EFI/borea /target/boot/limine
@@ -190,14 +190,14 @@ serial: yes
 
 /Borea (Arch Linux)
     protocol: linux
-    path: guid(${boot_uuid}):/vmlinuz-linux
-    module_path: guid(${boot_uuid}):/initramfs-linux.img
+    path: boot(2):/vmlinuz-linux
+    module_path: boot(2):/initramfs-linux.img
     cmdline: root=UUID=${root_uuid} ${cmdline_flags} rw console=tty0 console=ttyS0,115200
 
 /Borea fallback
     protocol: linux
-    path: guid(${boot_uuid}):/vmlinuz-linux
-    module_path: guid(${boot_uuid}):/initramfs-linux-fallback.img
+    path: boot(2):/vmlinuz-linux
+    module_path: boot(2):/initramfs-linux-fallback.img
     cmdline: root=UUID=${root_uuid} ${cmdline_flags} rw console=tty0 console=ttyS0,115200
 EOF
     cp /target/boot/efi/EFI/BOOT/limine.conf /target/boot/limine/limine.conf

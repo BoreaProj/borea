@@ -305,7 +305,7 @@ release. Deferred cards stay in this file marked `deferred`.
 - **Deliverable:** package set (`limine`, `efibootmgr`); copy `BOOTX64.EFI` to
   the ESP fallback and `/EFI/borea`; `efibootmgr` entry; write
   `/boot/efi/EFI/BOOT/limine.conf` (first EFI candidate) plus an informational
-  copy at `/boot/limine/limine.conf`, with `guid(<boot-fs-uuid>)` kernel paths,
+  copy at `/boot/limine/limine.conf`, with `boot(2)` kernel paths,
   the fallback initramfs entry and `rootflags=subvol=@` (or the ext4 cmdline).
 - **Done when:** an Arch fixture root receives the expected EFI copy, entry and
   config bytes; a kernel package update leaves the config valid.

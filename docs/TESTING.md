@@ -284,7 +284,7 @@ release checklist reads the latest artifact index, not memory.
    tail has the command output.
 3. `serial.log` — boot failures, missing initramfs, wrong root, failed units.
    For a Btrfs root, check that the cmdline has `rootflags=subvol=@`; for
-   Limine, check that the config's `guid(...)` matches the `/boot` UUID.
+   Limine, check that the config's `boot(2)` resolves to the `/boot` partition.
 4. Re-run with `--keep` and inspect the disk:
    `cargo xtask vm shell --image <cell>/disk.img` (boots a rescue shell) or
    attach the image read-only on the host. Mount Btrfs with

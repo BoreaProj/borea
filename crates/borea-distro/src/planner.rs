@@ -799,11 +799,7 @@ pub fn build(c: &Config, disk: DeviceIdentity, intent: Intent) -> Result<Plan> {
             );
         }
         let contents = format!(
-            "timeout: 5\nserial: yes\n\n/Borea\n    protocol: linux\n    path: guid({}):/vmlinuz-linux\n    module_path: guid({}):/initramfs-linux.img\n    cmdline: {cmdline}\n/Borea fallback\n    protocol: linux\n    path: guid({}):/vmlinuz-linux\n    module_path: guid({}):/initramfs-linux-fallback.img\n    cmdline: {cmdline}\n",
-            uuid("fs.boot"),
-            uuid("fs.boot"),
-            uuid("fs.boot"),
-            uuid("fs.boot")
+            "timeout: 5\nserial: yes\n\n/Borea\n    protocol: linux\n    path: boot(2):/vmlinuz-linux\n    module_path: boot(2):/initramfs-linux.img\n    cmdline: {cmdline}\n/Borea fallback\n    protocol: linux\n    path: boot(2):/vmlinuz-linux\n    module_path: boot(2):/initramfs-linux-fallback.img\n    cmdline: {cmdline}\n"
         );
         b.file(
             "boot.limine.config",
@@ -1099,7 +1095,7 @@ mod tests {
         }
     }
     #[test]
-    fn limine_kernel_paths_use_partition_guid_syntax() {
+    fn limine_kernel_paths_use_boot_partition_syntax() {
         let p = plan(Filesystem::Ext4, FamilyId::Arch);
         let config = p
             .steps
@@ -1111,8 +1107,8 @@ mod tests {
             })
             .unwrap();
         assert!(config.contains("serial: yes"));
-        assert!(config.contains("path: guid(") && config.contains("):/vmlinuz-linux"));
-        assert!(config.contains("module_path: guid(") && config.contains("):/initramfs-linux.img"));
+        assert!(config.contains("path: boot(2):/vmlinuz-linux"));
+        assert!(config.contains("module_path: boot(2):/initramfs-linux.img"));
     }
     #[test]
     fn digest_tampering_rejected() {
