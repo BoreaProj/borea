@@ -36,10 +36,8 @@ jobs:
           sudo mount ${dev}p2 $m/boot
           sudo mount ${dev}p1 $m/boot/efi
           for d in proc sys dev; do sudo mount --rbind /$d $m/$d; done
-          sudo chroot $m pacman -Q grub || true
-          ls -la $m/etc/default/grub.d/ || true
-          cat $m/etc/default/grub.d/*.cfg || true
-          grep -n "GRUB_CMDLINE_LINUX" $m/etc/default/grub || true
-          grep -n "grub.d\|default/grub" $m/usr/bin/grub-mkconfig || true
-          grep -n "linux\s" $m/boot/grub/grub.cfg | head -5 || true
-          ls -la $m/boot/efi/EFI/BOOT/ || true
+          sudo grep -n -E "^\s*(linux|initrd|search|set root|terminal|serial|set timeout)" $m/boot/grub/grub.cfg | head -20 || true
+          sudo ls -la $m/boot/ || true
+          echo "== serial.log head"; sudo head -c 3000 target/e2e/arch/minimal-grub/*/serial.log | tr -d '\033' | strings | head -40 || true
+          echo "== serial.log tail"; sudo tail -c 4000 target/e2e/arch/minimal-grub/*/serial.log | tr -d '\033' | strings | tail -40 || true
+          echo "== qemu log"; sudo tail -20 target/e2e/arch/minimal-grub/*/serial.qemu.log || true
