@@ -1,5 +1,5 @@
 {
-  "schema": 1,
+  "schema": 2,
   "cells": [
     {
       "cell": "arch/minimal",
@@ -10,6 +10,7 @@
       "artifact": "e2e-arch-minimal",
       "artifact_id": 14150070925,
       "result_digest": "5a0dd46661bb85af7496f6f283e7efac5f8d306e87d23967de6bf244c6641eca",
+      "golden_digest": "eff09e0a019c30b930d594926917698819f8b77ee02bf43351615046d99a6589",
       "validated": "2026-11-15",
       "release": "B-0.3"
     },
@@ -22,6 +23,7 @@
       "artifact": "e2e-arch-minimal-ext4",
       "artifact_id": 14149529824,
       "result_digest": "68c0aa60b23a03ef52185dde727b2193dca77d8a952088409cce3485a5ea5ea4",
+      "golden_digest": "4628c6b1833c5eb0d3b90c7d35cc73071d5368cdfff080116ca9f1ef8e16fc5a",
       "validated": "2026-11-15",
       "release": "B-0.3"
     },
@@ -34,6 +36,7 @@
       "artifact": "e2e-arch-minimal-grub",
       "artifact_id": 14164972637,
       "result_digest": "f0ae8d28f14c0a517c575a3d02dac40f71c252232ed10f8a8d3f51a5e0ac32e3",
+      "golden_digest": "eee7fdaae8f3514e52c3fbebaeb61459eae6dceda656724ccba723965bc8e2ec",
       "validated": "2026-11-15",
       "release": "B-0.3"
     }

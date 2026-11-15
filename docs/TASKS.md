@@ -908,6 +908,26 @@ release. Deferred cards stay in this file marked `deferred`.
 | alongside/resize | dangerous, large | after v1 |
 | GUI | explicitly removed | never in this repo |
 
+### F06 — Validated cells go stale when their plan changes
+- **WS:** F · **Dep:** F05
+- **Files:** `crates/xtask/src/{matrix,e2e,main}.rs`, `recipes/validated.json`,
+  `docs/{TASKS,TESTING}.md`
+- **Deliverable:** `result.json` (schema 2) carries the cell's golden plan
+  digest at run time, and each record keeps it (`validated.json` schema 2).
+  A record whose digest differs from the cell's current golden plan is
+  **stale**: `matrix check`, `matrix verify` and `MATRIX.generated.md` show it
+  as stale, and `matrix verify --strict` fails until the cell is re-run and
+  re-recorded.
+- **Done when:** a recipe or planner change that alters a cell's plan makes
+  its record stale without any manual step.
+- **Verify:** `cargo test -p xtask matrix`; `cargo xtask matrix verify`
+- **Out:** automatic re-recording (records stay reviewed commits).
+- **Status:** done. Existing records were migrated with the golden digest
+  from their own commit (`git show <commit>:fixtures/plans/<cell>.json`).
+  All three Arch records are stale: A11 and C08 changed the plans after
+  `6b06f35`, and C06 changed every plan after `806671d`. Re-record from the
+  next nightly on `main`.
+
 ### F07 — VM root-mount evidence for script initramfs
 - **WS:** F · **Dep:** F03
 - **Files:** `crates/xtask/src/vm.rs`

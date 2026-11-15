@@ -39,6 +39,10 @@ pub struct Record {
     pub artifact_id: u64,
     /// `borea_core::plan::digest` of the parsed `result.json`.
     pub result_digest: String,
+    /// Digest of the cell's golden plan when the run happened. If the current
+    /// golden plan differs, the recipe or planner changed and the record is
+    /// stale (F06).
+    pub golden_digest: String,
     /// UTC date of the run, `YYYY-MM-DD`.
     pub validated: String,
     pub release: String,
@@ -56,6 +60,9 @@ pub struct Required {
     pub cell: String,
     pub root_fs: String,
     pub loader: String,
+    /// Digest of the cell's current golden plan; `None` when the cell is a
+    /// refusal today.
+    pub golden_digest: Option<String>,
 }
 
 fn fs_name(fs: Filesystem) -> &'static str {
@@ -81,6 +88,7 @@ pub fn required() -> Result<Vec<Required>> {
                 cell: format!("{}/{profile}", f.as_str()),
                 root_fs: fs_name(fs).into(),
                 loader: loader.into(),
+                golden_digest: crate::build_case(&c).ok().map(|p| p.digest),
             })
         })
         .collect()
@@ -103,6 +111,7 @@ const FIELDS: &[&str] = &[
     "artifact",
     "artifact_id",
     "result_digest",
+    "golden_digest",
     "validated",
     "release",
 ];
@@ -113,8 +122,8 @@ fn parse(text: &str) -> Result<Validated> {
     let top = v
         .as_object()
         .ok_or_else(|| bad("must be an object".into()))?;
-    if top.keys().any(|k| k != "schema" && k != "cells") || top.get("schema") != Some(&1.into()) {
-        return Err(bad("must be {\"schema\": 1, \"cells\": [...]}".into()));
+    if top.keys().any(|k| k != "schema" && k != "cells") || top.get("schema") != Some(&2.into()) {
+        return Err(bad("must be {\"schema\": 2, \"cells\": [...]}".into()));
     }
     let cells = top
         .get("cells")
@@ -144,12 +153,13 @@ fn parse(text: &str) -> Result<Validated> {
                 .as_u64()
                 .ok_or_else(|| bad("artifact_id must be a number".into()))?,
             result_digest: s("result_digest")?,
+            golden_digest: s("golden_digest")?,
             validated: s("validated")?,
             release: s("release")?,
         });
     }
     Ok(Validated {
-        schema: 1,
+        schema: 2,
         cells: out,
     })
 }
@@ -163,13 +173,14 @@ fn render_json(v: &Validated) -> Result<String> {
                 "cell": r.cell, "root_fs": r.root_fs, "loader": r.loader,
                 "commit": r.commit, "run": r.run, "artifact": r.artifact,
                 "artifact_id": r.artifact_id, "result_digest": r.result_digest,
+                "golden_digest": r.golden_digest,
                 "validated": r.validated, "release": r.release,
             })
         })
         .collect();
     Ok(format!(
         "{}\n",
-        serde_json::to_string_pretty(&serde_json::json!({"schema": 1, "cells": cells}))?
+        serde_json::to_string_pretty(&serde_json::json!({"schema": 2, "cells": cells}))?
     ))
 }
 
@@ -209,8 +220,11 @@ pub fn validate(v: &Validated, required: &[Required]) -> Result<()> {
                 &format!("must be {} with {}", req.root_fs, req.loader),
             );
         }
-        if !hex(&r.commit, 40) || !hex(&r.result_digest, 64) {
-            return bad(&r.cell, "commit and result_digest must be lowercase hex");
+        if !hex(&r.commit, 40) || !hex(&r.result_digest, 64) || !hex(&r.golden_digest, 64) {
+            return bad(
+                &r.cell,
+                "commit, result_digest and golden_digest must be lowercase hex",
+            );
         }
         if !r
             .run
@@ -240,6 +254,20 @@ pub fn validate(v: &Validated, required: &[Required]) -> Result<()> {
         ));
     }
     Ok(())
+}
+
+/// Records whose cell plan changed since the run: the recipe or planner moved
+/// on, so the VM result no longer proves the current plan.
+pub fn stale<'a>(v: &'a Validated, required: &[Required]) -> Vec<&'a Record> {
+    v.cells
+        .iter()
+        .filter(|r| {
+            required
+                .iter()
+                .find(|q| q.cell == r.cell)
+                .is_none_or(|q| q.golden_digest.as_deref() != Some(r.golden_digest.as_str()))
+        })
+        .collect()
 }
 
 /// One `result.json` found under an artifacts directory.
@@ -329,6 +357,7 @@ pub fn record(result: &Path, run: &str, artifact: &str, artifact_id: u64) -> Res
         artifact: artifact.into(),
         artifact_id,
         result_digest: found.digest.clone(),
+        golden_digest: text("golden_digest")?,
         // The run directory is the UTC start time, YYYYMMDDTHHMMSSZ.
         validated: match dir.get(..8) {
             Some(d) if d.bytes().all(|b| b.is_ascii_digit()) => {
@@ -396,6 +425,7 @@ fn verify_with(
             }
         }
     }
+    let stale = stale(v, required);
     let missing: Vec<_> = required
         .iter()
         .filter(|q| !v.cells.iter().any(|r| r.cell == q.cell))
@@ -414,11 +444,23 @@ fn verify_with(
                 missing.join("\n  ")
             ));
         }
+        if !stale.is_empty() {
+            errors.push(format!(
+                "{} validated cells are stale (their plan changed since the run; re-run and re-record):\n  {}",
+                stale.len(),
+                stale
+                    .iter()
+                    .map(|r| r.cell.as_str())
+                    .collect::<Vec<_>>()
+                    .join("\n  ")
+            ));
+        }
     }
     let summary = format!(
-        "matrix verify: {}/{} required cells validated",
-        v.cells.len(),
-        required.len()
+        "matrix verify: {}/{} required cells validated ({} stale)",
+        v.cells.len() - stale.len(),
+        required.len(),
+        stale.len()
     );
     if errors.is_empty() {
         Ok(summary)
@@ -431,22 +473,30 @@ fn verify_with(
 }
 
 /// The validated-cell section appended to `MATRIX.generated.md`.
-pub fn render_section(v: &Validated, required: usize) -> String {
+pub fn render_section(v: &Validated, required: &[Required]) -> String {
+    let stale = stale(v, required);
     let mut text = format!(
-        "\n## VM-validated cells ({}/{required} required)\n\nA cell is validated only by a passing e2e run in CI, recorded with `cargo xtask matrix record` in `recipes/validated.json`. Package tiers above are not VM results.\n\n",
-        v.cells.len()
+        "\n## VM-validated cells ({}/{} required, {} stale)\n\nA cell is validated only by a passing e2e run in CI, recorded with `cargo xtask matrix record` in `recipes/validated.json`. A record is stale when the cell's golden plan has changed since the run; it then counts as unvalidated. Package tiers above are not VM results.\n\n",
+        v.cells.len() - stale.len(),
+        required.len(),
+        stale.len()
     );
     if v.cells.is_empty() {
         text += "None yet.\n";
         return text;
     }
-    text += "| Cell | Root fs | Loader | Commit | Date | Run |\n| --- | --- | --- | --- | --- | --- |\n";
+    text += "| Cell | Root fs | Loader | Status | Commit | Date | Run |\n| --- | --- | --- | --- | --- | --- | --- |\n";
     for r in &v.cells {
         text += &format!(
-            "| {} | {} | {} | `{}` | {} | [{} #{}]({}) |\n",
+            "| {} | {} | {} | {} | `{}` | {} | [{} #{}]({}) |\n",
             r.cell,
             r.root_fs,
             r.loader,
+            if stale.iter().any(|s| s.cell == r.cell) {
+                "stale"
+            } else {
+                "current"
+            },
             &r.commit[..7],
             r.validated,
             r.artifact,
@@ -475,6 +525,12 @@ mod tests {
             artifact: "e2e-arch-minimal".into(),
             artifact_id: 3,
             result_digest: "d".repeat(64),
+            golden_digest: required()
+                .unwrap()
+                .into_iter()
+                .find(|q| q.cell == cell)
+                .and_then(|q| q.golden_digest)
+                .unwrap_or_else(|| "e".repeat(64)),
             validated: "2026-11-14".into(),
             release: "B-0.3".into(),
         }
@@ -496,6 +552,7 @@ mod tests {
             "commit": "8".repeat(40), "pass": pass,
             "failed_stage": if pass { serde_json::Value::Null } else { "boot".into() },
             "artifacts": artifacts, "release": "B-0.3",
+            "golden_digest": "e".repeat(64),
         });
         fs::write(dir.join("result.json"), v.to_string()).unwrap();
         v
@@ -523,7 +580,7 @@ mod tests {
     fn records_are_validated() {
         let r = req();
         let ok = Validated {
-            schema: 1,
+            schema: 2,
             cells: vec![rec("arch/minimal")],
         };
         assert!(validate(&ok, &r).is_ok());
@@ -550,18 +607,18 @@ mod tests {
             },
         ] {
             let v = Validated {
-                schema: 1,
+                schema: 2,
                 cells: vec![broken],
             };
             assert!(validate(&v, &r).is_err());
         }
         let dup = Validated {
-            schema: 1,
+            schema: 2,
             cells: vec![rec("arch/minimal"), rec("arch/minimal")],
         };
         assert!(validate(&dup, &r).is_err());
-        assert!(parse(r#"{"schema":2,"cells":[]}"#).is_err());
-        assert!(parse(r#"{"schema":1,"cells":[],"extra":1}"#).is_err());
+        assert!(parse(r#"{"schema":1,"cells":[]}"#).is_err());
+        assert!(parse(r#"{"schema":2,"cells":[],"extra":1}"#).is_err());
         let text = render_json(&ok).unwrap();
         assert_eq!(parse(&text).unwrap(), ok);
         assert!(parse(&text.replace("\"release\"", "\"extra\": 1, \"release\"")).is_err());
@@ -599,7 +656,7 @@ mod tests {
         let v = run_dir(d.path(), "arch/minimal", true, true);
         let digest = borea_core::plan::digest(&v).unwrap();
         let recorded = Validated {
-            schema: 1,
+            schema: 2,
             cells: vec![Record {
                 result_digest: digest,
                 ..rec("arch/minimal")
@@ -619,7 +676,7 @@ mod tests {
         assert!(e.message.contains("needs --artifacts"));
         // A record whose own result is absent fails strict verify.
         let other = Validated {
-            schema: 1,
+            schema: 2,
             cells: vec![rec("arch/minimal")],
         };
         let e = verify_with(&other, &r, true, Some(d.path())).unwrap_err();
@@ -633,7 +690,7 @@ mod tests {
         assert!(
             verify_with(
                 &Validated {
-                    schema: 1,
+                    schema: 2,
                     cells: vec![]
                 },
                 &r,
@@ -645,22 +702,50 @@ mod tests {
     }
 
     #[test]
+    fn records_go_stale_when_the_golden_plan_changes() {
+        let r = req();
+        let current = rec("arch/minimal");
+        let old = Record {
+            golden_digest: "0".repeat(64),
+            root_fs: "ext4".into(),
+            ..rec("arch/minimal-ext4")
+        };
+        let v = Validated {
+            schema: 2,
+            cells: vec![current, old],
+        };
+        let stale: Vec<_> = stale(&v, &r).iter().map(|s| s.cell.clone()).collect();
+        assert_eq!(stale, ["arch/minimal-ext4"]);
+        let e = verify_with(&v, &r, true, None).unwrap_err();
+        assert!(e.message.contains("1 validated cells are stale"));
+        assert!(
+            e.message
+                .contains("1/29 required cells validated (1 stale)")
+        );
+        assert!(render_section(&v, &r).contains("| arch/minimal-ext4 | ext4 | limine | stale |"));
+        // A stale record does not fail nightly or matrix check.
+        assert!(verify_with(&v, &r, false, None).is_ok());
+    }
+
+    #[test]
     fn render_lists_records() {
         let empty = render_section(
             &Validated {
-                schema: 1,
+                schema: 2,
                 cells: vec![],
             },
-            29,
+            &req(),
         );
-        assert!(empty.contains("(0/29 required)") && empty.contains("None yet."));
+        assert!(empty.contains("(0/29 required, 0 stale)") && empty.contains("None yet."));
         let one = render_section(
             &Validated {
-                schema: 1,
+                schema: 2,
                 cells: vec![rec("arch/minimal")],
             },
-            29,
+            &req(),
         );
-        assert!(one.contains("| arch/minimal | btrfs | limine | `8888888` | 2026-11-14 |"));
+        assert!(
+            one.contains("| arch/minimal | btrfs | limine | current | `8888888` | 2026-11-14 |")
+        );
     }
 }

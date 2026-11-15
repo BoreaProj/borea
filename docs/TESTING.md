@@ -243,8 +243,10 @@ come from runs on `main`: a PR run tests a temporary merge commit.
   record's artifact by id first. An expired artifact fails the gate, so the
   cell must be re-run and re-recorded.
 
-Not yet enforced: re-validation after a recipe change. The record keeps the
-commit, so a later card can compare it with the recipe history.
+Re-validation after a recipe change is enforced (F06). Each record keeps the
+digest of the cell's golden plan at run time. When the current golden plan
+differs, the record is stale: it shows as stale, does not count as validated,
+and fails `matrix verify --strict` until the cell is re-run and re-recorded.
 
 ## 7. What each cell actually asserts
 

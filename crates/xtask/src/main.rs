@@ -33,9 +33,10 @@ fn run() -> Result<()> {
             let v = matrix::load()?;
             let required = matrix::required()?;
             matrix::validate(&v, &required)?;
+            let stale = matrix::stale(&v, &required).len();
             println!(
-                "matrix: complete cells, unique keys, evidence and native package mappings checked; {}/{} required cells VM-validated",
-                v.cells.len(),
+                "matrix: complete cells, unique keys, evidence and native package mappings checked; {}/{} required cells VM-validated ({stale} stale)",
+                v.cells.len() - stale,
                 required.len()
             );
         }
@@ -193,7 +194,7 @@ fn render(check: bool) -> Result<()> {
     let validated = matrix::load()?;
     let required = matrix::required()?;
     matrix::validate(&validated, &required)?;
-    text += &matrix::render_section(&validated, required.len());
+    text += &matrix::render_section(&validated, &required);
     let path = workspace().join("docs/MATRIX.generated.md");
     if check {
         if fs::read_to_string(path)? != text {
