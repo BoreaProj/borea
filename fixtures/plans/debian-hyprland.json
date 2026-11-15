@@ -1,11 +1,11 @@
 {
   "schema": 2,
-  "id": "2bd59341f49cc35f8c5633c13272455e",
+  "id": "540d809c21fd1918574a02b51ff2676d",
   "created": "1970-01-01T00:00:00Z",
   "borea_version": "B-0.3",
-  "digest": "2bd59341f49cc35f8c5633c13272455efb53e6a6d9d4e7a628b5ac7487a2a77b",
+  "digest": "540d809c21fd1918574a02b51ff2676d1044fbf4b48ccdb0dc372abc296ce2aa",
   "config_digest": "a9732f3723f17522e494fe2e1c100f8545a6263e34f1899c44d75e7d85dc2762",
-  "matrix_digest": "2c8e72b621a2407f672a030615d9fd7f732adb37cb06ae7dacfeaca926f5b593",
+  "matrix_digest": "1a06a55c49cb1b52db797b944304efd3e3d82141d0f2d96481bfa15c744830bd",
   "family": "debian",
   "disk": {
     "path": "/dev/vda",

@@ -450,6 +450,12 @@ release. Deferred cards stay in this file marked `deferred`.
   verifies, and the Noctalia Fedora cell is `native` with F45 evidence.
 - **Verify:** workspace checks; `cargo xtask plan golden`; `cargo xtask matrix check`
 - **Out:** Rawhide, Fedora Atomic.
+- **Status:** done (D-041).
+  - Fedora 45 release and runtime image pinned. Runtime `runtime-2026-11-15.1`
+    rebuilt from the branch; its lock replaces `runtimes.lock.json` (all four
+    bundles are republished, with unchanged source images except Fedora).
+  - Fedora Noctalia is `native` with package `noctalia`.
+  - Left for A11: Noctalia's v4 autostart command.
 
 ### C09 — Standalone flavour layer (Omarchy, PikaOS, Nobara)
 - **WS:** C · **Dep:** C02, C03, C04, C07, G05

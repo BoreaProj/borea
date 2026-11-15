@@ -1,11 +1,11 @@
 {
   "schema": 2,
-  "id": "615ada403c7467f2aa256dfcd12a1f78",
+  "id": "10dc6a445c23688870e14e8546a2d1f8",
   "created": "1970-01-01T00:00:00Z",
   "borea_version": "B-0.3",
-  "digest": "615ada403c7467f2aa256dfcd12a1f781b589b4a9c7b1d6b699cc2d4ec29e8e8",
+  "digest": "10dc6a445c23688870e14e8546a2d1f840e0c020793e116638368fd0c064669e",
   "config_digest": "dcb406c9c64223e93fc31b1af81e72717d2e4e4b55f1a88fa23c0437397300d9",
-  "matrix_digest": "2c8e72b621a2407f672a030615d9fd7f732adb37cb06ae7dacfeaca926f5b593",
+  "matrix_digest": "1a06a55c49cb1b52db797b944304efd3e3d82141d0f2d96481bfa15c744830bd",
   "family": "suse",
   "disk": {
     "path": "/dev/vda",

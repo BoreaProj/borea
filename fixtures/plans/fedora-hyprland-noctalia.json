@@ -1,11 +1,11 @@
 {
   "schema": 2,
-  "id": "2eea49a130ceeea000328c2b8dbfe327",
+  "id": "2d196c361eef145817c7c8ffcc48c75b",
   "created": "1970-01-01T00:00:00Z",
   "borea_version": "B-0.3",
-  "digest": "2eea49a130ceeea000328c2b8dbfe327367ae2ff7ab16c42c565e09e590dd921",
+  "digest": "2d196c361eef145817c7c8ffcc48c75bc74fd692b958dde911551314fa0f7fb4",
   "config_digest": "b4964ccc4ecce9a4e5e2ec9c1f253083711727ccb2d0b2d8a803cda058ae6e86",
-  "matrix_digest": "2c8e72b621a2407f672a030615d9fd7f732adb37cb06ae7dacfeaca926f5b593",
+  "matrix_digest": "1a06a55c49cb1b52db797b944304efd3e3d82141d0f2d96481bfa15c744830bd",
   "family": "fedora",
   "disk": {
     "path": "/dev/vda",
@@ -720,7 +720,7 @@
           "dnf5",
           "-y",
           "--installroot=/mnt",
-          "--releasever=43",
+          "--releasever=45",
           "install",
           "@core",
           "kernel",
@@ -763,7 +763,7 @@
           "hyprland",
           "kernel",
           "kitty",
-          "noctalia-shell",
+          "noctalia",
           "openssh-server",
           "sudo",
           "tuigreet",
@@ -795,7 +795,7 @@
       "action": {
         "kind": "write_file",
         "path": "/var/lib/borea/base-packages",
-        "contents": "@core\nNetworkManager\nbtrfs-progs\nefibootmgr\ngreetd\ngrub2-efi-x64\ngrub2-tools\nhyprland\nkernel\nkitty\nnoctalia-shell\nopenssh-server\nsudo\ntuigreet\nxdg-desktop-portal-hyprland\nzram-generator",
+        "contents": "@core\nNetworkManager\nbtrfs-progs\nefibootmgr\ngreetd\ngrub2-efi-x64\ngrub2-tools\nhyprland\nkernel\nkitty\nnoctalia\nopenssh-server\nsudo\ntuigreet\nxdg-desktop-portal-hyprland\nzram-generator",
         "mode": 420
       },
       "needs": [
@@ -804,7 +804,7 @@
       "probe": {
         "kind": "file_contains",
         "path": "/var/lib/borea/base-packages",
-        "needle": "@core\nNetworkManager\nbtrfs-progs\nefibootmgr\ngreetd\ngrub2-efi-x64\ngrub2-tools\nhyprland\nkernel\nkitty\nnoctalia-shell\nopenssh-server\nsudo\ntuigreet\nxdg-desktop-portal-hyprland\nzram-generator"
+        "needle": "@core\nNetworkManager\nbtrfs-progs\nefibootmgr\ngreetd\ngrub2-efi-x64\ngrub2-tools\nhyprland\nkernel\nkitty\nnoctalia\nopenssh-server\nsudo\ntuigreet\nxdg-desktop-portal-hyprland\nzram-generator"
       },
       "danger": "mutating",
       "timeout_s": 600,
