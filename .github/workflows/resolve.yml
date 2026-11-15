@@ -8,18 +8,14 @@ jobs:
   resolve:
     runs-on: ubuntu-latest
     steps:
-      - name: Image index digest and release
+      - name: Fedora 45 keys and repo key paths
         run: |
-          docker buildx imagetools inspect registry.fedoraproject.org/fedora:45 | head -20
-          docker pull -q registry.fedoraproject.org/fedora:45
-          docker inspect --format '{{index .RepoDigests 0}}' registry.fedoraproject.org/fedora:45
-          docker run --rm registry.fedoraproject.org/fedora:45 sh -ec '
-            cat /etc/os-release | grep -E "^(VERSION_ID|PRETTY_NAME)="
-            rpm -q fedora-gpg-keys fedora-repos rpm dnf5
-            rpm --eval "%_pkgverify_level"
-            ls /etc/pki/rpm-gpg/ | grep -E "fedora-4[5-7]"
-            for k in /etc/pki/rpm-gpg/RPM-GPG-KEY-fedora-45-primary; do rpm --querytags >/dev/null; done
-            dnf5 -q -y install gnupg2 >/dev/null 2>&1
-            gpg --show-keys --with-fingerprint /etc/pki/rpm-gpg/RPM-GPG-KEY-fedora-45-primary
-            grep -h "^gpgkey" /etc/yum.repos.d/fedora.repo /etc/yum.repos.d/fedora-updates.repo | sort -u
+          docker run --rm registry.fedoraproject.org/fedora@sha256:ea6d638d83c7bf2f4dd082e804c4a125feee764ba82e3e7798148673e445a496 sh -ec '
+            ls -l /etc/pki/rpm-gpg/ | grep -i 4[456] || ls -l /etc/pki/rpm-gpg/
+            grep -h "^gpgkey" /etc/yum.repos.d/*.repo | sort -u
+            dnf5 -q -y install gnupg2 >/dev/null
+            for k in $(ls /etc/pki/rpm-gpg/ | grep -E "fedora-45-(primary|x86_64)$"); do
+              echo "== $k"; gpg --show-keys --with-fingerprint --keyid-format long "/etc/pki/rpm-gpg/$k"
+            done
+            dnf5 -q repoquery --releasever=45 --qf "%{name}-%{evr} %{repoid}\n" noctalia 2>/dev/null | sort -u
           '
