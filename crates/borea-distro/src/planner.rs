@@ -651,6 +651,15 @@ pub fn build_with(
         format!("%{} ALL=(ALL:ALL) ALL\n", family.sudo_group),
         0o440,
     );
+    for step in crate::base::hardening() {
+        b.add(
+            step.id,
+            Phase::Base,
+            step.action,
+            step.probe,
+            Danger::Mutating,
+        );
+    }
     if c.disk.swap == "zram" {
         b.file(
             "base.zram",
@@ -732,6 +741,7 @@ pub fn build_with(
             argv: argv(&["systemctl", "is-enabled", &family.network_unit]),
         },
     ];
+    checks.extend(crate::base::checks(c, &family));
     if let Some(session) = intent.session.filter(|_| c.session.kind != "omarchy") {
         let exec = session.exec.as_deref().unwrap_or("");
         if let Some(autostart) = intent.autostart {

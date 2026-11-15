@@ -1,4 +1,5 @@
 //! Native family command adapters and deterministic storage planning.
+mod base;
 pub mod device;
 pub mod planner;
 use borea_core::{recipe::FamilyRecipe, *};
