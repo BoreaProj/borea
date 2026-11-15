@@ -17,7 +17,7 @@ acceptance requires a live disk, package transaction or VM is marked done.
 | D01–D13 | Selection/package/greeter/autostart planning; unpinned paths refused | Verified pins, seeds, session entries and exact VM cells |
 | E01–E05 | Catalogue preview, documented policy model/operations and process tests | Old source/upstream commit unavailable; verify mapping, update flock and removals |
 | A11, C08, C09, D14, E07 | D-039 scope revision cards (2026-11-14) | Not started; evidence in validation/scope-revision.md |
-| F01–F05 | Sparse image creation, cached container runner, golden/render/release gates; F03 Arch Btrfs/ext4 QEMU boot, SSH verify and corrupted-image lane; F04 e2e orchestrator; G05 image plan executor; arch/minimal (btrfs, limine) passes e2e in CI | 2/29 cells VM-validated (arch/minimal, arch/minimal-ext4); other cells |
+| F01–F05 | Sparse image creation, cached container runner, golden/render/release gates; F03 Arch Btrfs/ext4 QEMU boot, SSH verify and corrupted-image lane; F04 e2e orchestrator; G05 image plan executor; arch/minimal (btrfs, limine) passes e2e in CI | 3/29 cells VM-validated (arch/minimal, arch/minimal-ext4, arch/minimal-grub); other cells |
 
 The exact unsupported errors are documented in IMPLEMENTATION.md. No checks,
 keys or matrix tiers were weakened to make a missing integration report green.
@@ -385,8 +385,8 @@ release. Deferred cards stay in this file marked `deferred`.
     resolved loader (it was hard-coded to `limine`).
   - The e2e lane adds `ignore_loglevel systemd.show_status=1` because Arch's
     GRUB defaults are `quiet`.
-  - arch/minimal-grub passed in nightly run 43707335139 on the G07 branch.
-    Record it from a nightly run on `main` after merge.
+  - arch/minimal-grub is recorded as VM-validated from nightly run
+    43723003250 on `main` (`806671d`).
   - Debian, Fedora and openSUSE ext4 cells wait for their family e2e lanes
     (C02, C04, C05).
 
