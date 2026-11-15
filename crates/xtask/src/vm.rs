@@ -730,7 +730,36 @@ fn verify_serial_log(serial: &str, filesystem: &str) -> Result<()> {
         ));
     }
 
-    let root_mounted = clean.contains(&format!("VFS: Mounted root ({filesystem} filesystem)"))
+    // Script initramfs (Debian initramfs-tools) mounts root from userspace, so
+    // neither the VFS line nor systemd's /sysroot line appears. The kernel still
+    // logs the filesystem mount by UUID; the root UUID is the last root= on the
+    // command line, as the kernel uses it (F07).
+    let root_uuid = clean
+        .lines()
+        .find_map(|line| {
+            line.split_once("Kernel command line:")
+                .map(|(_, rest)| rest)
+        })
+        .and_then(|cmdline| {
+            cmdline
+                .split_whitespace()
+                .filter_map(|arg| arg.strip_prefix("root=UUID="))
+                .next_back()
+        });
+    let fs_mounted_by_uuid = root_uuid.is_some_and(|uuid| {
+        clean.lines().any(|line| match filesystem {
+            "btrfs" => {
+                line.contains("BTRFS info (device ")
+                    && line.contains(&format!("first mount of filesystem {uuid}"))
+            }
+            "ext4" => {
+                line.contains("EXT4-fs (") && line.contains(&format!("mounted filesystem {uuid}"))
+            }
+            _ => false,
+        })
+    });
+    let root_mounted = fs_mounted_by_uuid
+        || clean.contains(&format!("VFS: Mounted root ({filesystem} filesystem)"))
         || (clean.contains("Mounted /sysroot.")
             && match filesystem {
                 "btrfs" => clean.contains("Mounted /home.") && clean.contains("Mounted /var/log."),
@@ -889,6 +918,31 @@ mod tests {
     fn verifies_systemd_initrd_btrfs_mount() {
         let log = "Expecting device /dev/disk/by-uuid/1234...\nMounted /sysroot.\nMounted /home.\nMounted /var/log.\nborea login:";
         assert!(verify_serial_log(log, "btrfs").is_ok());
+    }
+
+    #[test]
+    fn verifies_script_initramfs_root_mount_by_uuid() {
+        let uuid = "8a58514f-38a3-8f5c-a975-d5ca5b4fcb21";
+        let btrfs = format!(
+            "Kernel command line: root=/dev/vda3 ro rootflags=subvol=@ root=UUID={uuid} rootflags=subvol=@\nBTRFS info (device sda3): first mount of filesystem {uuid}\nborea login:"
+        );
+        assert!(verify_serial_log(&btrfs, "btrfs").is_ok());
+        // Another filesystem's UUID is not evidence for the root.
+        let other = btrfs.replace(
+            &format!("filesystem {uuid}"),
+            "filesystem 00000000-0000-0000-0000-000000000000",
+        );
+        assert!(verify_serial_log(&other, "btrfs").is_err());
+        // The kernel uses the last root=, so an earlier one must not match.
+        let earlier = format!(
+            "Kernel command line: root=UUID={uuid} root=UUID=11111111-1111-1111-1111-111111111111 rootflags=subvol=@\nBTRFS info (device sda3): first mount of filesystem {uuid}\n"
+        );
+        assert!(verify_serial_log(&earlier, "btrfs").is_err());
+        let ext4 = format!(
+            "Kernel command line: root=UUID={uuid} ro\nEXT4-fs (sda3): mounted filesystem {uuid} ro with ordered data mode.\n"
+        );
+        assert!(verify_serial_log(&ext4, "ext4").is_ok());
+        assert!(verify_serial_log(&ext4, "btrfs").is_err());
     }
 
     #[test]
