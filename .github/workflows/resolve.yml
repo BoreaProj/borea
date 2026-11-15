@@ -1,0 +1,25 @@
+name: c08 resolve fedora 45
+on:
+  push:
+    branches: [scratch/c08-resolve-fedora45]
+permissions:
+  contents: read
+jobs:
+  resolve:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Image index digest and release
+        run: |
+          docker buildx imagetools inspect registry.fedoraproject.org/fedora:45 | head -20
+          docker pull -q registry.fedoraproject.org/fedora:45
+          docker inspect --format '{{index .RepoDigests 0}}' registry.fedoraproject.org/fedora:45
+          docker run --rm registry.fedoraproject.org/fedora:45 sh -ec '
+            cat /etc/os-release | grep -E "^(VERSION_ID|PRETTY_NAME)="
+            rpm -q fedora-gpg-keys fedora-repos rpm dnf5
+            rpm --eval "%_pkgverify_level"
+            ls /etc/pki/rpm-gpg/ | grep -E "fedora-4[5-7]"
+            for k in /etc/pki/rpm-gpg/RPM-GPG-KEY-fedora-45-primary; do rpm --querytags >/dev/null; done
+            dnf5 -q -y install gnupg2 >/dev/null 2>&1
+            gpg --show-keys --with-fingerprint /etc/pki/rpm-gpg/RPM-GPG-KEY-fedora-45-primary
+            grep -h "^gpgkey" /etc/yum.repos.d/fedora.repo /etc/yum.repos.d/fedora-updates.repo | sort -u
+          '
