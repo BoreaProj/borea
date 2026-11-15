@@ -62,6 +62,8 @@ impl Loader {
         }
     }
 }
+/// Compositor installed under a shell when the config names none (D-039).
+pub const DEFAULT_COMPOSITOR: &str = "hyprland";
 fn schema() -> u16 {
     2
 }
@@ -236,7 +238,12 @@ pub fn size_mib(s: &str) -> Result<u64> {
 }
 impl Config {
     pub fn parse(s: &str) -> Result<Self> {
-        let c: Self = toml::from_str(s).map_err(|e| BoreaError::invalid(e.to_string()))?;
+        let mut c: Self = toml::from_str(s).map_err(|e| BoreaError::invalid(e.to_string()))?;
+        // D-039: a shell runs on Hyprland unless the config names another
+        // compositor the shell supports.
+        if c.session.kind == "shell" && c.session.compositor.is_none() {
+            c.session.compositor = Some(DEFAULT_COMPOSITOR.into());
+        }
         c.validate()?;
         Ok(c)
     }
@@ -342,6 +349,11 @@ impl Config {
                     .is_some_and(|s| ["kde", "gnome", "cosmic"].contains(&s))
                     && self.session.compositor.is_none()
                     && self.session.shell.is_none() => {}
+            "shell" if self.session.shell.as_deref().is_none_or(|s| s == "none") => {
+                return Err(BoreaError::unsupported(
+                    "compositor-only sessions were removed (D-039); remedy: set session.shell to noctalia, dms or end4 (Hyprland by default), or use session.type = 'desktop' with kde, gnome or cosmic",
+                ));
+            }
             "shell"
                 if self
                     .session
@@ -353,7 +365,7 @@ impl Config {
                         .session
                         .shell
                         .as_deref()
-                        .is_none_or(|s| ["none", "noctalia", "dms", "end4"].contains(&s)) => {}
+                        .is_some_and(|s| ["noctalia", "dms", "end4"].contains(&s)) => {}
             "omarchy"
                 if self.session.desktop.is_none()
                     && self.session.compositor.is_none()

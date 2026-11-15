@@ -88,22 +88,35 @@ resolver has one gate mechanism for every capability.
 is packaged on openSUSE but deliberately not offered in v0.1; GRUB is the
 tested Btrfs/snapper-aware path there (O-21). See `DECISIONS.md` D-026/D-027.
 
-## 3. Session pairs promised in v0.1
+## 3. Session cells promised in v0.1
 
-> Pending revision by [D-039](DECISIONS.md) / card A11. Compositor-only
-> sessions are being removed, and COSMIC and End4 (Arch) become required. The
-> tables below describe the current `recipes/matrix.toml` until A11 lands.
+The sessions are set by [D-039](DECISIONS.md): a **desktop** (KDE, GNOME,
+COSMIC) or a **shell** (Noctalia v5, DMS, End4) on a compositor. Hyprland is the
+default compositor. A shell can use another compositor only when the shell
+supports it and the family packages it:
 
-A pair is the compositor + shell combination. The matrix gates components; a
-pair is only promised when its row has an artifact. v0.1 promises exactly these
-pairs, on every family, on the default storage layout (Btrfs root, ext4
-`/boot`, default loader):
+| Shell | Compositors (default first) |
+| --- | --- |
+| Noctalia v5 | Hyprland, Niri, MangoWM |
+| DMS | Hyprland, Niri |
+| End4 | Hyprland |
 
-| Pair | Arch | Debian | Fedora | openSUSE |
+Compositor-only sessions are refused with a remedy. v0.1 promises these cells
+on the default storage layout (Btrfs root, ext4 `/boot`, default loader). Every
+family also has a `minimal` worker base cell.
+
+| Session | Arch | Debian | Fedora | openSUSE |
 | --- | --- | --- | --- | --- |
-| Hyprland only | required | required | required | required |
+| minimal (worker base) | required | required | required | required |
+| KDE | required | required | required | required |
+| GNOME | required | required | required | required |
+| COSMIC | required | gated (no Debian 13 package) | required | required |
 | Hyprland + Noctalia | required | required | required | required |
 | Hyprland + DMS | required | required | required | required |
+| Hyprland + End4 | required (pinned source) | gated | gated | gated |
+
+`cargo xtask matrix verify --strict` counts exactly these cells (plus the
+storage and boot cells below): 29 in total.
 
 v0.1 also requires these storage and boot cells:
 
@@ -113,10 +126,10 @@ v0.1 also requires these storage and boot cells:
 | minimal with GRUB | required (fallback) | covered by default | covered by default | covered by default |
 | minimal with Limine | covered by default | — | — | gated |
 
-Other combinations are **planned**, not refused: the resolver allows them when
-both components are supported and the shell's `compatible_compositors` list
-includes the compositor, but `borea catalogue` marks them `untested` until a VM
-artifact exists. They become promised one cell at a time.
+Other combinations, such as Noctalia on Niri, are **planned**, not refused:
+the resolver allows them when both components are supported and the shell's
+`compatible_compositors` list includes the compositor, but `borea catalogue`
+marks them `untested` until a VM artifact exists. They become promised one cell at a time.
 
 This is deliberate. Claiming "every shell on every compositor on every distro"
 without artifacts is how the previous repository lost credibility.

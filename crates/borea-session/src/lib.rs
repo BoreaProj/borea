@@ -79,9 +79,17 @@ pub fn select(
         if let Some(s) = &session
             && !r.compatible_compositors.contains(&s.id)
         {
-            return Err(BoreaError::unsupported(
-                "shell/compositor pair unavailable; choose a compatible shell",
-            ));
+            let options: Vec<_> = r
+                .compatible_compositors
+                .iter()
+                .map(|c| c.trim_start_matches("compositor."))
+                .collect();
+            return Err(BoreaError::unsupported(format!(
+                "{shell} does not support {}; remedy: set session.compositor to one of {} (default {})",
+                s.id.trim_start_matches("compositor."),
+                options.join(", "),
+                borea_core::config::DEFAULT_COMPOSITOR
+            )));
         }
         autostart = r.autostart.clone();
         ids.push(id);
@@ -164,6 +172,49 @@ mod tests {
         )
         .unwrap();
         assert_eq!(s.greeter, "none");
+    }
+    fn shell(name: &str, compositor: Option<&str>) -> Result<Selection> {
+        let text = include_str!("../../../recipes/profiles/hyprland-noctalia.toml")
+            .replace("compositor = \"hyprland\"\n", "")
+            .replace("shell = \"noctalia\"", &format!("shell = \"{name}\""))
+            .replace(
+                "[session]\n",
+                &compositor
+                    .map(|c| format!("[session]\ncompositor = \"{c}\"\n"))
+                    .unwrap_or("[session]\n".into()),
+            );
+        let mut c = Config::parse(&text)?;
+        c.target.family = FamilyId::Arch;
+        select(
+            &c,
+            &Matrix::embedded().unwrap(),
+            Loader::Limine,
+            true,
+            false,
+        )
+    }
+    #[test]
+    fn shells_default_to_hyprland_and_refuse_incompatible_compositors() {
+        let s = shell("noctalia", None).unwrap();
+        assert_eq!(s.session.unwrap().id, "compositor.hyprland");
+        assert_eq!(s.autostart.as_deref(), Some("noctalia"));
+        assert!(shell("noctalia", Some("niri")).is_ok());
+        assert!(shell("dms", Some("niri")).is_ok());
+        for (name, compositor) in [("dms", "mangowm"), ("end4", "niri"), ("end4", "mangowm")] {
+            let e = shell(name, Some(compositor)).unwrap_err();
+            assert_eq!(e.code, "E_UNSUPPORTED");
+            assert!(e.message.contains("remedy"), "{}", e.message);
+        }
+    }
+    #[test]
+    fn compositor_only_sessions_are_refused() {
+        for shell in ["\nshell = \"none\"", ""] {
+            let text = include_str!("../../../recipes/profiles/hyprland-noctalia.toml")
+                .replace("\nshell = \"noctalia\"", shell);
+            let e = Config::parse(&text).unwrap_err();
+            assert_eq!(e.code, "E_UNSUPPORTED");
+            assert!(e.message.contains("D-039") && e.message.contains("remedy"));
+        }
     }
     #[test]
     fn unpinned_third_party_refused() {

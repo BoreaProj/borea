@@ -7,7 +7,7 @@
 # An unsupported cell requires reason, remedy and evidence.
 
 schema = 1
-revision = "matrix-2026-11-15.1"
+revision = "matrix-2026-11-15.2"
 
 # ---------------------------------------------------------------- base
 
@@ -123,8 +123,8 @@ checked = 2026-11-13
 family = "suse"
 component = "desktop.cosmic"
 tier = "third-party"
-evidence = "https://build.opensuse.org/search?search_text=cosmic"
-checked = 2026-11-13
+evidence = "https://en.opensuse.org/Portal:COSMIC"
+checked = 2026-11-15
 
 # ---------------------------------------------------------------- compositors
 
@@ -221,14 +221,14 @@ family = "arch"
 component = "shell.noctalia"
 tier = "native"
 evidence = "https://archlinux.org/packages/extra/x86_64/noctalia/"
-checked = 2026-11-13
+checked = 2026-11-15
 
 [[cell]]
 family = "debian"
 component = "shell.noctalia"
 tier = "third-party"
-evidence = "https://docs.noctalia.dev/noctalia/getting-started/installation/"
-checked = 2026-11-13
+evidence = "https://docs.noctalia.dev/noctalia/v5.4.1/getting-started/installation/"
+checked = 2026-11-15
 
 [[cell]]
 family = "fedora"
@@ -240,37 +240,37 @@ checked = 2026-11-15
 [[cell]]
 family = "suse"
 component = "shell.noctalia"
-tier = "native"
-evidence = "https://software.opensuse.org/package/noctalia"
-checked = 2026-11-13
+tier = "third-party"
+evidence = "https://download.opensuse.org/repositories/home:neifua:Noctalia/openSUSE_Tumbleweed/"
+checked = 2026-11-15
 
 [[cell]]
 family = "arch"
 component = "shell.dms"
 tier = "native"
-evidence = "https://duxlabs.dev/docs/"
-checked = 2026-11-13
+evidence = "https://archlinux.org/packages/extra/x86_64/dms-shell/"
+checked = 2026-11-15
 
 [[cell]]
 family = "debian"
 component = "shell.dms"
 tier = "third-party"
-evidence = "https://duxlabs.dev/docs/"
-checked = 2026-11-13
+evidence = "https://danklinux.com/docs/1.6/dankmaterialshell/installation"
+checked = 2026-11-15
 
 [[cell]]
 family = "fedora"
 component = "shell.dms"
 tier = "third-party"
-evidence = "https://duxlabs.dev/docs/"
-checked = 2026-11-13
+evidence = "https://copr.fedorainfracloud.org/coprs/avengemedia/dms/"
+checked = 2026-11-15
 
 [[cell]]
 family = "suse"
 component = "shell.dms"
 tier = "third-party"
-evidence = "https://duxlabs.dev/docs/"
-checked = 2026-11-13
+evidence = "https://danklinux.com/docs/1.6/dankmaterialshell/installation"
+checked = 2026-11-15
 
 [[cell]]
 family = "arch"

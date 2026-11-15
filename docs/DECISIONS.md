@@ -746,3 +746,35 @@ for every command (receipt-probed and always-run steps would fail).
 Card A11 repins Noctalia for every family; until then the Fedora Noctalia session plan names the v5 package and the v4
 autostart, and that cell stays untested.
 **Rejected:** keeping F43 until A11; adding Terra or COPR for Noctalia.
+
+### D-042 — Session catalogue for the D-039 contract (A11)
+
+**Date:** 2026-11-15
+**Decision:**
+- `session.type = "shell"` requires `shell` ∈ {noctalia, dms, end4}. `compositor` is optional: `Config::parse` fills
+  in Hyprland (`config::DEFAULT_COMPOSITOR`). A shell with no shell (or `shell = "none"`) is refused with a remedy.
+  Desktops are kde, gnome and cosmic.
+- Compatible compositors: Noctalia → Hyprland, Niri, MangoWM; DMS → Hyprland, Niri; End4 → Hyprland. An incompatible
+  pair is refused and the error names the allowed compositors.
+- Noctalia is v5: package `noctalia` (Arch `extra` 5.5.0, Fedora 45), autostart `noctalia`. openSUSE Noctalia is
+  third-party (OBS `home:neifua:Noctalia`). Like DMS on Debian, Fedora and openSUSE, it has no recipe packages until
+  C07 pins the repository, so those cells refuse as unpinned rather than planning a package the default repos lack.
+- Re-verified 2026-11-15: Arch `dms-shell` is in `extra` (native). openSUSE COSMIC is installed from the
+  `X11:COSMIC:Next` devel project, so it stays third-party.
+- The 29 required cells are a data table (`CONTRACT` in `crates/xtask/src/main.rs`), not family branches:
+  - minimal, KDE, GNOME, COSMIC, Hyprland + Noctalia and Hyprland + DMS on every family, except Debian COSMIC (23)
+  - Arch Hyprland + End4
+  - ext4 root on every family (4)
+  - Arch GRUB
+
+  Golden fixtures also cover the Debian COSMIC gate and a compositor-only refusal.
+- **Schemas are unchanged.** No field was added, removed or renamed in the config, matrix, recipe or plan formats.
+  Only validation tightened and data changed: matrix `revision` is now `matrix-2026-11-15.2`, and plan digests moved
+  with it. A11 asked for a schema bump, but AGENTS §6 ties bumps to format changes, so none was made.
+
+**Known gaps:**
+- Arch DMS needs a `dms-shell-compositor` provider (`dms-shell-hyprland` or `dms-shell-niri`). The recipe model has no
+  per-compositor packages, so `pacman --noconfirm` picks its default provider.
+- Shell autostart seeding is still Hyprland-only in the planner. Noctalia or DMS on Niri resolves but fails at plan
+  time.
+- DMS's COPR documents Fedora 43/44, not 45 (C07 must confirm before pinning).

@@ -1,12 +1,12 @@
 {
   "schema": 2,
-  "id": "9731a088b019abf00a8cba9fa4aec954",
+  "id": "df4617afb3943e00346c908ee5d2beb0",
   "created": "1970-01-01T00:00:00Z",
   "borea_version": "B-0.3",
-  "digest": "9731a088b019abf00a8cba9fa4aec954362a373821758e8f5cf061810867cd45",
-  "config_digest": "aa8fba2af93105551e9e99aaf433caf6dd120c0743046077860f68fe2bbe87be",
-  "matrix_digest": "1a06a55c49cb1b52db797b944304efd3e3d82141d0f2d96481bfa15c744830bd",
-  "family": "fedora",
+  "digest": "df4617afb3943e00346c908ee5d2beb0757f6c1f6d2bad9b73189b530d9beec9",
+  "config_digest": "d571a2ca5e500f94d5ae1f48420e2897b16e3291d2dd4663c538fe7d426ecb36",
+  "matrix_digest": "a27dce16ed4d14ecacee96c00446bb7eaa12cee65aca56def3e89f18df1509e8",
+  "family": "arch",
   "disk": {
     "path": "/dev/vda",
     "serial": "fixture-disk",
@@ -14,7 +14,7 @@
     "sector_size": 512
   },
   "root_fs": "btrfs",
-  "loader": "grub",
+  "loader": "limine",
   "root": "/mnt",
   "steps": [
     {
@@ -28,13 +28,13 @@
           "--clear",
           "--new=1:0:+1024M",
           "--typecode=1:ef00",
-          "--partition-guid=1:e5092c2c-8a8f-5e19-948e-802e4f4e889e",
+          "--partition-guid=1:362f62f4-72e0-5db5-b45c-f498eb6b15c0",
           "--new=2:0:+2048M",
           "--typecode=2:8300",
-          "--partition-guid=2:a2d0c48c-84f9-593f-9cb4-9c846e0f19c8",
+          "--partition-guid=2:92cacc4a-86f0-574e-ba60-642b0ec86cf3",
           "--new=3:0:0",
           "--typecode=3:8300",
-          "--partition-guid=3:99e12b2a-b878-5e6b-ab52-0f639cd8b239",
+          "--partition-guid=3:3cd65d04-ba23-57ef-a9bb-8fe34cb195e0",
           "/dev/vda"
         ],
         "chroot": false,
@@ -85,7 +85,7 @@
           "mkfs.fat",
           "-F32",
           "-i",
-          "c5d184fb",
+          "89b134a1",
           "/dev/vda1"
         ],
         "chroot": false,
@@ -110,7 +110,7 @@
           "mkfs.ext4",
           "-F",
           "-U",
-          "e679c144-e8eb-5e25-b299-ed4a7185ac7a",
+          "ce7afbae-6a2b-5d1b-8e00-d35802f5a5dc",
           "/dev/vda2"
         ],
         "chroot": false,
@@ -135,7 +135,7 @@
           "mkfs.btrfs",
           "-f",
           "-U",
-          "4691cc82-681b-5844-a348-2e10255dd025",
+          "ebda1f24-58d0-5957-927f-4d7f9b44fffd",
           "/dev/vda3"
         ],
         "chroot": false,
@@ -712,23 +712,22 @@
       "phase": "storage"
     },
     {
-      "id": "bootstrap.fedora",
-      "title": "bootstrap fedora",
+      "id": "bootstrap.arch",
+      "title": "bootstrap arch",
       "action": {
         "kind": "command",
         "argv": [
-          "dnf5",
-          "-y",
-          "--installroot=/mnt",
-          "--releasever=45",
-          "install",
-          "@core",
-          "kernel",
+          "pacstrap",
+          "-K",
+          "/mnt",
+          "base",
+          "linux",
+          "linux-firmware",
           "btrfs-progs",
-          "NetworkManager",
+          "networkmanager",
           "sudo",
           "zram-generator",
-          "openssh-server"
+          "openssh"
         ],
         "chroot": false,
         "stdin": null
@@ -750,30 +749,28 @@
       "action": {
         "kind": "command",
         "argv": [
-          "dnf5",
-          "-y",
-          "install",
-          "@core",
-          "NetworkManager",
+          "pacman",
+          "-S",
+          "--needed",
+          "--noconfirm",
+          "base",
           "btrfs-progs",
+          "cosmic",
+          "cosmic-greeter",
           "efibootmgr",
-          "greetd",
-          "grub2-efi-x64",
-          "grub2-tools",
-          "hyprland",
-          "kernel",
-          "kitty",
-          "openssh-server",
+          "limine",
+          "linux",
+          "linux-firmware",
+          "networkmanager",
+          "openssh",
           "sudo",
-          "tuigreet",
-          "xdg-desktop-portal-hyprland",
           "zram-generator"
         ],
         "chroot": true,
         "stdin": null
       },
       "needs": [
-        "bootstrap.fedora"
+        "bootstrap.arch"
       ],
       "probe": {
         "kind": "command_ok",
@@ -794,7 +791,7 @@
       "action": {
         "kind": "write_file",
         "path": "/var/lib/borea/base-packages",
-        "contents": "@core\nNetworkManager\nbtrfs-progs\nefibootmgr\ngreetd\ngrub2-efi-x64\ngrub2-tools\nhyprland\nkernel\nkitty\nopenssh-server\nsudo\ntuigreet\nxdg-desktop-portal-hyprland\nzram-generator",
+        "contents": "base\nbtrfs-progs\ncosmic\ncosmic-greeter\nefibootmgr\nlimine\nlinux\nlinux-firmware\nnetworkmanager\nopenssh\nsudo\nzram-generator",
         "mode": 420
       },
       "needs": [
@@ -803,7 +800,7 @@
       "probe": {
         "kind": "file_contains",
         "path": "/var/lib/borea/base-packages",
-        "needle": "@core\nNetworkManager\nbtrfs-progs\nefibootmgr\ngreetd\ngrub2-efi-x64\ngrub2-tools\nhyprland\nkernel\nkitty\nopenssh-server\nsudo\ntuigreet\nxdg-desktop-portal-hyprland\nzram-generator"
+        "needle": "base\nbtrfs-progs\ncosmic\ncosmic-greeter\nefibootmgr\nlimine\nlinux\nlinux-firmware\nnetworkmanager\nopenssh\nsudo\nzram-generator"
       },
       "danger": "mutating",
       "timeout_s": 600,
@@ -815,7 +812,7 @@
       "action": {
         "kind": "write_file",
         "path": "/etc/fstab",
-        "contents": "UUID=4691cc82-681b-5844-a348-2e10255dd025 / btrfs subvol=@,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=4691cc82-681b-5844-a348-2e10255dd025 /home btrfs subvol=@home,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=4691cc82-681b-5844-a348-2e10255dd025 /.snapshots btrfs subvol=@snapshots,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=4691cc82-681b-5844-a348-2e10255dd025 /var/log btrfs subvol=@log,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=4691cc82-681b-5844-a348-2e10255dd025 /var/cache btrfs subvol=@cache,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=e679c144-e8eb-5e25-b299-ed4a7185ac7a /boot ext4 defaults 0 2\nPARTUUID=e5092c2c-8a8f-5e19-948e-802e4f4e889e /boot/efi vfat umask=0077 0 2\n",
+        "contents": "UUID=ebda1f24-58d0-5957-927f-4d7f9b44fffd / btrfs subvol=@,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=ebda1f24-58d0-5957-927f-4d7f9b44fffd /home btrfs subvol=@home,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=ebda1f24-58d0-5957-927f-4d7f9b44fffd /.snapshots btrfs subvol=@snapshots,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=ebda1f24-58d0-5957-927f-4d7f9b44fffd /var/log btrfs subvol=@log,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=ebda1f24-58d0-5957-927f-4d7f9b44fffd /var/cache btrfs subvol=@cache,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=ce7afbae-6a2b-5d1b-8e00-d35802f5a5dc /boot ext4 defaults 0 2\nPARTUUID=362f62f4-72e0-5db5-b45c-f498eb6b15c0 /boot/efi vfat umask=0077 0 2\n",
         "mode": 420
       },
       "needs": [
@@ -824,7 +821,7 @@
       "probe": {
         "kind": "file_contains",
         "path": "/etc/fstab",
-        "needle": "UUID=4691cc82-681b-5844-a348-2e10255dd025 / btrfs subvol=@,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=4691cc82-681b-5844-a348-2e10255dd025 /home btrfs subvol=@home,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=4691cc82-681b-5844-a348-2e10255dd025 /.snapshots btrfs subvol=@snapshots,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=4691cc82-681b-5844-a348-2e10255dd025 /var/log btrfs subvol=@log,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=4691cc82-681b-5844-a348-2e10255dd025 /var/cache btrfs subvol=@cache,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=e679c144-e8eb-5e25-b299-ed4a7185ac7a /boot ext4 defaults 0 2\nPARTUUID=e5092c2c-8a8f-5e19-948e-802e4f4e889e /boot/efi vfat umask=0077 0 2\n"
+        "needle": "UUID=ebda1f24-58d0-5957-927f-4d7f9b44fffd / btrfs subvol=@,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=ebda1f24-58d0-5957-927f-4d7f9b44fffd /home btrfs subvol=@home,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=ebda1f24-58d0-5957-927f-4d7f9b44fffd /.snapshots btrfs subvol=@snapshots,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=ebda1f24-58d0-5957-927f-4d7f9b44fffd /var/log btrfs subvol=@log,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=ebda1f24-58d0-5957-927f-4d7f9b44fffd /var/cache btrfs subvol=@cache,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=ce7afbae-6a2b-5d1b-8e00-d35802f5a5dc /boot ext4 defaults 0 2\nPARTUUID=362f62f4-72e0-5db5-b45c-f498eb6b15c0 /boot/efi vfat umask=0077 0 2\n"
       },
       "danger": "mutating",
       "timeout_s": 600,
@@ -946,6 +943,75 @@
       "phase": "base"
     },
     {
+      "id": "base.locale.gen",
+      "title": "base locale gen",
+      "action": {
+        "kind": "write_file",
+        "path": "/etc/locale.gen",
+        "contents": "en_US.UTF-8 UTF-8\n",
+        "mode": 420
+      },
+      "needs": [
+        "base.timezone"
+      ],
+      "probe": {
+        "kind": "file_contains",
+        "path": "/etc/locale.gen",
+        "needle": "en_US.UTF-8 UTF-8\n"
+      },
+      "danger": "mutating",
+      "timeout_s": 600,
+      "phase": "base"
+    },
+    {
+      "id": "base.locale.generate",
+      "title": "base locale generate",
+      "action": {
+        "kind": "command",
+        "argv": [
+          "locale-gen"
+        ],
+        "chroot": true,
+        "stdin": null
+      },
+      "needs": [
+        "base.locale.gen"
+      ],
+      "probe": {
+        "kind": "command_ok",
+        "argv": [
+          "test",
+          "-e",
+          "/var/lib/borea/locale-generated"
+        ],
+        "chroot": true
+      },
+      "danger": "mutating",
+      "timeout_s": 600,
+      "phase": "base"
+    },
+    {
+      "id": "base.locale.receipt",
+      "title": "base locale receipt",
+      "action": {
+        "kind": "write_file",
+        "path": "/var/lib/borea/locale-generated",
+        "contents": "en_US.UTF-8",
+        "mode": 420
+      },
+      "needs": [
+        "base.locale.generate"
+      ],
+      "probe": {
+        "kind": "file_contains",
+        "path": "/var/lib/borea/locale-generated",
+        "needle": "en_US.UTF-8"
+      },
+      "danger": "mutating",
+      "timeout_s": 600,
+      "phase": "base"
+    },
+    {
       "id": "base.user",
       "title": "base user",
       "action": {
@@ -965,7 +1031,7 @@
         "stdin": null
       },
       "needs": [
-        "base.timezone"
+        "base.locale.receipt"
       ],
       "probe": {
         "kind": "command_ok",
@@ -1005,7 +1071,7 @@
       "action": {
         "kind": "write_file",
         "path": "/var/lib/borea/password-set",
-        "contents": "aa8fba2af93105551e9e99aaf433caf6dd120c0743046077860f68fe2bbe87be",
+        "contents": "d571a2ca5e500f94d5ae1f48420e2897b16e3291d2dd4663c538fe7d426ecb36",
         "mode": 384
       },
       "needs": [
@@ -1014,7 +1080,7 @@
       "probe": {
         "kind": "file_contains",
         "path": "/var/lib/borea/password-set",
-        "needle": "aa8fba2af93105551e9e99aaf433caf6dd120c0743046077860f68fe2bbe87be"
+        "needle": "d571a2ca5e500f94d5ae1f48420e2897b16e3291d2dd4663c538fe7d426ecb36"
       },
       "danger": "mutating",
       "timeout_s": 600,
@@ -1192,27 +1258,6 @@
       "phase": "base"
     },
     {
-      "id": "session.greetd",
-      "title": "session greetd",
-      "action": {
-        "kind": "write_file",
-        "path": "/etc/greetd/config.toml",
-        "contents": "[terminal]\nvt = 1\n[default_session]\ncommand = \"tuigreet --cmd Hyprland\"\nuser = \"greeter\"\n",
-        "mode": 420
-      },
-      "needs": [
-        "base.ssh.receipt"
-      ],
-      "probe": {
-        "kind": "file_contains",
-        "path": "/etc/greetd/config.toml",
-        "needle": "[terminal]\nvt = 1\n[default_session]\ncommand = \"tuigreet --cmd Hyprland\"\nuser = \"greeter\"\n"
-      },
-      "danger": "mutating",
-      "timeout_s": 600,
-      "phase": "session"
-    },
-    {
       "id": "session.greeter.enable",
       "title": "session greeter enable",
       "action": {
@@ -1220,20 +1265,20 @@
         "argv": [
           "systemctl",
           "enable",
-          "greetd.service"
+          "cosmic-greeter.service"
         ],
         "chroot": true,
         "stdin": null
       },
       "needs": [
-        "session.greetd"
+        "base.ssh.receipt"
       ],
       "probe": {
         "kind": "command_ok",
         "argv": [
           "systemctl",
           "is-enabled",
-          "greetd.service"
+          "cosmic-greeter.service"
         ],
         "chroot": true
       },
@@ -1277,9 +1322,8 @@
       "action": {
         "kind": "command",
         "argv": [
-          "dracut",
-          "--regenerate-all",
-          "--force"
+          "mkinitcpio",
+          "-P"
         ],
         "chroot": true,
         "stdin": null
@@ -1306,7 +1350,7 @@
       "action": {
         "kind": "write_file",
         "path": "/var/lib/borea/initramfs-generated",
-        "contents": "root=UUID=4691cc82-681b-5844-a348-2e10255dd025 rootflags=subvol=@",
+        "contents": "root=UUID=ebda1f24-58d0-5957-927f-4d7f9b44fffd rootflags=subvol=@",
         "mode": 420
       },
       "needs": [
@@ -1315,79 +1359,272 @@
       "probe": {
         "kind": "file_contains",
         "path": "/var/lib/borea/initramfs-generated",
-        "needle": "root=UUID=4691cc82-681b-5844-a348-2e10255dd025 rootflags=subvol=@"
+        "needle": "root=UUID=ebda1f24-58d0-5957-927f-4d7f9b44fffd rootflags=subvol=@"
       },
       "danger": "mutating",
       "timeout_s": 600,
       "phase": "boot"
     },
     {
-      "id": "boot.grub.cmdline",
-      "title": "boot grub cmdline",
+      "id": "boot.limine.copy.kernel",
+      "title": "boot limine copy kernel",
       "action": {
-        "kind": "write_file",
-        "path": "/etc/default/grub.d/90-borea.cfg",
-        "contents": "GRUB_CMDLINE_LINUX=\"root=UUID=4691cc82-681b-5844-a348-2e10255dd025 rootflags=subvol=@\"\n",
-        "mode": 420
+        "kind": "command",
+        "argv": [
+          "install",
+          "-m",
+          "0644",
+          "/boot/vmlinuz-linux",
+          "/boot/efi/vmlinuz-linux"
+        ],
+        "chroot": true,
+        "stdin": null
       },
       "needs": [
         "boot.initramfs.receipt"
       ],
       "probe": {
-        "kind": "file_contains",
-        "path": "/etc/default/grub.d/90-borea.cfg",
-        "needle": "GRUB_CMDLINE_LINUX=\"root=UUID=4691cc82-681b-5844-a348-2e10255dd025 rootflags=subvol=@\"\n"
+        "kind": "command_ok",
+        "argv": [
+          "cmp",
+          "-s",
+          "/boot/vmlinuz-linux",
+          "/boot/efi/vmlinuz-linux"
+        ],
+        "chroot": true
       },
       "danger": "mutating",
       "timeout_s": 600,
       "phase": "boot"
     },
     {
-      "id": "boot.grub.install",
-      "title": "boot grub install",
+      "id": "boot.limine.copy.initramfs",
+      "title": "boot limine copy initramfs",
       "action": {
         "kind": "command",
         "argv": [
-          "grub2-install",
-          "--target=x86_64-efi",
-          "--efi-directory=/boot/efi",
-          "--bootloader-id=borea",
-          "--removable"
+          "install",
+          "-m",
+          "0644",
+          "/boot/initramfs-linux.img",
+          "/boot/efi/initramfs-linux.img"
         ],
         "chroot": true,
         "stdin": null
       },
       "needs": [
-        "boot.grub.cmdline"
+        "boot.limine.copy.kernel"
+      ],
+      "probe": {
+        "kind": "command_ok",
+        "argv": [
+          "cmp",
+          "-s",
+          "/boot/initramfs-linux.img",
+          "/boot/efi/initramfs-linux.img"
+        ],
+        "chroot": true
+      },
+      "danger": "mutating",
+      "timeout_s": 600,
+      "phase": "boot"
+    },
+    {
+      "id": "boot.limine.dir.fallback",
+      "title": "boot limine dir fallback",
+      "action": {
+        "kind": "mkdir",
+        "path": "/boot/efi/EFI/BOOT",
+        "mode": 493
+      },
+      "needs": [
+        "boot.limine.copy.initramfs"
       ],
       "probe": {
         "kind": "file_exists",
-        "path": "/boot/efi/EFI/BOOT/BOOTX64.EFI"
+        "path": "/boot/efi/EFI/BOOT"
       },
       "danger": "mutating",
       "timeout_s": 600,
       "phase": "boot"
     },
     {
-      "id": "boot.grub.config",
-      "title": "boot grub config",
+      "id": "boot.limine.copy.fallback",
+      "title": "boot limine copy fallback",
       "action": {
         "kind": "command",
         "argv": [
-          "grub2-mkconfig",
-          "-o",
-          "/boot/grub2/grub.cfg"
+          "cp",
+          "/usr/share/limine/BOOTX64.EFI",
+          "/boot/efi/EFI/BOOT/BOOTX64.EFI"
         ],
         "chroot": true,
         "stdin": null
       },
       "needs": [
-        "boot.grub.install"
+        "boot.limine.dir.fallback"
+      ],
+      "probe": {
+        "kind": "command_ok",
+        "argv": [
+          "cmp",
+          "-s",
+          "/usr/share/limine/BOOTX64.EFI",
+          "/boot/efi/EFI/BOOT/BOOTX64.EFI"
+        ],
+        "chroot": true
+      },
+      "danger": "mutating",
+      "timeout_s": 600,
+      "phase": "boot"
+    },
+    {
+      "id": "boot.limine.dir.borea",
+      "title": "boot limine dir borea",
+      "action": {
+        "kind": "mkdir",
+        "path": "/boot/efi/EFI/borea",
+        "mode": 493
+      },
+      "needs": [
+        "boot.limine.copy.fallback"
+      ],
+      "probe": {
+        "kind": "file_exists",
+        "path": "/boot/efi/EFI/borea"
+      },
+      "danger": "mutating",
+      "timeout_s": 600,
+      "phase": "boot"
+    },
+    {
+      "id": "boot.limine.copy.borea",
+      "title": "boot limine copy borea",
+      "action": {
+        "kind": "command",
+        "argv": [
+          "cp",
+          "/usr/share/limine/BOOTX64.EFI",
+          "/boot/efi/EFI/borea/BOOTX64.EFI"
+        ],
+        "chroot": true,
+        "stdin": null
+      },
+      "needs": [
+        "boot.limine.dir.borea"
+      ],
+      "probe": {
+        "kind": "command_ok",
+        "argv": [
+          "cmp",
+          "-s",
+          "/usr/share/limine/BOOTX64.EFI",
+          "/boot/efi/EFI/borea/BOOTX64.EFI"
+        ],
+        "chroot": true
+      },
+      "danger": "mutating",
+      "timeout_s": 600,
+      "phase": "boot"
+    },
+    {
+      "id": "boot.limine.config",
+      "title": "boot limine config",
+      "action": {
+        "kind": "write_file",
+        "path": "/boot/efi/EFI/BOOT/limine.conf",
+        "contents": "timeout: 5\nserial: yes\n\n/Borea\n    protocol: linux\n    path: boot():/vmlinuz-linux\n    module_path: boot():/initramfs-linux.img\n    cmdline: root=UUID=ebda1f24-58d0-5957-927f-4d7f9b44fffd rootflags=subvol=@\n/Borea fallback\n    protocol: linux\n    path: boot():/vmlinuz-linux\n    module_path: boot():/initramfs-linux-fallback.img\n    cmdline: root=UUID=ebda1f24-58d0-5957-927f-4d7f9b44fffd rootflags=subvol=@\n",
+        "mode": 420
+      },
+      "needs": [
+        "boot.limine.copy.borea"
       ],
       "probe": {
         "kind": "file_contains",
-        "path": "/boot/grub2/grub.cfg",
-        "needle": "4691cc82-681b-5844-a348-2e10255dd025"
+        "path": "/boot/efi/EFI/BOOT/limine.conf",
+        "needle": "timeout: 5\nserial: yes\n\n/Borea\n    protocol: linux\n    path: boot():/vmlinuz-linux\n    module_path: boot():/initramfs-linux.img\n    cmdline: root=UUID=ebda1f24-58d0-5957-927f-4d7f9b44fffd rootflags=subvol=@\n/Borea fallback\n    protocol: linux\n    path: boot():/vmlinuz-linux\n    module_path: boot():/initramfs-linux-fallback.img\n    cmdline: root=UUID=ebda1f24-58d0-5957-927f-4d7f9b44fffd rootflags=subvol=@\n"
+      },
+      "danger": "mutating",
+      "timeout_s": 600,
+      "phase": "boot"
+    },
+    {
+      "id": "boot.limine.config.copy",
+      "title": "boot limine config copy",
+      "action": {
+        "kind": "write_file",
+        "path": "/boot/limine/limine.conf",
+        "contents": "timeout: 5\nserial: yes\n\n/Borea\n    protocol: linux\n    path: boot():/vmlinuz-linux\n    module_path: boot():/initramfs-linux.img\n    cmdline: root=UUID=ebda1f24-58d0-5957-927f-4d7f9b44fffd rootflags=subvol=@\n/Borea fallback\n    protocol: linux\n    path: boot():/vmlinuz-linux\n    module_path: boot():/initramfs-linux-fallback.img\n    cmdline: root=UUID=ebda1f24-58d0-5957-927f-4d7f9b44fffd rootflags=subvol=@\n",
+        "mode": 420
+      },
+      "needs": [
+        "boot.limine.config"
+      ],
+      "probe": {
+        "kind": "file_contains",
+        "path": "/boot/limine/limine.conf",
+        "needle": "timeout: 5\nserial: yes\n\n/Borea\n    protocol: linux\n    path: boot():/vmlinuz-linux\n    module_path: boot():/initramfs-linux.img\n    cmdline: root=UUID=ebda1f24-58d0-5957-927f-4d7f9b44fffd rootflags=subvol=@\n/Borea fallback\n    protocol: linux\n    path: boot():/vmlinuz-linux\n    module_path: boot():/initramfs-linux-fallback.img\n    cmdline: root=UUID=ebda1f24-58d0-5957-927f-4d7f9b44fffd rootflags=subvol=@\n"
+      },
+      "danger": "mutating",
+      "timeout_s": 600,
+      "phase": "boot"
+    },
+    {
+      "id": "boot.limine.sync.dir",
+      "title": "boot limine sync dir",
+      "action": {
+        "kind": "mkdir",
+        "path": "/etc/pacman.d/hooks",
+        "mode": 493
+      },
+      "needs": [
+        "boot.limine.config.copy"
+      ],
+      "probe": {
+        "kind": "file_exists",
+        "path": "/etc/pacman.d/hooks"
+      },
+      "danger": "mutating",
+      "timeout_s": 600,
+      "phase": "boot"
+    },
+    {
+      "id": "boot.limine.sync.script",
+      "title": "boot limine sync script",
+      "action": {
+        "kind": "write_file",
+        "path": "/usr/local/bin/borea-limine-sync",
+        "contents": "#!/bin/sh\nset -eu\nmountpoint -q /boot/efi || { echo 'Borea Limine ESP is not mounted at /boot/efi' >&2; exit 1; }\nfor file in vmlinuz-linux initramfs-linux.img; do\n    test -s \"/boot/$file\"\n    install -m 0644 \"/boot/$file\" \"/boot/efi/$file\"\ndone\nif [ -s \"/boot/initramfs-linux-fallback.img\" ]; then\n    install -m 0644 \"/boot/initramfs-linux-fallback.img\" \"/boot/efi/initramfs-linux-fallback.img\"\nfi\n",
+        "mode": 493
+      },
+      "needs": [
+        "boot.limine.sync.dir"
+      ],
+      "probe": {
+        "kind": "file_contains",
+        "path": "/usr/local/bin/borea-limine-sync",
+        "needle": "#!/bin/sh\nset -eu\nmountpoint -q /boot/efi || { echo 'Borea Limine ESP is not mounted at /boot/efi' >&2; exit 1; }\nfor file in vmlinuz-linux initramfs-linux.img; do\n    test -s \"/boot/$file\"\n    install -m 0644 \"/boot/$file\" \"/boot/efi/$file\"\ndone\nif [ -s \"/boot/initramfs-linux-fallback.img\" ]; then\n    install -m 0644 \"/boot/initramfs-linux-fallback.img\" \"/boot/efi/initramfs-linux-fallback.img\"\nfi\n"
+      },
+      "danger": "mutating",
+      "timeout_s": 600,
+      "phase": "boot"
+    },
+    {
+      "id": "boot.limine.sync.hook",
+      "title": "boot limine sync hook",
+      "action": {
+        "kind": "write_file",
+        "path": "/etc/pacman.d/hooks/zzzz-borea-limine-sync.hook",
+        "contents": "[Trigger]\nOperation = Install\nOperation = Upgrade\nType = Package\nTarget = linux\n\n[Action]\nDescription = Sync kernel and initramfs to the Limine ESP\nWhen = PostTransaction\nExec = /usr/local/bin/borea-limine-sync\n",
+        "mode": 420
+      },
+      "needs": [
+        "boot.limine.sync.script"
+      ],
+      "probe": {
+        "kind": "file_contains",
+        "path": "/etc/pacman.d/hooks/zzzz-borea-limine-sync.hook",
+        "needle": "[Trigger]\nOperation = Install\nOperation = Upgrade\nType = Package\nTarget = linux\n\n[Action]\nDescription = Sync kernel and initramfs to the Limine ESP\nWhen = PostTransaction\nExec = /usr/local/bin/borea-limine-sync\n"
       },
       "danger": "mutating",
       "timeout_s": 600,
@@ -1399,16 +1636,16 @@
       "action": {
         "kind": "write_file",
         "path": "/var/lib/borea/config-digest",
-        "contents": "aa8fba2af93105551e9e99aaf433caf6dd120c0743046077860f68fe2bbe87be",
+        "contents": "d571a2ca5e500f94d5ae1f48420e2897b16e3291d2dd4663c538fe7d426ecb36",
         "mode": 384
       },
       "needs": [
-        "boot.grub.config"
+        "boot.limine.sync.hook"
       ],
       "probe": {
         "kind": "file_contains",
         "path": "/var/lib/borea/config-digest",
-        "needle": "aa8fba2af93105551e9e99aaf433caf6dd120c0743046077860f68fe2bbe87be"
+        "needle": "d571a2ca5e500f94d5ae1f48420e2897b16e3291d2dd4663c538fe7d426ecb36"
       },
       "danger": "mutating",
       "timeout_s": 600,
@@ -1419,7 +1656,7 @@
     {
       "kind": "file_contains",
       "path": "/etc/fstab",
-      "needle": "UUID=4691cc82-681b-5844-a348-2e10255dd025 / btrfs subvol=@,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=4691cc82-681b-5844-a348-2e10255dd025 /home btrfs subvol=@home,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=4691cc82-681b-5844-a348-2e10255dd025 /.snapshots btrfs subvol=@snapshots,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=4691cc82-681b-5844-a348-2e10255dd025 /var/log btrfs subvol=@log,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=4691cc82-681b-5844-a348-2e10255dd025 /var/cache btrfs subvol=@cache,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=e679c144-e8eb-5e25-b299-ed4a7185ac7a /boot ext4 defaults 0 2\nPARTUUID=e5092c2c-8a8f-5e19-948e-802e4f4e889e /boot/efi vfat umask=0077 0 2\n"
+      "needle": "UUID=ebda1f24-58d0-5957-927f-4d7f9b44fffd / btrfs subvol=@,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=ebda1f24-58d0-5957-927f-4d7f9b44fffd /home btrfs subvol=@home,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=ebda1f24-58d0-5957-927f-4d7f9b44fffd /.snapshots btrfs subvol=@snapshots,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=ebda1f24-58d0-5957-927f-4d7f9b44fffd /var/log btrfs subvol=@log,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=ebda1f24-58d0-5957-927f-4d7f9b44fffd /var/cache btrfs subvol=@cache,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=ce7afbae-6a2b-5d1b-8e00-d35802f5a5dc /boot ext4 defaults 0 2\nPARTUUID=362f62f4-72e0-5db5-b45c-f498eb6b15c0 /boot/efi vfat umask=0077 0 2\n"
     },
     {
       "kind": "file_contains",
@@ -1447,16 +1684,20 @@
       "argv": [
         "systemctl",
         "is-enabled",
-        "greetd.service"
+        "cosmic-greeter.service"
       ]
     },
     {
       "kind": "file_exists",
-      "path": "/usr/share/wayland-sessions/hyprland.desktop"
+      "path": "/usr/share/wayland-sessions/cosmic.desktop"
     },
     {
       "kind": "file_exists",
-      "path": "/boot/grub2/grub.cfg"
+      "path": "/boot/efi/EFI/BOOT/BOOTX64.EFI"
+    },
+    {
+      "kind": "file_exists",
+      "path": "/boot/efi/vmlinuz-linux"
     }
   ],
   "secrets": [

@@ -41,9 +41,9 @@ sudo = "same"                # same | separate
 # ssh_authorized_key_file = "/run/borea/test.pub"   # enables sshd
 
 [session]
-type = "shell"               # minimal | desktop | shell
-compositor = "hyprland"      # hyprland | niri | mangowm
-shell = "noctalia"           # noctalia | dms | end4 | none
+type = "shell"               # minimal | desktop (kde|gnome|cosmic) | shell
+compositor = "hyprland"      # optional; default hyprland. noctalia: hyprland|niri|mangowm, dms: hyprland|niri, end4: hyprland
+shell = "noctalia"           # noctalia | dms | end4 (required for type = "shell")
 greeter = "auto"             # auto | sddm | gdm | greetd | none
 
 # For a desktop instead:

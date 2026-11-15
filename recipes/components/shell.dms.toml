@@ -1,9 +1,9 @@
 schema = 1
 id = "shell.dms"
 requires = []
-evidence = "https://duxlabs.dev/docs/"
+evidence = "https://danklinux.com/docs/1.6/dankmaterialshell/installation"
 autostart = "dms run"
-compatible_compositors = ["compositor.hyprland", "compositor.niri", "compositor.mangowm"]
+compatible_compositors = ["compositor.hyprland", "compositor.niri"]
 
 [packages]
 arch = ["dms-shell"]

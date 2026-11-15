@@ -1,0 +1,6 @@
+{
+  "code": "E_UNSUPPORTED",
+  "reason": "shell.end4: source build requires --allow-source",
+  "schema": 1,
+  "status": "refused"
+}

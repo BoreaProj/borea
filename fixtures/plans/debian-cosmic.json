@@ -1,0 +1,6 @@
+{
+  "code": "E_UNSUPPORTED",
+  "reason": "desktop.cosmic: No COSMIC packages or documented Debian repository found as of 2026-11-13; upstream packaging is not distro-ready; remedy: Use KDE or GNOME; track pop-os/cosmic-epoch packaging (D-013)",
+  "schema": 1,
+  "status": "refused"
+}
