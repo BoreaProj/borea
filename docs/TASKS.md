@@ -17,7 +17,7 @@ acceptance requires a live disk, package transaction or VM is marked done.
 | D01–D13 | Selection/package/greeter/autostart planning; unpinned paths refused | Verified pins, seeds, session entries and exact VM cells |
 | E01–E05 | Catalogue preview, documented policy model/operations and process tests | Old source/upstream commit unavailable; verify mapping, update flock and removals |
 | A11, C08, C09, D14, E07 | D-039 scope revision cards (2026-11-14) | Not started; evidence in validation/scope-revision.md |
-| F01–F05 | Sparse image creation, cached container runner, golden/render/release gates; F03 Arch Btrfs/ext4 QEMU boot, SSH verify and corrupted-image lane; F04 e2e orchestrator; G05 image plan executor; arch/minimal (btrfs, limine) passes e2e in CI | Recording arch/minimal from a main nightly run; other cells |
+| F01–F05 | Sparse image creation, cached container runner, golden/render/release gates; F03 Arch Btrfs/ext4 QEMU boot, SSH verify and corrupted-image lane; F04 e2e orchestrator; G05 image plan executor; arch/minimal (btrfs, limine) passes e2e in CI | 2/29 cells VM-validated (arch/minimal, arch/minimal-ext4); other cells |
 
 The exact unsupported errors are documented in IMPLEMENTATION.md. No checks,
 keys or matrix tiers were weakened to make a missing integration report green.
@@ -820,8 +820,9 @@ release. Deferred cards stay in this file marked `deferred`.
   - The PR e2e job proves `record`/`verify` on the real result without
     committing it.
 
-  Next: record arch/minimal from a nightly run on `main`. Re-validation after
-  a recipe change is not enforced yet.
+  Recorded 2026-11-15 from nightly run 43684747770 on `main` (`6b06f35`):
+  arch/minimal (btrfs, limine) and arch/minimal-ext4 (ext4, limine), 2/29.
+  Re-validation after a recipe change is not enforced yet.
 
 ---
 

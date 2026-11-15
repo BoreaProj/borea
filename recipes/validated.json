@@ -1,4 +1,29 @@
 {
   "schema": 1,
-  "cells": []
+  "cells": [
+    {
+      "cell": "arch/minimal",
+      "root_fs": "btrfs",
+      "loader": "limine",
+      "commit": "6b06f352f46dd9f261a99e117238684349fa2360",
+      "run": "https://github.com/BoreaProj/borea/actions/runs/43684747770",
+      "artifact": "e2e-arch-minimal",
+      "artifact_id": 14150070925,
+      "result_digest": "5a0dd46661bb85af7496f6f283e7efac5f8d306e87d23967de6bf244c6641eca",
+      "validated": "2026-11-15",
+      "release": "B-0.3"
+    },
+    {
+      "cell": "arch/minimal-ext4",
+      "root_fs": "ext4",
+      "loader": "limine",
+      "commit": "6b06f352f46dd9f261a99e117238684349fa2360",
+      "run": "https://github.com/BoreaProj/borea/actions/runs/43684747770",
+      "artifact": "e2e-arch-minimal-ext4",
+      "artifact_id": 14149529824,
+      "result_digest": "68c0aa60b23a03ef52185dde727b2193dca77d8a952088409cce3485a5ea5ea4",
+      "validated": "2026-11-15",
+      "release": "B-0.3"
+    }
+  ]
 }
