@@ -1,0 +1,27 @@
+name: c03 debug (temporary, remove before merge)
+on:
+  push:
+    branches: [feature/c03-debian-minimal]
+permissions:
+  contents: read
+jobs:
+  debian:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.99.1
+      - uses: Swatinem/rust-cache@v2
+      - run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y bubblewrap ovmf qemu-system-x86 jq
+          cargo build --release --locked -p borea-cli -p xtask
+          target/release/borea runtime fetch --family debian --cache "$RUNNER_TEMP/rt"
+      - name: e2e
+        run: sudo env BOREA_RUNTIME_CACHE="$RUNNER_TEMP/rt" target/release/xtask e2e --family debian --profile minimal --out "$PWD/target/e2e" || true
+      - name: serial
+        run: |
+          f=$(ls target/e2e/debian/minimal/*/serial.log)
+          sudo cat "$f" | tr -d '\033' | strings | grep -n -i -E "command line|mount|sysroot|root|btrfs|login:|initramfs|Begin:|subvol" | head -60
