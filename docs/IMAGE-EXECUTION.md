@@ -163,5 +163,8 @@ storage the closed program above prepared. It is reached through
   action. Results go to a plan-digest-bound JSON journal.
 - Host files the plan names (the password slot, `copy_in` sources) are read
   from a root-owned mode-0700 staging directory that mirrors those paths.
-- Supported today: Arch, unencrypted Btrfs or ext4, Limine. LUKS, the Omarchy
+- Devices: the whole image is one partition-scanned loop disk. Its kernel
+  partitions are bound at the plan's paths and their kernel names, and `/dev`
+  is bound recursively into the target (D-043).
+- Supported today: Arch, unencrypted Btrfs or ext4, Limine or GRUB. LUKS, the Omarchy
   installer and package-absence probes are refused.

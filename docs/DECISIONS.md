@@ -778,3 +778,25 @@ autostart, and that cell stays untested.
 - Shell autostart seeding is still Hyprland-only in the planner. Noctalia or DMS on Niri resolves but fails at plan
   time.
 - DMS's COPR documents Fedora 43/44, not 45 (C07 must confirm before pinning).
+
+### D-043 — Image plan sandbox devices for GRUB (G07)
+
+**Date:** 2026-11-15
+**Context:** The first `arch/minimal-grub` e2e failed at `boot.grub.install` with
+`grub_fs_probe: unknown filesystem` (B11). Limine cells passed because Limine never reads the block devices.
+**Findings:** A debug run kept the failed image and probed it outside the sandbox. The image's own GRUB 2.16 detected
+ext2 (`/boot`), FAT (`/boot/efi`) and Btrfs (`/`). The fault was the sandbox: `chroot_ready` bound `/dev` into the target
+non-recursively. The plan's device nodes are bind mounts on bwrap's `/dev` tmpfs, so inside the chroot `/dev/vda2` was an
+empty placeholder file.
+**Decision:**
+- `image-plan.sh` binds `/dev` into the target with `--rbind`.
+- `apply_plan` attaches the whole image with `LO_FLAGS_PARTSCAN` and binds its kernel partitions (`loopNp1..3`) at the
+  plan's partition paths and at their kernel names. Each partition is checked against the image layout through sysfs
+  (start, size, device number). The separate offset loops are no longer used in plan execution, so GRUB sees one disk
+  with real partitions. The closed G02/G03 programs are unchanged.
+- The e2e lane's kernel arguments gain `ignore_loglevel` and `systemd.show_status=1`. Arch's
+  `/etc/default/grub` appends `loglevel=3 quiet`, which hid the kernel command line and the mount status lines that
+  `vm::boot` checks. The GRUB VM had booted to the serial login regardless. Like the serial console, these are VM-lane
+  inputs, not user config.
+**Evidence:** nightly run 43707335139 on `feature/g07-partition-devices`: arch/minimal, arch/minimal-ext4 and
+arch/minimal-grub all pass.
