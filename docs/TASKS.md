@@ -445,6 +445,17 @@ release. Deferred cards stay in this file marked `deferred`.
 - **Done when:** verify checks pass for each item on a fixture root and a VM.
 - **Verify:** `cargo test -p borea-distro base && cargo xtask e2e --family arch --profile minimal`
 - **Out:** SSH server by default, shell dotfiles beyond `/etc/skel`.
+- **Status:** done.
+  - `crates/borea-distro/src/base.rs` adds root lock, machine-id and a
+    persistent, bounded journald drop-in, each probed.
+  - There is a verify check for every base item: hostname, locale, timezone,
+    keymap, account and sudo group, sudoers syntax, root lock, machine-id,
+    NetworkManager and journald.
+  - VM evidence: nightly run 43723223519 on the C06 branch. arch/minimal,
+    arch/minimal-ext4 and arch/minimal-grub pass with all 14 checks. Root key
+    SSH still works with a locked root (sshd uses PAM).
+  - Other families get the same steps and checks; their VM runs come with
+    C02, C04 and C05.
 
 ### C07 — Repository adapters and key pinning
 - **WS:** C · **Dep:** C03, C04, C05
