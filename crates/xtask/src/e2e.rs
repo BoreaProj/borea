@@ -29,7 +29,10 @@ const CANARIES: &[&str] = &[
     "borea-bootstrap-ci-canary-not-a-real-password",
 ];
 /// The VM lane reads the kernel log and login prompt from the serial port.
-const SERIAL_CONSOLE: &[&str] = &["console=tty0", "console=ttyS0,115200"];
+/// `ignore_loglevel` keeps the kernel log on the console wherever it falls on
+/// the command line: Arch's GRUB defaults append `loglevel=3 quiet`, which
+/// would otherwise hide the command line `vm::boot` checks.
+const SERIAL_CONSOLE: &[&str] = &["console=tty0", "console=ttyS0,115200", "ignore_loglevel"];
 /// `vm::boot` waits for this host's login prompt.
 const VM_HOSTNAME: &str = "borea";
 
@@ -597,7 +600,7 @@ mod tests {
         assert!(json.contains(&format!("UUID={} / btrfs", image.uuid("root"))));
         assert!(json.contains(&format!("PARTUUID={} /boot/efi", image.uuid("esp"))));
         assert!(json.contains(&format!(
-            "root=UUID={} rootflags=subvol=@ console=tty0 console=ttyS0,115200",
+            "root=UUID={} rootflags=subvol=@ console=tty0 console=ttyS0,115200 ignore_loglevel",
             image.uuid("root")
         )));
         assert!(!json.contains(CANARIES[0]));
