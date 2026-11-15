@@ -1,11 +1,11 @@
 {
   "schema": 2,
-  "id": "e877f9c5e7a64e4774cd42322c8aeb51",
+  "id": "ea4ce2623084b1c3d4bb9f05b0bc573a",
   "created": "1970-01-01T00:00:00Z",
   "borea_version": "B-0.3",
-  "digest": "e877f9c5e7a64e4774cd42322c8aeb511816f1ab8ecbecbf3403538acb672323",
+  "digest": "ea4ce2623084b1c3d4bb9f05b0bc573a42400ff6f8122952fbbb37f12c83bcf3",
   "config_digest": "dbb749ad50816ab91198ce9d6c315fae97dbd8bab3ea0617e4d0452f4155954a",
-  "matrix_digest": "2c8e72b621a2407f672a030615d9fd7f732adb37cb06ae7dacfeaca926f5b593",
+  "matrix_digest": "1a06a55c49cb1b52db797b944304efd3e3d82141d0f2d96481bfa15c744830bd",
   "family": "fedora",
   "disk": {
     "path": "/dev/vda",
@@ -720,7 +720,7 @@
           "dnf5",
           "-y",
           "--installroot=/mnt",
-          "--releasever=43",
+          "--releasever=45",
           "install",
           "@core",
           "kernel",

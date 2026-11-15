@@ -7,7 +7,7 @@
 # An unsupported cell requires reason, remedy and evidence.
 
 schema = 1
-revision = "matrix-2026-11-13.4"
+revision = "matrix-2026-11-15.1"
 
 # ---------------------------------------------------------------- base
 
@@ -234,8 +234,8 @@ checked = 2026-11-13
 family = "fedora"
 component = "shell.noctalia"
 tier = "native"
-evidence = "https://docs.noctalia.dev/noctalia/getting-started/installation/"
-checked = 2026-11-13
+evidence = "https://packages.fedoraproject.org/pkgs/noctalia/noctalia/"
+checked = 2026-11-15
 
 [[cell]]
 family = "suse"

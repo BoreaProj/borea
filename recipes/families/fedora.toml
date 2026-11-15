@@ -1,7 +1,7 @@
 schema = 1
 id = "family.fedora"
 family = "fedora"
-release = "43"
+release = "45"
 bootstrap = "dnf5"
 base_packages = ["@core", "kernel", "btrfs-progs", "NetworkManager", "sudo", "zram-generator", "openssh-server"]
 default_loader = "grub"

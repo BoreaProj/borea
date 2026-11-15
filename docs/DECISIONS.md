@@ -717,3 +717,32 @@ The closed Arch bootstrap (G03) stays until the F03 lanes move to plans.
 **Rejected:** running destructive plan steps on the image (weaker resume
 safety than G02's probed storage program); rewriting plan paths; a post-probe
 for every command (receipt-probed and always-run steps would fail).
+
+### D-041 — Fedora 45 pin and enforced RPM signatures
+
+**Date:** 2026-11-15
+**Context:** Fedora 45 shipped on 2026-11-03. Fedora 43, the previous pin, reaches end of life about six weeks later (C08).
+**Decision:**
+- The Fedora target release is 45 (`recipes/families/fedora.toml`). The Fedora runtime is rebuilt from
+  `registry.fedoraproject.org/fedora@sha256:ea6d638d83c7bf2f4dd082e804c4a125feee764ba82e3e7798148673e445a496`
+  (tag `45`, OCI index, resolved 2026-11-15). The runtime image carries
+  `fedora-gpg-keys-45-1`, `fedora-repos-45-1`, `rpm-6.1.0-1.fc45` and `dnf5-5.4.8.0-2.fc45`.
+- Repository keys come from the runtime's own `fedora-gpg-keys`, content-pinned by the image digest; Borea does not
+  download keys. The Fedora 45 primary key fingerprint
+  `4F50 A611 4CD5 C697 6A7F 1179 655A 4B02 F577 861E` (rsa4096 `655A4B02F577861E`, 2025-07-29) was read from
+  `/usr/share/pki/rpm-gpg/RPM-GPG-KEY-fedora-45-primary` in that image. It matches
+  https://fedoraproject.org/security/.
+- Fedora 45 moved repo files to `/usr/share/dnf5/repos.d/` and keys to `/usr/share/pki/rpm-gpg/`. `dnf5 --installroot
+  --releasever=45` uses the runtime's repo definitions, which set `gpgcheck=1` with a `file://` key path.
+- Fedora 45 enforces RPM signatures by default: `%_pkgverify_level` is `all` (verified in the image), following the
+  RPM 6.0 upstream default (https://fedoraproject.org/wiki/Changes/Enforcing_signature_checking_by_default). This
+  matches Borea's rule. Borea never passes `--nosignature` or `--nogpgcheck`. Any third-party Fedora repo (RPM
+  Fusion, COPR) must have its key imported before its first package.
+- Noctalia v5 is native on Fedora 45: package `noctalia` (5.2.1 in `fedora`, 5.5.0 in `updates` on 2026-11-15;
+  https://packages.fedoraproject.org/pkgs/noctalia/noctalia/). It was not packaged for Fedora 43, so the previous
+  `native` tier was wrong.
+
+**Known gap:** the Noctalia component's `autostart = "noctalia-shell"` is the v4 command. The v5 command is `noctalia`.
+Card A11 repins Noctalia for every family; until then the Fedora Noctalia session plan names the v5 package and the v4
+autostart, and that cell stays untested.
+**Rejected:** keeping F43 until A11; adding Terra or COPR for Noctalia.

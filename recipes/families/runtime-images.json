@@ -10,9 +10,9 @@
     "checked": "2026-11-13"
   },
   "fedora": {
-    "image": "registry.fedoraproject.org/fedora@sha256:1075c0fe0a090c01c03fe5c71cc8ecce6d9b565772ad271e150232aacab39632",
-    "tag_observed": "43",
-    "checked": "2026-11-13"
+    "image": "registry.fedoraproject.org/fedora@sha256:ea6d638d83c7bf2f4dd082e804c4a125feee764ba82e3e7798148673e445a496",
+    "tag_observed": "45",
+    "checked": "2026-11-15"
   },
   "suse": {
     "image": "registry.opensuse.org/opensuse/tumbleweed@sha256:206dc8ac56167e1b900154ade89cf052a7454b00b49c0414a8ad0aa2d341dc7f",

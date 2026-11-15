@@ -7,5 +7,5 @@ compatible_compositors = ["compositor.hyprland", "compositor.niri", "compositor.
 
 [packages]
 arch = ["noctalia-shell"]
-fedora = ["noctalia-shell"]
+fedora = ["noctalia"]
 suse = ["noctalia-shell"]
