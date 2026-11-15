@@ -23,6 +23,7 @@ jobs:
           - { family: arch, profile: minimal }
           - { family: arch, profile: minimal-ext4 }
           - { family: arch, profile: minimal-grub }
+          - { family: debian, profile: minimal }
     env:
       CELL: ${{ matrix.family }}/${{ matrix.profile }}
     steps:
