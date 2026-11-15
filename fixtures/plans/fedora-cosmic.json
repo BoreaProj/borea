@@ -1,12 +1,12 @@
 {
   "schema": 2,
-  "id": "e36a672d6253d3f81c4701f8ec5ea8dd",
+  "id": "772ad748383fdc839f61ba99fcfcb3c0",
   "created": "1970-01-01T00:00:00Z",
   "borea_version": "B-0.3",
-  "digest": "e36a672d6253d3f81c4701f8ec5ea8ddad37780044a2bbaa8501c3367db3977a",
-  "config_digest": "4eabdb9016b233ee9f1093df36a5fd0e6c7f8f9735cfbe17471995232c30f485",
-  "matrix_digest": "1a06a55c49cb1b52db797b944304efd3e3d82141d0f2d96481bfa15c744830bd",
-  "family": "suse",
+  "digest": "772ad748383fdc839f61ba99fcfcb3c00671f16cee329f0dcd969499aea88ad9",
+  "config_digest": "f9042d79982bfef61e2eccb6527cf26143a1270147045c3b1144494682d585cd",
+  "matrix_digest": "a27dce16ed4d14ecacee96c00446bb7eaa12cee65aca56def3e89f18df1509e8",
+  "family": "fedora",
   "disk": {
     "path": "/dev/vda",
     "serial": "fixture-disk",
@@ -28,13 +28,13 @@
           "--clear",
           "--new=1:0:+1024M",
           "--typecode=1:ef00",
-          "--partition-guid=1:9993e84a-6e12-5ba9-b11f-1bb76aacbb44",
+          "--partition-guid=1:cc0896d1-5288-5b32-8008-74643ca47354",
           "--new=2:0:+2048M",
           "--typecode=2:8300",
-          "--partition-guid=2:df912eb1-093b-5160-bb7d-3ec3bf0e260a",
+          "--partition-guid=2:ab4e83c8-9224-53eb-856c-bcdc14f25006",
           "--new=3:0:0",
           "--typecode=3:8300",
-          "--partition-guid=3:fccd20d9-c100-5837-915a-3614e85ae4aa",
+          "--partition-guid=3:24488dd6-0726-54df-a1da-33dc0ac70667",
           "/dev/vda"
         ],
         "chroot": false,
@@ -85,7 +85,7 @@
           "mkfs.fat",
           "-F32",
           "-i",
-          "c3ba032f",
+          "eb852139",
           "/dev/vda1"
         ],
         "chroot": false,
@@ -110,7 +110,7 @@
           "mkfs.ext4",
           "-F",
           "-U",
-          "3d624c1c-3313-520b-8c5b-969b97bfa8a0",
+          "701b80e5-9cbe-567c-9c9a-283d29a84c89",
           "/dev/vda2"
         ],
         "chroot": false,
@@ -135,7 +135,7 @@
           "mkfs.btrfs",
           "-f",
           "-U",
-          "c568c60b-8d2b-5af5-b21e-5d493a951a5c",
+          "9e1e4846-1250-51f6-a477-4b3836fe2d5f",
           "/dev/vda3"
         ],
         "chroot": false,
@@ -712,24 +712,23 @@
       "phase": "storage"
     },
     {
-      "id": "bootstrap.suse",
-      "title": "bootstrap suse",
+      "id": "bootstrap.fedora",
+      "title": "bootstrap fedora",
       "action": {
         "kind": "command",
         "argv": [
-          "zypper",
-          "--root",
-          "/mnt",
-          "--non-interactive",
+          "dnf5",
+          "-y",
+          "--installroot=/mnt",
+          "--releasever=45",
           "install",
-          "--no-recommends",
-          "patterns-base-minimal_base",
-          "kernel-default",
-          "btrfsprogs",
+          "@core",
+          "kernel",
+          "btrfs-progs",
           "NetworkManager",
           "sudo",
-          "systemd-zram-service",
-          "openssh"
+          "zram-generator",
+          "openssh-server"
         ],
         "chroot": false,
         "stdin": null
@@ -751,30 +750,27 @@
       "action": {
         "kind": "command",
         "argv": [
-          "zypper",
-          "--non-interactive",
+          "dnf5",
+          "-y",
           "install",
-          "--no-recommends",
+          "@core",
           "NetworkManager",
-          "btrfsprogs",
+          "btrfs-progs",
+          "cosmic-desktop",
+          "cosmic-greeter",
           "efibootmgr",
-          "greetd",
-          "grub2-x86_64-efi",
-          "hyprland",
-          "kernel-default",
-          "kitty",
-          "openssh",
-          "patterns-base-minimal_base",
+          "grub2-efi-x64",
+          "grub2-tools",
+          "kernel",
+          "openssh-server",
           "sudo",
-          "systemd-zram-service",
-          "tuigreet",
-          "xdg-desktop-portal-hyprland"
+          "zram-generator"
         ],
         "chroot": true,
         "stdin": null
       },
       "needs": [
-        "bootstrap.suse"
+        "bootstrap.fedora"
       ],
       "probe": {
         "kind": "command_ok",
@@ -795,7 +791,7 @@
       "action": {
         "kind": "write_file",
         "path": "/var/lib/borea/base-packages",
-        "contents": "NetworkManager\nbtrfsprogs\nefibootmgr\ngreetd\ngrub2-x86_64-efi\nhyprland\nkernel-default\nkitty\nopenssh\npatterns-base-minimal_base\nsudo\nsystemd-zram-service\ntuigreet\nxdg-desktop-portal-hyprland",
+        "contents": "@core\nNetworkManager\nbtrfs-progs\ncosmic-desktop\ncosmic-greeter\nefibootmgr\ngrub2-efi-x64\ngrub2-tools\nkernel\nopenssh-server\nsudo\nzram-generator",
         "mode": 420
       },
       "needs": [
@@ -804,7 +800,7 @@
       "probe": {
         "kind": "file_contains",
         "path": "/var/lib/borea/base-packages",
-        "needle": "NetworkManager\nbtrfsprogs\nefibootmgr\ngreetd\ngrub2-x86_64-efi\nhyprland\nkernel-default\nkitty\nopenssh\npatterns-base-minimal_base\nsudo\nsystemd-zram-service\ntuigreet\nxdg-desktop-portal-hyprland"
+        "needle": "@core\nNetworkManager\nbtrfs-progs\ncosmic-desktop\ncosmic-greeter\nefibootmgr\ngrub2-efi-x64\ngrub2-tools\nkernel\nopenssh-server\nsudo\nzram-generator"
       },
       "danger": "mutating",
       "timeout_s": 600,
@@ -816,7 +812,7 @@
       "action": {
         "kind": "write_file",
         "path": "/etc/fstab",
-        "contents": "UUID=c568c60b-8d2b-5af5-b21e-5d493a951a5c / btrfs subvol=@,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=c568c60b-8d2b-5af5-b21e-5d493a951a5c /home btrfs subvol=@home,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=c568c60b-8d2b-5af5-b21e-5d493a951a5c /.snapshots btrfs subvol=@snapshots,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=c568c60b-8d2b-5af5-b21e-5d493a951a5c /var/log btrfs subvol=@log,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=c568c60b-8d2b-5af5-b21e-5d493a951a5c /var/cache btrfs subvol=@cache,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=3d624c1c-3313-520b-8c5b-969b97bfa8a0 /boot ext4 defaults 0 2\nPARTUUID=9993e84a-6e12-5ba9-b11f-1bb76aacbb44 /boot/efi vfat umask=0077 0 2\n",
+        "contents": "UUID=9e1e4846-1250-51f6-a477-4b3836fe2d5f / btrfs subvol=@,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=9e1e4846-1250-51f6-a477-4b3836fe2d5f /home btrfs subvol=@home,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=9e1e4846-1250-51f6-a477-4b3836fe2d5f /.snapshots btrfs subvol=@snapshots,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=9e1e4846-1250-51f6-a477-4b3836fe2d5f /var/log btrfs subvol=@log,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=9e1e4846-1250-51f6-a477-4b3836fe2d5f /var/cache btrfs subvol=@cache,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=701b80e5-9cbe-567c-9c9a-283d29a84c89 /boot ext4 defaults 0 2\nPARTUUID=cc0896d1-5288-5b32-8008-74643ca47354 /boot/efi vfat umask=0077 0 2\n",
         "mode": 420
       },
       "needs": [
@@ -825,7 +821,7 @@
       "probe": {
         "kind": "file_contains",
         "path": "/etc/fstab",
-        "needle": "UUID=c568c60b-8d2b-5af5-b21e-5d493a951a5c / btrfs subvol=@,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=c568c60b-8d2b-5af5-b21e-5d493a951a5c /home btrfs subvol=@home,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=c568c60b-8d2b-5af5-b21e-5d493a951a5c /.snapshots btrfs subvol=@snapshots,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=c568c60b-8d2b-5af5-b21e-5d493a951a5c /var/log btrfs subvol=@log,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=c568c60b-8d2b-5af5-b21e-5d493a951a5c /var/cache btrfs subvol=@cache,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=3d624c1c-3313-520b-8c5b-969b97bfa8a0 /boot ext4 defaults 0 2\nPARTUUID=9993e84a-6e12-5ba9-b11f-1bb76aacbb44 /boot/efi vfat umask=0077 0 2\n"
+        "needle": "UUID=9e1e4846-1250-51f6-a477-4b3836fe2d5f / btrfs subvol=@,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=9e1e4846-1250-51f6-a477-4b3836fe2d5f /home btrfs subvol=@home,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=9e1e4846-1250-51f6-a477-4b3836fe2d5f /.snapshots btrfs subvol=@snapshots,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=9e1e4846-1250-51f6-a477-4b3836fe2d5f /var/log btrfs subvol=@log,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=9e1e4846-1250-51f6-a477-4b3836fe2d5f /var/cache btrfs subvol=@cache,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=701b80e5-9cbe-567c-9c9a-283d29a84c89 /boot ext4 defaults 0 2\nPARTUUID=cc0896d1-5288-5b32-8008-74643ca47354 /boot/efi vfat umask=0077 0 2\n"
       },
       "danger": "mutating",
       "timeout_s": 600,
@@ -1006,7 +1002,7 @@
       "action": {
         "kind": "write_file",
         "path": "/var/lib/borea/password-set",
-        "contents": "4eabdb9016b233ee9f1093df36a5fd0e6c7f8f9735cfbe17471995232c30f485",
+        "contents": "f9042d79982bfef61e2eccb6527cf26143a1270147045c3b1144494682d585cd",
         "mode": 384
       },
       "needs": [
@@ -1015,7 +1011,7 @@
       "probe": {
         "kind": "file_contains",
         "path": "/var/lib/borea/password-set",
-        "needle": "4eabdb9016b233ee9f1093df36a5fd0e6c7f8f9735cfbe17471995232c30f485"
+        "needle": "f9042d79982bfef61e2eccb6527cf26143a1270147045c3b1144494682d585cd"
       },
       "danger": "mutating",
       "timeout_s": 600,
@@ -1193,27 +1189,6 @@
       "phase": "base"
     },
     {
-      "id": "session.greetd",
-      "title": "session greetd",
-      "action": {
-        "kind": "write_file",
-        "path": "/etc/greetd/config.toml",
-        "contents": "[terminal]\nvt = 1\n[default_session]\ncommand = \"tuigreet --cmd Hyprland\"\nuser = \"greeter\"\n",
-        "mode": 420
-      },
-      "needs": [
-        "base.ssh.receipt"
-      ],
-      "probe": {
-        "kind": "file_contains",
-        "path": "/etc/greetd/config.toml",
-        "needle": "[terminal]\nvt = 1\n[default_session]\ncommand = \"tuigreet --cmd Hyprland\"\nuser = \"greeter\"\n"
-      },
-      "danger": "mutating",
-      "timeout_s": 600,
-      "phase": "session"
-    },
-    {
       "id": "session.greeter.enable",
       "title": "session greeter enable",
       "action": {
@@ -1221,20 +1196,20 @@
         "argv": [
           "systemctl",
           "enable",
-          "greetd.service"
+          "cosmic-greeter.service"
         ],
         "chroot": true,
         "stdin": null
       },
       "needs": [
-        "session.greetd"
+        "base.ssh.receipt"
       ],
       "probe": {
         "kind": "command_ok",
         "argv": [
           "systemctl",
           "is-enabled",
-          "greetd.service"
+          "cosmic-greeter.service"
         ],
         "chroot": true
       },
@@ -1307,7 +1282,7 @@
       "action": {
         "kind": "write_file",
         "path": "/var/lib/borea/initramfs-generated",
-        "contents": "root=UUID=c568c60b-8d2b-5af5-b21e-5d493a951a5c rootflags=subvol=@",
+        "contents": "root=UUID=9e1e4846-1250-51f6-a477-4b3836fe2d5f rootflags=subvol=@",
         "mode": 420
       },
       "needs": [
@@ -1316,7 +1291,7 @@
       "probe": {
         "kind": "file_contains",
         "path": "/var/lib/borea/initramfs-generated",
-        "needle": "root=UUID=c568c60b-8d2b-5af5-b21e-5d493a951a5c rootflags=subvol=@"
+        "needle": "root=UUID=9e1e4846-1250-51f6-a477-4b3836fe2d5f rootflags=subvol=@"
       },
       "danger": "mutating",
       "timeout_s": 600,
@@ -1328,7 +1303,7 @@
       "action": {
         "kind": "write_file",
         "path": "/etc/default/grub.d/90-borea.cfg",
-        "contents": "GRUB_CMDLINE_LINUX=\"root=UUID=c568c60b-8d2b-5af5-b21e-5d493a951a5c rootflags=subvol=@\"\n",
+        "contents": "GRUB_CMDLINE_LINUX=\"root=UUID=9e1e4846-1250-51f6-a477-4b3836fe2d5f rootflags=subvol=@\"\n",
         "mode": 420
       },
       "needs": [
@@ -1337,7 +1312,7 @@
       "probe": {
         "kind": "file_contains",
         "path": "/etc/default/grub.d/90-borea.cfg",
-        "needle": "GRUB_CMDLINE_LINUX=\"root=UUID=c568c60b-8d2b-5af5-b21e-5d493a951a5c rootflags=subvol=@\"\n"
+        "needle": "GRUB_CMDLINE_LINUX=\"root=UUID=9e1e4846-1250-51f6-a477-4b3836fe2d5f rootflags=subvol=@\"\n"
       },
       "danger": "mutating",
       "timeout_s": 600,
@@ -1388,7 +1363,7 @@
       "probe": {
         "kind": "file_contains",
         "path": "/boot/grub2/grub.cfg",
-        "needle": "c568c60b-8d2b-5af5-b21e-5d493a951a5c"
+        "needle": "9e1e4846-1250-51f6-a477-4b3836fe2d5f"
       },
       "danger": "mutating",
       "timeout_s": 600,
@@ -1400,7 +1375,7 @@
       "action": {
         "kind": "write_file",
         "path": "/var/lib/borea/config-digest",
-        "contents": "4eabdb9016b233ee9f1093df36a5fd0e6c7f8f9735cfbe17471995232c30f485",
+        "contents": "f9042d79982bfef61e2eccb6527cf26143a1270147045c3b1144494682d585cd",
         "mode": 384
       },
       "needs": [
@@ -1409,7 +1384,7 @@
       "probe": {
         "kind": "file_contains",
         "path": "/var/lib/borea/config-digest",
-        "needle": "4eabdb9016b233ee9f1093df36a5fd0e6c7f8f9735cfbe17471995232c30f485"
+        "needle": "f9042d79982bfef61e2eccb6527cf26143a1270147045c3b1144494682d585cd"
       },
       "danger": "mutating",
       "timeout_s": 600,
@@ -1420,7 +1395,7 @@
     {
       "kind": "file_contains",
       "path": "/etc/fstab",
-      "needle": "UUID=c568c60b-8d2b-5af5-b21e-5d493a951a5c / btrfs subvol=@,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=c568c60b-8d2b-5af5-b21e-5d493a951a5c /home btrfs subvol=@home,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=c568c60b-8d2b-5af5-b21e-5d493a951a5c /.snapshots btrfs subvol=@snapshots,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=c568c60b-8d2b-5af5-b21e-5d493a951a5c /var/log btrfs subvol=@log,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=c568c60b-8d2b-5af5-b21e-5d493a951a5c /var/cache btrfs subvol=@cache,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=3d624c1c-3313-520b-8c5b-969b97bfa8a0 /boot ext4 defaults 0 2\nPARTUUID=9993e84a-6e12-5ba9-b11f-1bb76aacbb44 /boot/efi vfat umask=0077 0 2\n"
+      "needle": "UUID=9e1e4846-1250-51f6-a477-4b3836fe2d5f / btrfs subvol=@,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=9e1e4846-1250-51f6-a477-4b3836fe2d5f /home btrfs subvol=@home,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=9e1e4846-1250-51f6-a477-4b3836fe2d5f /.snapshots btrfs subvol=@snapshots,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=9e1e4846-1250-51f6-a477-4b3836fe2d5f /var/log btrfs subvol=@log,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=9e1e4846-1250-51f6-a477-4b3836fe2d5f /var/cache btrfs subvol=@cache,compress=zstd:3,noatime,ssd,discard=async 0 0\nUUID=701b80e5-9cbe-567c-9c9a-283d29a84c89 /boot ext4 defaults 0 2\nPARTUUID=cc0896d1-5288-5b32-8008-74643ca47354 /boot/efi vfat umask=0077 0 2\n"
     },
     {
       "kind": "file_contains",
@@ -1448,12 +1423,12 @@
       "argv": [
         "systemctl",
         "is-enabled",
-        "greetd.service"
+        "cosmic-greeter.service"
       ]
     },
     {
       "kind": "file_exists",
-      "path": "/usr/share/wayland-sessions/hyprland.desktop"
+      "path": "/usr/share/wayland-sessions/cosmic.desktop"
     },
     {
       "kind": "file_exists",

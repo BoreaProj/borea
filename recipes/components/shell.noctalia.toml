@@ -1,11 +1,10 @@
 schema = 1
 id = "shell.noctalia"
 requires = []
-evidence = "https://archlinux.org/packages/extra/x86_64/noctalia/"
-autostart = "noctalia-shell"
+evidence = "https://docs.noctalia.dev/noctalia/v5.4.1/getting-started/installation/"
+autostart = "noctalia"
 compatible_compositors = ["compositor.hyprland", "compositor.niri", "compositor.mangowm"]
 
 [packages]
-arch = ["noctalia-shell"]
+arch = ["noctalia"]
 fedora = ["noctalia"]
-suse = ["noctalia-shell"]

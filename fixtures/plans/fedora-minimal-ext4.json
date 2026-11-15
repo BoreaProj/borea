@@ -1,11 +1,11 @@
 {
   "schema": 2,
-  "id": "c51d611509ecbe511f4bb45a2c908f57",
+  "id": "0b5f6211094553bedb3e4c82acf564c8",
   "created": "1970-01-01T00:00:00Z",
   "borea_version": "B-0.3",
-  "digest": "c51d611509ecbe511f4bb45a2c908f57e30857b85260d4e7ac40c499430668ec",
+  "digest": "0b5f6211094553bedb3e4c82acf564c810cd86f0171e267c73eb8fc971f1b53b",
   "config_digest": "9d9e2aa555a83677c174e3589045d1dd3c99edb6dfa86469b9cfb0d32c688cc0",
-  "matrix_digest": "1a06a55c49cb1b52db797b944304efd3e3d82141d0f2d96481bfa15c744830bd",
+  "matrix_digest": "a27dce16ed4d14ecacee96c00446bb7eaa12cee65aca56def3e89f18df1509e8",
   "family": "fedora",
   "disk": {
     "path": "/dev/vda",

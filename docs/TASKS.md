@@ -237,6 +237,18 @@ release. Deferred cards stay in this file marked `deferred`.
 - **Verify:** workspace checks; `cargo xtask matrix check`; `cargo xtask plan golden`;
   `cargo xtask matrix render --check`
 - **Out:** VM promotion (F04/F05); flavours (C09).
+- **Status:** done (D-042).
+  - Sessions are desktop (KDE, GNOME, COSMIC) or shell (Noctalia v5, DMS,
+    End4) on a compatible compositor, Hyprland by default.
+  - Compositor-only configs and incompatible shell/compositor pairs are
+    refused with a remedy.
+  - Noctalia is v5 (`noctalia`, autostart `noctalia`).
+  - The required cells are a data table in `xtask` (29), and `matrix verify
+    --strict` lists exactly those.
+  - Golden fixtures are regenerated: 24 plans and 9 refusals, including
+    Debian COSMIC and a compositor-only session.
+  - Third-party shells on Debian, Fedora and openSUSE stay refused until C07
+    pins their repositories.
 
 ---
 

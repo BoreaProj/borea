@@ -1,11 +1,11 @@
 {
   "schema": 2,
-  "id": "4628c6b1833c5eb0d3b90c7d35cc7307",
+  "id": "36ba0db22a7b26279cc52cb93777915e",
   "created": "1970-01-01T00:00:00Z",
   "borea_version": "B-0.3",
-  "digest": "4628c6b1833c5eb0d3b90c7d35cc73071d5368cdfff080116ca9f1ef8e16fc5a",
+  "digest": "36ba0db22a7b26279cc52cb93777915e5f703a5f989dfcc14e958a9212f64f9d",
   "config_digest": "57ca951fcff74e4953747c8511aa9b668b5737973e77135050e71ce63cc17a8e",
-  "matrix_digest": "1a06a55c49cb1b52db797b944304efd3e3d82141d0f2d96481bfa15c744830bd",
+  "matrix_digest": "a27dce16ed4d14ecacee96c00446bb7eaa12cee65aca56def3e89f18df1509e8",
   "family": "arch",
   "disk": {
     "path": "/dev/vda",

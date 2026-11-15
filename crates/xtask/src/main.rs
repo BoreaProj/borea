@@ -207,20 +207,62 @@ fn render(check: bool) -> Result<()> {
     }
     Ok(())
 }
-fn cases() -> Vec<(FamilyId, String, Filesystem, Loader)> {
-    let mut out = Vec::new();
-    for f in FamilyId::ALL {
-        for profile in [
+/// The D-039 release contract, as data: required session profiles per family.
+/// Debian has no COSMIC cell (no Debian 13 package) and End4 is Arch-only.
+const CONTRACT: &[(FamilyId, &[&str])] = &[
+    (
+        FamilyId::Arch,
+        &[
             "minimal",
             "kde",
             "gnome",
-            "hyprland",
+            "cosmic",
             "hyprland-noctalia",
             "hyprland-dms",
-        ] {
-            out.push((f, profile.into(), Filesystem::Btrfs, Loader::Auto));
+            "hyprland-end4",
+        ],
+    ),
+    (
+        FamilyId::Debian,
+        &[
+            "minimal",
+            "kde",
+            "gnome",
+            "hyprland-noctalia",
+            "hyprland-dms",
+        ],
+    ),
+    (
+        FamilyId::Fedora,
+        &[
+            "minimal",
+            "kde",
+            "gnome",
+            "cosmic",
+            "hyprland-noctalia",
+            "hyprland-dms",
+        ],
+    ),
+    (
+        FamilyId::Suse,
+        &[
+            "minimal",
+            "kde",
+            "gnome",
+            "cosmic",
+            "hyprland-noctalia",
+            "hyprland-dms",
+        ],
+    ),
+];
+/// The required cells, in report order: sessions and ext4 per family, then Arch GRUB.
+fn cases() -> Vec<(FamilyId, String, Filesystem, Loader)> {
+    let mut out = Vec::new();
+    for (f, profiles) in CONTRACT {
+        for profile in *profiles {
+            out.push((*f, (*profile).into(), Filesystem::Btrfs, Loader::Auto));
         }
-        out.push((f, "minimal-ext4".into(), Filesystem::Ext4, Loader::Auto));
+        out.push((*f, "minimal-ext4".into(), Filesystem::Ext4, Loader::Auto));
     }
     out.push((
         FamilyId::Arch,
@@ -229,6 +271,19 @@ fn cases() -> Vec<(FamilyId, String, Filesystem, Loader)> {
         Loader::Grub,
     ));
     out
+}
+/// Golden fixtures beyond the contract: optional Omarchy plans and the
+/// refusals D-039 promises (Debian COSMIC, compositor-only sessions).
+fn extra_cases() -> Vec<(FamilyId, String, Filesystem, Loader)> {
+    [
+        (FamilyId::Arch, "omarchy"),
+        (FamilyId::Arch, "omarchy-custom"),
+        (FamilyId::Debian, "cosmic"),
+        (FamilyId::Arch, "hyprland"),
+    ]
+    .into_iter()
+    .map(|(f, p)| (f, p.into(), Filesystem::Btrfs, Loader::Auto))
+    .collect()
 }
 fn case_config(f: FamilyId, profile: &str, fs: Filesystem, l: Loader) -> Result<Config> {
     let mut c = Config::parse(include_str!("../../../recipes/profiles/minimal.toml"))?;
@@ -250,7 +305,7 @@ fn case_config(f: FamilyId, profile: &str, fs: Filesystem, l: Loader) -> Result<
             }
             c.omarchy = Some(o);
         }
-        "kde" | "gnome" => {
+        "kde" | "gnome" | "cosmic" => {
             c.session.kind = "desktop".into();
             c.session.desktop = Some(profile.into());
             c.session.greeter = "auto".into();
@@ -261,6 +316,7 @@ fn case_config(f: FamilyId, profile: &str, fs: Filesystem, l: Loader) -> Result<
             c.session.shell = match profile {
                 "hyprland-noctalia" => Some("noctalia".into()),
                 "hyprland-dms" => Some("dms".into()),
+                "hyprland-end4" => Some("end4".into()),
                 _ => None,
             };
             c.session.greeter = "auto".into();
@@ -303,18 +359,7 @@ fn golden(update: bool) -> Result<()> {
     }
     let mut plans = 0;
     let mut refusals = 0;
-    for (f, profile, fs, l) in
-        cases()
-            .into_iter()
-            .chain(["omarchy", "omarchy-custom"].into_iter().map(|profile| {
-                (
-                    FamilyId::Arch,
-                    profile.into(),
-                    Filesystem::Btrfs,
-                    Loader::Auto,
-                )
-            }))
-    {
+    for (f, profile, fs, l) in cases().into_iter().chain(extra_cases()) {
         let c = case_config(f, &profile, fs, l)?;
         let result = match build_case(&c) {
             Ok(p) => {
@@ -347,7 +392,9 @@ fn golden(update: bool) -> Result<()> {
         }
     }
     println!(
-        "golden: {plans} deterministic draft plans, {refusals} explicit refusal fixtures; 29 required cases plus 2 optional Omarchy cases represented, none VM-validated"
+        "golden: {plans} deterministic draft plans, {refusals} explicit refusal fixtures; {} required cases plus {} optional or refusal cases represented",
+        cases().len(),
+        extra_cases().len()
     );
     Ok(())
 }

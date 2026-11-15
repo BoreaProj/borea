@@ -5,7 +5,7 @@ VM result. Nothing here promotes a matrix cell. Tiers follow PLAN §7.
 
 ## 1. Session sources per family
 
-`→` marks a correction to `recipes/matrix.toml` as of `cfe489e`.
+`→` marks a correction to `recipes/matrix.toml` as of `cfe489e`. A11 (D-042) applied these corrections on 2026-11-15.
 
 | Component | Arch | Debian 13 | Fedora | openSUSE Tumbleweed |
 | --- | --- | --- | --- | --- |
