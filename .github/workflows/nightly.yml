@@ -22,6 +22,7 @@ jobs:
           # Cells with an image lane today (xtask e2e refuses the rest).
           - { family: arch, profile: minimal }
           - { family: arch, profile: minimal-ext4 }
+          - { family: arch, profile: minimal-grub }
     env:
       CELL: ${{ matrix.family }}/${{ matrix.profile }}
     steps:
