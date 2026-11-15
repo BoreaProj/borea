@@ -26,8 +26,11 @@ Package tiers describe draft packaging paths, not VM results. VM-validated cells
 | shell.noctalia | native | third-party | native | third-party |
 | system.codecs | native | native | third-party | third-party |
 
-## VM-validated cells (0/29 required)
+## VM-validated cells (2/29 required)
 
 A cell is validated only by a passing e2e run in CI, recorded with `cargo xtask matrix record` in `recipes/validated.json`. Package tiers above are not VM results.
 
-None yet.
+| Cell | Root fs | Loader | Commit | Date | Run |
+| --- | --- | --- | --- | --- | --- |
+| arch/minimal | btrfs | limine | `6b06f35` | 2026-11-15 | [e2e-arch-minimal #14150070925](https://github.com/BoreaProj/borea/actions/runs/43684747770) |
+| arch/minimal-ext4 | ext4 | limine | `6b06f35` | 2026-11-15 | [e2e-arch-minimal-ext4 #14149529824](https://github.com/BoreaProj/borea/actions/runs/43684747770) |

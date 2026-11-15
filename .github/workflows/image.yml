@@ -157,11 +157,16 @@ jobs:
         run: |
           result=$(ls target/e2e/$CELL/*/result.json | tail -n 1)
           target/release/xtask matrix record --result "$result" --run "$RUN" --artifact e2e-arch-minimal --artifact-id 1
-          jq -e '.cells | length == 1 and .[0].cell == "arch/minimal" and .[0].loader == "limine"' recipes/validated.json
+          # The fresh result replaces any committed arch/minimal record; other
+          # records are untouched.
+          jq -e '[.cells[] | select(.cell == "arch/minimal")] | length == 1 and .[0].loader == "limine" and .[0].artifact_id == 1' recipes/validated.json
+          git diff --quiet HEAD -- recipes/validated.json && exit 1
           target/release/xtask matrix verify --artifacts target/e2e
+          missing=$((29 - $(jq '.cells | length' recipes/validated.json)))
           out=$(target/release/xtask matrix verify --strict --artifacts target/e2e 2>&1) && exit 1
           echo "$out"
-          grep -q '28 required cells have no validated e2e result' <<<"$out"
+          if [ "$missing" -gt 0 ]; then grep -q "$missing required cells have no validated e2e result" <<<"$out"; fi
+          # The fresh arch/minimal result is present, so its record is proven.
           ! grep -q 'arch/minimal: recorded result' <<<"$out"
           git checkout -- recipes/validated.json docs/MATRIX.generated.md
       - uses: actions/upload-artifact@v4
