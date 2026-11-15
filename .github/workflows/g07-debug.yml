@@ -1,0 +1,45 @@
+name: g07 debug (temporary, remove before merge)
+on:
+  push:
+    branches: [feature/g07-partition-devices]
+permissions:
+  contents: read
+jobs:
+  grub:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.99.1
+      - uses: Swatinem/rust-cache@v2
+      - run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y bubblewrap ovmf qemu-system-x86 jq
+          cargo build --release --locked -p borea-cli -p xtask
+          target/release/borea runtime fetch --family arch --cache "$RUNNER_TEMP/rt"
+      - name: e2e keep
+        run: |
+          sudo env BOREA_RUNTIME_CACHE="$RUNNER_TEMP/rt" target/release/xtask e2e --family arch --profile minimal-grub --keep --out "$PWD/target/e2e" || true
+      - name: probe
+        run: |
+          set -x
+          img=$(ls target/e2e/arch/minimal-grub/*/disk.img)
+          dev=$(sudo losetup -fP --show "$img")
+          sleep 2
+          lsblk -o NAME,FSTYPE,SIZE,START "$dev" || true
+          sudo blkid -p ${dev}p1 ${dev}p2 ${dev}p3 || true
+          sudo dumpe2fs -h ${dev}p2 2>/dev/null | grep -i -E "features|revision" || true
+          m=$(mktemp -d)
+          sudo mount -o subvol=@ ${dev}p3 $m
+          sudo mount ${dev}p2 $m/boot
+          sudo mount ${dev}p1 $m/boot/efi
+          for d in proc sys dev; do sudo mount --rbind /$d $m/$d; done
+          sudo chroot $m pacman -Q grub || true
+          ls -la $m/etc/default/grub.d/ || true
+          cat $m/etc/default/grub.d/*.cfg || true
+          grep -n "GRUB_CMDLINE_LINUX" $m/etc/default/grub || true
+          grep -n "grub.d\|default/grub" $m/usr/bin/grub-mkconfig || true
+          grep -n "linux\s" $m/boot/grub/grub.cfg | head -5 || true
+          ls -la $m/boot/efi/EFI/BOOT/ || true
