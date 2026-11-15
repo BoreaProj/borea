@@ -1390,11 +1390,15 @@ pub fn apply_plan(
     }
     // The plan's own device paths resolve to the held disk and its kernel
     // partitions.
+    // Tools that resolve a mount by device number (grub-probe) look the
+    // device up by its kernel name, so bind those names too.
     cmd.arg("--dev-bind").arg(&whole.path).arg(disk);
+    cmd.arg("--dev-bind").arg(&whole.path).arg(&whole.path);
     for (n, part) in parts.iter().enumerate() {
         cmd.arg("--dev-bind")
             .arg(part)
             .arg(partition_path(disk, n as u8 + 1));
+        cmd.arg("--dev-bind").arg(part).arg(part);
     }
     cmd.arg("--ro-bind")
         .arg(&plan_dir)
