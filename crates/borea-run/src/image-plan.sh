@@ -31,7 +31,8 @@ chroot_ready() {
     mkdir -p "$root/proc" "$root/sys" "$root/dev" "$root/run"
     mountpoint -q "$root/proc" || mount -t proc proc "$root/proc"
     mountpoint -q "$root/sys" || mount -t sysfs sys "$root/sys"
-    mountpoint -q "$root/dev" || mount --bind /dev "$root/dev"
+    # Recursive: the plan's device nodes are bind mounts on the sandbox /dev.
+    mountpoint -q "$root/dev" || mount --rbind /dev "$root/dev"
     mountpoint -q "$root/run" || mount -t tmpfs -o mode=0755 tmpfs "$root/run"
     # Package managers in the chroot need the sandbox resolver. Bind it; do not
     # copy it, so the target keeps its own file.
