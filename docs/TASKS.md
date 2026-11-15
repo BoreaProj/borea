@@ -380,26 +380,15 @@ release. Deferred cards stay in this file marked `deferred`.
 - **Verify:** `cargo xtask e2e --family arch --profile minimal --root-fs ext4
   --loader grub`
 - **Out:** xfs, zfs, dual-boot.
-- **Status:** partly done; Arch GRUB blocked on G07.
-  - `xtask e2e` now runs `arch/minimal-grub`. The old refusal predated G05,
-    which runs the plan's own GRUB steps.
-  - `result.json` reports the resolved loader; it was hard-coded to `limine`.
-  - arch/minimal-ext4 is already validated (F05 record).
+- **Status:** done for Arch (G07, D-043).
+  - `xtask e2e` runs `arch/minimal-grub`, and `result.json` reports the
+    resolved loader (it was hard-coded to `limine`).
+  - The e2e lane adds `ignore_loglevel systemd.show_status=1` because Arch's
+    GRUB defaults are `quiet`.
+  - arch/minimal-grub passed in nightly run 43707335139 on the G07 branch.
+    Record it from a nightly run on `main` after merge.
   - Debian, Fedora and openSUSE ext4 cells wait for their family e2e lanes
     (C02, C04, C05).
-- **Blocker (Arch GRUB):** nightly run 43699983228 on this branch
-  (https://github.com/BoreaProj/borea/actions/runs/43699983228/job/132768780764).
-  Create and plan passed; apply failed at `boot.grub.install`:
-  `grub-install: error: grub-core/kern/fs.c:grub_fs_probe:122:unknown filesystem.`
-  The image partitions reach the sandbox as separate offset loop devices
-  (`Loop::attach`, autoclear only, no partition scan), not partitions of one
-  disk. GRUB probes the `/boot` device through sysfs and does not recognise
-  them. Limine does not probe, which is why arch/minimal passes. This reading
-  is not yet tested. Smallest next experiment: G07.
-
----
-
-## C — Families
 
 ### C01 — Family trait, registry, host requirements
 - **WS:** C · **Dep:** A04
@@ -803,6 +792,10 @@ release. Deferred cards stay in this file marked `deferred`.
 - **Verify:** `cargo test -p borea-run`; nightly matrix with arch/minimal-grub
   restored.
 - **Out:** changing the G02 storage program; LUKS.
+- **Status:** done (D-043). The fault was a non-recursive `/dev` bind into the
+  target (empty device placeholders), found by probing the kept image outside
+  the sandbox. The whole-disk loop uses `LO_FLAGS_PARTSCAN`, and its partitions
+  are identity-checked through sysfs.
 
 ### G05 — Image plan executor (unblocks F04)
 - **WS:** G · **Dep:** G02, G03, G04, F04

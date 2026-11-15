@@ -273,8 +273,21 @@ fn unlocked_backing(image: &File) -> Result<File> {
     }
     Ok(backing)
 }
+/// `LO_FLAGS_AUTOCLEAR`: detach when the last opener closes.
+const LO_AUTOCLEAR: u32 = 4;
+/// `LO_FLAGS_PARTSCAN`: the kernel creates partition devices for the GPT.
+const LO_PARTSCAN: u32 = 8;
 impl Loop {
     fn attach(image: &File, offset: u64, size: u64) -> Result<Self> {
+        Self::attach_with(image, offset, size, LO_AUTOCLEAR)
+    }
+    /// Attach the whole image with partition scanning, so its partitions are
+    /// real kernel partitions of one disk (G07). GRUB probes `/boot` through
+    /// sysfs and rejects bare offset loops.
+    fn attach_disk(image: &File) -> Result<Self> {
+        Self::attach_with(image, 0, 0, LO_AUTOCLEAR | LO_PARTSCAN)
+    }
+    fn attach_with(image: &File, offset: u64, size: u64, flags: u32) -> Result<Self> {
         let backing = unlocked_backing(image)?;
         let ctl = OpenOptions::new()
             .read(true)
@@ -305,7 +318,7 @@ impl Loop {
                 info: LoopInfo {
                     offset,
                     size,
-                    flags: 4,
+                    flags,
                     ..Default::default()
                 },
                 reserved: [0; 8],
@@ -323,6 +336,45 @@ impl Loop {
             "no free loop device after concurrent allocation retries",
         ))
     }
+}
+/// The kernel partition `n` of a partition-scanned loop disk, checked against
+/// the expected start and length (bytes) through sysfs.
+fn loop_partition(disk: &Loop, n: u8, start: u64, len: u64) -> Result<PathBuf> {
+    let name = disk
+        .path
+        .file_name()
+        .and_then(|n| n.to_str())
+        .ok_or_else(|| fail("loop path"))?;
+    let part = format!("{name}p{n}");
+    let sys = Path::new("/sys/class/block").join(&part);
+    let dev = Path::new("/dev").join(&part);
+    // The kernel creates partition nodes asynchronously after LOOP_CONFIGURE.
+    for _ in 0..100 {
+        if sys.join("start").is_file() && dev.exists() {
+            break;
+        }
+        std::thread::sleep(Duration::from_millis(50));
+    }
+    let sectors = |f: &str| -> Result<u64> {
+        fs::read_to_string(sys.join(f))
+            .map_err(|e| fail(format!("{part} has no {f} in sysfs: {e}")))?
+            .trim()
+            .parse::<u64>()
+            .map_err(|_| fail(format!("{part} {f} is not a number")))
+    };
+    if (sectors("start")? * 512, sectors("size")? * 512) != (start, len) {
+        return Err(fail(format!(
+            "{part} does not match the image layout; recreate the image"
+        )));
+    }
+    let m = fs::symlink_metadata(&dev)?;
+    let dev_no = fs::read_to_string(sys.join("dev"))?;
+    if m.mode() & libc::S_IFMT != libc::S_IFBLK
+        || format!("{}:{}", libc::major(m.rdev()), libc::minor(m.rdev())) != dev_no.trim()
+    {
+        return Err(fail(format!("{part} device node identity mismatch")));
+    }
+    Ok(dev)
 }
 impl Drop for Loop {
     fn drop(&mut self) {
@@ -1287,10 +1339,12 @@ pub fn apply_plan(
         fs::write(&pacman_conf, kept)?;
     }
 
-    let whole = Loop::attach(&file, 0, 0)?;
-    let esp = Loop::attach(&file, MIB, GIB)?;
-    let boot = Loop::attach(&file, MIB + GIB, 2 * GIB)?;
-    let rootdev = Loop::attach(&file, MIB + 3 * GIB, image.bytes - 2 * MIB - 3 * GIB)?;
+    let whole = Loop::attach_disk(&file)?;
+    let parts = [
+        loop_partition(&whole, 1, MIB, GIB)?,
+        loop_partition(&whole, 2, MIB + GIB, 2 * GIB)?,
+        loop_partition(&whole, 3, MIB + 3 * GIB, image.bytes - 2 * MIB - 3 * GIB)?,
+    ];
     let mut cmd = Command::new("/usr/bin/bwrap");
     cmd.env_clear().args([
         "--die-with-parent",
@@ -1334,14 +1388,17 @@ pub fn apply_plan(
     if let Ok(resolv) = fs::canonicalize("/etc/resolv.conf") {
         cmd.arg("--ro-bind").arg(resolv).arg("/etc/resolv.conf");
     }
-    // The plan's own device paths resolve to the held loop mappings.
-    for (l, path) in [
-        (&whole, disk.to_string()),
-        (&esp, partition_path(disk, 1)),
-        (&boot, partition_path(disk, 2)),
-        (&rootdev, partition_path(disk, 3)),
-    ] {
-        cmd.arg("--dev-bind").arg(&l.path).arg(path);
+    // The plan's own device paths resolve to the held disk and its kernel
+    // partitions.
+    // Tools that resolve a mount by device number (grub-probe) look the
+    // device up by its kernel name, so bind those names too.
+    cmd.arg("--dev-bind").arg(&whole.path).arg(disk);
+    cmd.arg("--dev-bind").arg(&whole.path).arg(&whole.path);
+    for (n, part) in parts.iter().enumerate() {
+        cmd.arg("--dev-bind")
+            .arg(part)
+            .arg(partition_path(disk, n as u8 + 1));
+        cmd.arg("--dev-bind").arg(part).arg(part);
     }
     cmd.arg("--ro-bind")
         .arg(&plan_dir)
@@ -1499,7 +1556,7 @@ pub fn apply_plan(
         driver.child.running = false;
     }
     drop(driver);
-    drop((whole, esp, boot, rootdev));
+    drop(whole);
     result.and(teardown)
 }
 
