@@ -113,18 +113,29 @@ impl Args {
                 self.family.as_str()
             )));
         }
-        if !matches!(self.profile.as_str(), "minimal" | "minimal-ext4") {
+        if !matches!(
+            self.profile.as_str(),
+            "minimal" | "minimal-ext4" | "minimal-grub"
+        ) {
             return Err(BoreaError::unsupported(format!(
-                "e2e profile {} is not runnable: session cells have not been run through the image plan executor yet; only arch/minimal and arch/minimal-ext4 have an image lane",
+                "e2e profile {} is not runnable: session cells have not been run through the image plan executor yet; only arch/minimal, arch/minimal-ext4 and arch/minimal-grub have an image lane",
                 self.profile
             )));
         }
-        if self.loader == Loader::Grub {
-            return Err(BoreaError::unsupported(
-                "e2e has no GRUB image lane: the Arch image bootloader executor installs Limine only (G03)",
-            ));
-        }
         Ok(())
+    }
+
+    /// The loader the plan will install, as `result.json` and the matrix
+    /// record name it.
+    fn loader_name(&self) -> Result<&'static str> {
+        let c = crate::case_config(self.family, &self.profile, self.root_fs, self.loader)?;
+        let matrix = borea_core::matrix::Matrix::embedded()?;
+        let family = borea_core::recipe::family(self.family)?;
+        match borea_distro::loader(&c, &family, &matrix)? {
+            Loader::Limine => Ok("limine"),
+            Loader::Grub => Ok("grub"),
+            Loader::Auto => Err(BoreaError::invalid("loader resolved to auto")),
+        }
     }
 
     fn fs(&self) -> &'static str {
@@ -172,6 +183,7 @@ impl Run {
 
 pub fn run(args: &Args) -> Result<()> {
     args.gate()?;
+    let loader = args.loader_name()?;
     let started = Instant::now();
     let root = match &args.out {
         Some(out) => out.clone(),
@@ -213,7 +225,7 @@ pub fn run(args: &Args) -> Result<()> {
         "family": args.family,
         "profile": args.profile,
         "root_fs": args.fs(),
-        "loader": "limine",
+        "loader": loader,
         "commit": commit(),
         "pass": outcome.is_ok(),
         "failed_stage": failed,
@@ -541,11 +553,28 @@ mod tests {
         for a in [
             ["--family", "debian", "--profile", "minimal"],
             ["--family", "arch", "--profile", "kde"],
-            ["--family", "arch", "--profile", "minimal-grub"],
         ] {
             let e = parse(&a).unwrap().gate().unwrap_err();
             assert_eq!(e.code, "E_UNSUPPORTED");
         }
+    }
+
+    #[test]
+    fn grub_cell_runs_and_reports_its_loader() {
+        let a = parse(&["--family", "arch", "--profile", "minimal-grub"]).unwrap();
+        assert_eq!(a.loader, Loader::Grub);
+        assert!(a.gate().is_ok());
+        assert_eq!(a.loader_name().unwrap(), "grub");
+        let a = parse(&["--family", "arch", "--profile", "minimal"]).unwrap();
+        assert_eq!(a.loader_name().unwrap(), "limine");
+        let (_, plan) = plan_for(
+            &parse(&["--family", "arch", "--profile", "minimal-grub"]).unwrap(),
+            &image_fixture(),
+        )
+        .unwrap();
+        let json = plan.json().unwrap();
+        assert!(json.contains("grub-install") && !json.contains("limine-install"));
+        assert!(json.contains("console=ttyS0,115200"));
     }
 
     #[test]

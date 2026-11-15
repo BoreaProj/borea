@@ -380,6 +380,22 @@ release. Deferred cards stay in this file marked `deferred`.
 - **Verify:** `cargo xtask e2e --family arch --profile minimal --root-fs ext4
   --loader grub`
 - **Out:** xfs, zfs, dual-boot.
+- **Status:** partly done; Arch GRUB blocked on G07.
+  - `xtask e2e` now runs `arch/minimal-grub`. The old refusal predated G05,
+    which runs the plan's own GRUB steps.
+  - `result.json` reports the resolved loader; it was hard-coded to `limine`.
+  - arch/minimal-ext4 is already validated (F05 record).
+  - Debian, Fedora and openSUSE ext4 cells wait for their family e2e lanes
+    (C02, C04, C05).
+- **Blocker (Arch GRUB):** nightly run 43699983228 on this branch
+  (https://github.com/BoreaProj/borea/actions/runs/43699983228/job/132768780764).
+  Create and plan passed; apply failed at `boot.grub.install`:
+  `grub-install: error: grub-core/kern/fs.c:grub_fs_probe:122:unknown filesystem.`
+  The image partitions reach the sandbox as separate offset loop devices
+  (`Loop::attach`, autoclear only, no partition scan), not partitions of one
+  disk. GRUB probes the `/boot` device through sysfs and does not recognise
+  them. Limine does not probe, which is why arch/minimal passes. This reading
+  is not yet tested. Smallest next experiment: G07.
 
 ---
 
@@ -772,6 +788,21 @@ release. Deferred cards stay in this file marked `deferred`.
   the lock, and the storage, bootstrap and e2e jobs pass.
 - **Verify:** `cargo test -p borea-run loop_backing`; `disposable-image-storage` workflow
 - **Out:** waiting for udev, changing the lock model.
+
+### G07 — Real partition devices for the image plan executor
+- **WS:** G · **Dep:** G05
+- **Files:** `crates/borea-run/src/image.rs`, `docs/{TASKS,IMAGE-EXECUTION}.md`
+- **Deliverable:** in `apply_plan`, attach the whole-disk loop with
+  `LO_FLAGS_PARTSCAN` and bind its kernel partition nodes (`loopNp1..3`,
+  identity-checked by start and size against the image plan) at the plan's
+  partition paths. The separate offset loops are no longer used there. The
+  closed G02/G03 programs are unchanged.
+- **Done when:** `xtask e2e --family arch --profile minimal-grub` passes in CI.
+  arch/minimal and arch/minimal-ext4 still pass, and G06's lock test still
+  holds.
+- **Verify:** `cargo test -p borea-run`; nightly matrix with arch/minimal-grub
+  restored.
+- **Out:** changing the G02 storage program; LUKS.
 
 ### G05 — Image plan executor (unblocks F04)
 - **WS:** G · **Dep:** G02, G03, G04, F04
