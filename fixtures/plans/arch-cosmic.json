@@ -1,9 +1,9 @@
 {
   "schema": 2,
-  "id": "df4617afb3943e00346c908ee5d2beb0",
+  "id": "75dbae5d88d8f134eb0cc59287586222",
   "created": "1970-01-01T00:00:00Z",
   "borea_version": "B-0.3",
-  "digest": "df4617afb3943e00346c908ee5d2beb0757f6c1f6d2bad9b73189b530d9beec9",
+  "digest": "75dbae5d88d8f134eb0cc5928758622204303373d70975357f3bef44bda9056f",
   "config_digest": "d571a2ca5e500f94d5ae1f48420e2897b16e3291d2dd4663c538fe7d426ecb36",
   "matrix_digest": "a27dce16ed4d14ecacee96c00446bb7eaa12cee65aca56def3e89f18df1509e8",
   "family": "arch",
@@ -1108,6 +1108,83 @@
       "phase": "base"
     },
     {
+      "id": "base.root.lock",
+      "title": "base root lock",
+      "action": {
+        "kind": "command",
+        "argv": [
+          "usermod",
+          "--lock",
+          "root"
+        ],
+        "chroot": true,
+        "stdin": null
+      },
+      "needs": [
+        "base.sudo"
+      ],
+      "probe": {
+        "kind": "command_ok",
+        "argv": [
+          "sh",
+          "-c",
+          "getent shadow root | cut -d: -f2 | grep -q '^!'"
+        ],
+        "chroot": true
+      },
+      "danger": "mutating",
+      "timeout_s": 600,
+      "phase": "base"
+    },
+    {
+      "id": "base.machine-id",
+      "title": "base machine-id",
+      "action": {
+        "kind": "command",
+        "argv": [
+          "systemd-machine-id-setup"
+        ],
+        "chroot": true,
+        "stdin": null
+      },
+      "needs": [
+        "base.root.lock"
+      ],
+      "probe": {
+        "kind": "command_ok",
+        "argv": [
+          "sh",
+          "-c",
+          "grep -Eqx '[0-9a-f]{32}' /etc/machine-id"
+        ],
+        "chroot": true
+      },
+      "danger": "mutating",
+      "timeout_s": 600,
+      "phase": "base"
+    },
+    {
+      "id": "base.journald",
+      "title": "base journald",
+      "action": {
+        "kind": "write_file",
+        "path": "/etc/systemd/journald.conf.d/10-borea.conf",
+        "contents": "[Journal]\nStorage=persistent\nSystemMaxUse=500M\n",
+        "mode": 420
+      },
+      "needs": [
+        "base.machine-id"
+      ],
+      "probe": {
+        "kind": "file_contains",
+        "path": "/etc/systemd/journald.conf.d/10-borea.conf",
+        "needle": "[Journal]\nStorage=persistent\nSystemMaxUse=500M\n"
+      },
+      "danger": "mutating",
+      "timeout_s": 600,
+      "phase": "base"
+    },
+    {
       "id": "base.zram",
       "title": "base zram",
       "action": {
@@ -1117,7 +1194,7 @@
         "mode": 420
       },
       "needs": [
-        "base.sudo"
+        "base.journald"
       ],
       "probe": {
         "kind": "file_contains",
@@ -1678,6 +1755,63 @@
         "is-enabled",
         "NetworkManager.service"
       ]
+    },
+    {
+      "kind": "file_contains",
+      "path": "/etc/locale.conf",
+      "needle": "LANG=en_US.UTF-8"
+    },
+    {
+      "kind": "command_ok",
+      "argv": [
+        "test",
+        "/usr/share/zoneinfo/UTC",
+        "-ef",
+        "/etc/localtime"
+      ]
+    },
+    {
+      "kind": "file_contains",
+      "path": "/etc/vconsole.conf",
+      "needle": "KEYMAP=us"
+    },
+    {
+      "kind": "command_ok",
+      "argv": [
+        "sh",
+        "-c",
+        "id -nG tester | tr ' ' '\\n' | grep -qx wheel"
+      ]
+    },
+    {
+      "kind": "command_ok",
+      "argv": [
+        "visudo",
+        "-c",
+        "-f",
+        "/etc/sudoers.d/10-borea"
+      ]
+    },
+    {
+      "kind": "command_ok",
+      "argv": [
+        "sh",
+        "-c",
+        "getent shadow root | cut -d: -f2 | grep -q '^!'"
+      ]
+    },
+    {
+      "kind": "command_ok",
+      "argv": [
+        "sh",
+        "-c",
+        "grep -Eqx '[0-9a-f]{32}' /etc/machine-id"
+      ]
+    },
+    {
+      "kind": "file_contains",
+      "path": "/etc/systemd/journald.conf.d/10-borea.conf",
+      "needle": "[Journal]\nStorage=persistent\nSystemMaxUse=500M\n"
     },
     {
       "kind": "command_ok",
