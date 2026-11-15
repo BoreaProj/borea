@@ -21,6 +21,8 @@ use std::{
     time::{Instant, SystemTime, UNIX_EPOCH},
 };
 
+/// Families whose runtime has run a plan on an image (G05 Arch, C03 Debian).
+const IMAGE_LANES: &[FamilyId] = &[FamilyId::Arch, FamilyId::Debian];
 const IMAGE_BYTES: u64 = 20 * 1024 * 1024 * 1024;
 const STAGES: &[&str] = &["create", "plan", "apply", "boot", "verify", "collect"];
 /// TESTING.md §11: no artifact may contain the canary password.
@@ -116,10 +118,15 @@ impl Args {
     /// Only cells with a disposable-image lane can run. Refuse the rest before
     /// any image is created rather than produce an artifact that proves nothing.
     fn gate(&self) -> Result<()> {
-        if self.family != FamilyId::Arch {
+        if !IMAGE_LANES.contains(&self.family) {
             return Err(BoreaError::unsupported(format!(
-                "e2e has no {} image lane: only the Arch runtime bootstraps images (G03); Debian/Fedora/openSUSE image bootstrap are later cards",
-                self.family.as_str()
+                "e2e has no {} image lane yet; lanes exist for {}. Fedora and openSUSE come with C04 and C05",
+                self.family.as_str(),
+                IMAGE_LANES
+                    .iter()
+                    .map(|f| f.as_str())
+                    .collect::<Vec<_>>()
+                    .join(", ")
             )));
         }
         if !matches!(
@@ -560,7 +567,7 @@ mod tests {
     #[test]
     fn refuses_cells_without_an_image_lane() {
         for a in [
-            ["--family", "debian", "--profile", "minimal"],
+            ["--family", "fedora", "--profile", "minimal"],
             ["--family", "arch", "--profile", "kde"],
         ] {
             let e = parse(&a).unwrap().gate().unwrap_err();
