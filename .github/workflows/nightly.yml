@@ -1,0 +1,98 @@
+name: nightly matrix
+# F05: re-run every cell that has an e2e lane, keep the evidence, and fail if a
+# cell recorded in recipes/validated.json regresses. A passing run prints the
+# `matrix record` result; recording is a reviewed commit, never automatic.
+on:
+  schedule:
+    - cron: "45 2 * * *"
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: nightly-matrix
+  cancel-in-progress: false
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Cells with an image lane today (xtask e2e refuses the rest).
+          - { family: arch, profile: minimal }
+          - { family: arch, profile: minimal-ext4 }
+    env:
+      CELL: ${{ matrix.family }}/${{ matrix.profile }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.99.1
+      - uses: Swatinem/rust-cache@v2
+      - name: Namespace and VM prerequisites
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y bubblewrap ovmf qemu-system-x86 jq
+      - name: Build and fetch pinned independent runtime
+        run: |
+          cargo build --release --locked -p borea-cli -p xtask
+          target/release/borea runtime fetch --family "${{ matrix.family }}" --cache "$RUNNER_TEMP/borea-image-runtime"
+      - name: e2e ${{ env.CELL }}
+        id: e2e
+        run: |
+          set -o pipefail
+          mkdir -p target/e2e
+          status=0
+          sudo env BOREA_RUNTIME_CACHE="$RUNNER_TEMP/borea-image-runtime" GITHUB_SHA="$GITHUB_SHA" \
+            target/release/xtask e2e --family "${{ matrix.family }}" --profile "${{ matrix.profile }}" \
+            --out "$PWD/target/e2e" 2>&1 | tee target/e2e/run.log || status=$?
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          sudo chown -R "$(id -u):$(id -g)" target/e2e
+          ! grep -rl 'canary-not-a-real-password' target/e2e
+      - name: Upload evidence
+        id: upload
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-${{ matrix.family }}-${{ matrix.profile }}
+          path: target/e2e
+          retention-days: 90
+      - name: Record candidate
+        if: steps.e2e.outputs.status == '0'
+        env:
+          RUN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          NAME: e2e-${{ matrix.family }}-${{ matrix.profile }}
+          ID: ${{ steps.upload.outputs.artifact-id }}
+        run: |
+          result=$(ls target/e2e/$CELL/*/result.json | tail -n 1)
+          target/release/xtask matrix record --result "$result" --run "$RUN" --artifact "$NAME" --artifact-id "$ID"
+          record=$(jq --arg c "$CELL" '.cells[] | select(.cell == $c)' recipes/validated.json)
+          echo "$record"
+          {
+            echo "### $CELL passed"
+            echo "To validate this cell, add this record to recipes/validated.json"
+            echo "(or run the same \`matrix record\` command locally) in a reviewed PR:"
+            echo '```json'
+            echo "$record"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Fail on a failed run
+        run: test '${{ steps.e2e.outputs.status }}' = 0
+
+  regressions:
+    needs: [e2e]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.99.1
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: e2e-*
+          path: ${{ runner.temp }}/nightly
+      - name: Recorded cells still pass
+        run: cargo xtask matrix verify --artifacts "$RUNNER_TEMP/nightly"

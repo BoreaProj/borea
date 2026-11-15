@@ -151,6 +151,19 @@ jobs:
           grep -a -m1 -o 'root=UUID=[^[:cntrl:]]*' "$dir/serial.log" || true
           ! ls target/e2e/$CELL/*/disk.img 2>/dev/null
           ! grep -rl 'canary-not-a-real-password' target/e2e
+      - name: matrix record and verify accept the real result (not committed)
+        env:
+          RUN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          result=$(ls target/e2e/$CELL/*/result.json | tail -n 1)
+          target/release/xtask matrix record --result "$result" --run "$RUN" --artifact e2e-arch-minimal --artifact-id 1
+          jq -e '.cells | length == 1 and .[0].cell == "arch/minimal" and .[0].loader == "limine"' recipes/validated.json
+          target/release/xtask matrix verify --artifacts target/e2e
+          out=$(target/release/xtask matrix verify --strict --artifacts target/e2e 2>&1) && exit 1
+          echo "$out"
+          grep -q '28 required cells have no validated e2e result' <<<"$out"
+          ! grep -q 'arch/minimal: recorded result' <<<"$out"
+          git checkout -- recipes/validated.json docs/MATRIX.generated.md
       - uses: actions/upload-artifact@v4
         if: always()
         with:
