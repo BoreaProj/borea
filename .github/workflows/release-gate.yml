@@ -3,6 +3,7 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+  actions: read
 jobs:
   required-vm-evidence:
     runs-on: ubuntu-latest
@@ -11,5 +12,18 @@ jobs:
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: 1.99.1
+      - name: Download each recorded cell's evidence
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          dir="$RUNNER_TEMP/evidence"
+          mkdir -p "$dir"
+          for id in $(jq -r '.cells[].artifact_id' recipes/validated.json); do
+            # An expired or deleted artifact is missing evidence, and the gate fails below.
+            if gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$id/zip" > "$dir/$id.zip"; then
+              unzip -q "$dir/$id.zip" -d "$dir/$id"
+            fi
+            rm -f "$dir/$id.zip"
+          done
       - name: Refuse release without validated VM cells
-        run: cargo xtask matrix verify --strict
+        run: cargo xtask matrix verify --strict --artifacts "$RUNNER_TEMP/evidence"

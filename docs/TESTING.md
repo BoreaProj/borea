@@ -224,9 +224,27 @@ target/e2e/<family>/<profile>/<timestamp>/
   disk.img            (only with --keep)
 ```
 
-CI uploads the whole directory on failure and `result.json` on success.
-`cargo xtask matrix verify --strict` scans artifacts and refuses to mark a cell
-green without a `pass: true` result newer than the last recipe change.
+CI uploads the whole run directory as an artifact (90-day retention nightly).
+
+A cell is validated only by a record in `recipes/validated.json`. The record
+ties the cell to one `result.json` by digest, plus the commit, run URL and
+artifact id. `cargo xtask matrix record --result R --run URL --artifact NAME
+--artifact-id ID` is the only writer. It accepts only a passing result that
+lists plan, journal, serial log and verify report, for a required cell with
+that cell's root filesystem and loader. The nightly workflow prints the
+record for each passing cell. Committing it is a reviewed change, and records
+come from runs on `main`: a PR run tests a temporary merge commit.
+
+- `cargo xtask matrix verify [--artifacts DIR]` (nightly): records are well
+  formed; any recorded cell re-run in DIR must have passed.
+- `cargo xtask matrix verify --strict --artifacts DIR` (release gate): also
+  every required cell has a record, and each record's own result is in DIR with
+  the same digest and commit. The release-gate workflow downloads each
+  record's artifact by id first. An expired artifact fails the gate, so the
+  cell must be re-run and re-recorded.
+
+Not yet enforced: re-validation after a recipe change. The record keeps the
+commit, so a later card can compare it with the recipe history.
 
 ## 7. What each cell actually asserts
 
@@ -278,12 +296,12 @@ cargo xtask plan golden
 cargo xtask secret canary
 ```
 
-Nightly (or manual):
+Nightly (`.github/workflows/nightly.yml`, 02:45 UTC, or manual):
 
-- disk selftest, Btrfs and ext4, unencrypted and encrypted;
-- one family per night on a rotating schedule, all four by the end of the week;
-- the 24 session cells plus the five storage/boot cells on release candidates;
-- artifacts uploaded and indexed.
+- every cell with an image lane today: arch/minimal and arch/minimal-ext4;
+- a regression job that fails if a recorded cell no longer passes;
+- planned as lanes exist: disk selftests with LUKS, a rotating family per
+  night, and every session and storage/boot cell on release candidates.
 
 A red nightly does not block unrelated PRs, but it blocks a release. The
 release checklist reads the latest artifact index, not memory.
