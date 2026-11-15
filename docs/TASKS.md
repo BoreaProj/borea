@@ -649,6 +649,26 @@ release. Deferred cards stay in this file marked `deferred`.
 - **Verify:** `cargo xtask matrix check`; `cargo xtask plan golden`
 - **Out:** game mods, emulators, interactive tweaks.
 
+### D16 — Shell autostart beyond Hyprland, and home ownership
+- **WS:** D · **Dep:** A11, D05
+- **Files:** `crates/borea-distro/src/planner.rs`, `crates/xtask/src/main.rs`
+  (golden cases), golden fixtures, `docs/{TASKS,DECISIONS}.md`
+- **Deliverable:**
+  - Niri: start the shell as a global systemd user unit
+    (`/etc/systemd/user/borea-shell.service`, `WantedBy=graphical-session.target`,
+    enabled with `systemctl --global enable`), because `niri.service` brings up
+    `graphical-session.target`.
+  - Hyprland: after seeding `~/.config/hypr/hyprland.conf` as root, hand
+    `~/.config` back to the user (`chown -R user:`), with a probe and a check.
+  - MangoWM: refused with a remedy until a session hook is verified.
+- **Done when:** golden plans exist for Noctalia and DMS on Niri, MangoWM
+  refuses, and the Hyprland plans carry the ownership step and check.
+- **Verify:** `cargo xtask plan golden`; workspace tests
+- **Out:** VM runs of session cells (they need display-manager checks); kitty
+  in the Hyprland seed.
+- **Status:** done (D-044). Golden fixtures `arch-niri-noctalia`,
+  `arch-niri-dms` and the `arch-mangowm-noctalia` refusal are added.
+
 ---
 
 ## E — Omarchy

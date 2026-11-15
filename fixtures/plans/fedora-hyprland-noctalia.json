@@ -1,9 +1,9 @@
 {
   "schema": 2,
-  "id": "754bba7e67531a69fe3291309f88a034",
+  "id": "c89b5c93f6041b32e7264965630d0e98",
   "created": "1970-01-01T00:00:00Z",
   "borea_version": "B-0.3",
-  "digest": "754bba7e67531a69fe3291309f88a034b69a40b2d5c15c3a7907cb8adf552fbc",
+  "digest": "c89b5c93f6041b32e7264965630d0e9866ee75c823e618282e322df56d4db996",
   "config_digest": "b4964ccc4ecce9a4e5e2ec9c1f253083711727ccb2d0b2d8a803cda058ae6e86",
   "matrix_digest": "a27dce16ed4d14ecacee96c00446bb7eaa12cee65aca56def3e89f18df1509e8",
   "family": "fedora",
@@ -1291,6 +1291,36 @@
       "phase": "session"
     },
     {
+      "id": "session.autostart.owner",
+      "title": "session autostart owner",
+      "action": {
+        "kind": "command",
+        "argv": [
+          "chown",
+          "-R",
+          "tester:",
+          "/home/tester/.config"
+        ],
+        "chroot": true,
+        "stdin": null
+      },
+      "needs": [
+        "session.autostart"
+      ],
+      "probe": {
+        "kind": "command_ok",
+        "argv": [
+          "sh",
+          "-c",
+          "test \"$(stat -c %U /home/tester/.config)\" = tester && test \"$(stat -c %U /home/tester/.config/hypr/hyprland.conf)\" = tester"
+        ],
+        "chroot": true
+      },
+      "danger": "mutating",
+      "timeout_s": 600,
+      "phase": "session"
+    },
+    {
       "id": "session.greetd",
       "title": "session greetd",
       "action": {
@@ -1300,7 +1330,7 @@
         "mode": 420
       },
       "needs": [
-        "session.autostart"
+        "session.autostart.owner"
       ],
       "probe": {
         "kind": "file_contains",
@@ -1597,6 +1627,14 @@
       "kind": "file_contains",
       "path": "/etc/systemd/journald.conf.d/10-borea.conf",
       "needle": "[Journal]\nStorage=persistent\nSystemMaxUse=500M\n"
+    },
+    {
+      "kind": "command_ok",
+      "argv": [
+        "sh",
+        "-c",
+        "test \"$(stat -c %U /home/tester/.config)\" = tester && test \"$(stat -c %U /home/tester/.config/hypr/hyprland.conf)\" = tester"
+      ]
     },
     {
       "kind": "command_ok",

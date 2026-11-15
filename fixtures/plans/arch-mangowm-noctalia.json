@@ -1,0 +1,6 @@
+{
+  "code": "E_UNSUPPORTED",
+  "reason": "shell autostart is implemented for Hyprland and Niri; MangoWM has no verified session hook (D-044). Remedy: set session.compositor to hyprland or niri",
+  "schema": 1,
+  "status": "refused"
+}

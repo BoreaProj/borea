@@ -280,6 +280,10 @@ fn extra_cases() -> Vec<(FamilyId, String, Filesystem, Loader)> {
         (FamilyId::Arch, "omarchy-custom"),
         (FamilyId::Debian, "cosmic"),
         (FamilyId::Arch, "hyprland"),
+        // D-044: non-default compositors. Niri plans; MangoWM is refused.
+        (FamilyId::Arch, "niri-noctalia"),
+        (FamilyId::Arch, "niri-dms"),
+        (FamilyId::Arch, "mangowm-noctalia"),
     ]
     .into_iter()
     .map(|(f, p)| (f, p.into(), Filesystem::Btrfs, Loader::Auto))
@@ -308,6 +312,13 @@ fn case_config(f: FamilyId, profile: &str, fs: Filesystem, l: Loader) -> Result<
         "kde" | "gnome" | "cosmic" => {
             c.session.kind = "desktop".into();
             c.session.desktop = Some(profile.into());
+            c.session.greeter = "auto".into();
+        }
+        s @ ("niri-noctalia" | "niri-dms" | "mangowm-noctalia") => {
+            let (compositor, shell) = s.split_once('-').expect("profile has a compositor");
+            c.session.kind = "shell".into();
+            c.session.compositor = Some(compositor.into());
+            c.session.shell = Some(shell.into());
             c.session.greeter = "auto".into();
         }
         s if s.starts_with("hyprland") => {
