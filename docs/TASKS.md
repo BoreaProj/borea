@@ -418,6 +418,16 @@ release. Deferred cards stay in this file marked `deferred`.
 - **Done when:** Debian minimal VM boots and verifies.
 - **Verify:** `cargo xtask e2e --family debian --profile minimal`
 - **Out:** Ubuntu, derivatives, testing/sid beyond the configured suite.
+- **Status:** done for the image lane. `xtask e2e` runs Debian (`IMAGE_LANES`).
+  debian/minimal (btrfs) and debian/minimal-ext4 pass end to end in nightly
+  run 43728325508 on this branch: `debootstrap` from the runtime, the plan's
+  apt packages, initramfs-tools, GRUB, boot and `borea verify --ssh`. No
+  adapter change was needed. Record both from a nightly run on `main` after
+  merge.
+  - Observation: Debian's `update-grub` adds `root=/dev/vda3` (the plan's path
+    as seen in the sandbox) before the plan's `root=UUID=`. The kernel uses the
+    last `root=`, so boot is correct; on a real disk the path is the real
+    device.
 
 ### C04 — Fedora adapter
 - **WS:** C · **Dep:** C02
@@ -863,6 +873,20 @@ release. Deferred cards stay in this file marked `deferred`.
 | Limine on openSUSE | packaged, but GRUB is better integrated and no VM cell exists (O-21) | O-21 accepted + VM cell |
 | alongside/resize | dangerous, large | after v1 |
 | GUI | explicitly removed | never in this repo |
+
+### F07 — VM root-mount evidence for script initramfs
+- **WS:** F · **Dep:** F03
+- **Files:** `crates/xtask/src/vm.rs`
+- **Deliverable:** accept the kernel's filesystem mount line for the root UUID
+  (`BTRFS info … first mount of filesystem <uuid>`, `EXT4-fs (…): mounted
+  filesystem <uuid>`) as root-mount evidence. Debian's initramfs-tools mounts
+  root from a script, so neither `VFS: Mounted root` nor systemd's
+  `Mounted /sysroot.` appears. The UUID must be the last `root=UUID=` on the
+  kernel command line.
+- **Done when:** debian/minimal passes the VM serial checks; a wrong or earlier
+  UUID is rejected.
+- **Verify:** `cargo test -p xtask vm`
+- **Status:** done (evidence: C03 nightly run 43727370833).
 
 ### G02 — Closed image storage executor
 - **Scope:** Borea-created root-owned raw images only; private verified runtime

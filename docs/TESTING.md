@@ -298,7 +298,8 @@ cargo xtask secret canary
 
 Nightly (`.github/workflows/nightly.yml`, 02:45 UTC, or manual):
 
-- every cell with an image lane today: arch/minimal and arch/minimal-ext4;
+- every cell with an image lane today: arch/minimal, arch/minimal-ext4,
+  arch/minimal-grub, debian/minimal and debian/minimal-ext4;
 - a regression job that fails if a recorded cell no longer passes;
 - planned as lanes exist: disk selftests with LUKS, a rotating family per
   night, and every session and storage/boot cell on release candidates.
