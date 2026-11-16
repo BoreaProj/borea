@@ -799,6 +799,29 @@ release. Deferred cards stay in this file marked `deferred`.
 - **Verify:** `cargo test -p borea-run loop_backing`; `disposable-image-storage` workflow
 - **Out:** waiting for udev, changing the lock model.
 
+### G08 — Image executor on Ubuntu 26.04 hosts
+- **WS:** G · **Dep:** G02, G05
+- **Files:** `crates/borea-run/src/{image,runtime}.rs`, `.github/workflows/{image,nightly}.yml`,
+  `docs/{TASKS,DECISIONS,IMAGE-EXECUTION}.md`
+- **Context:** GitHub moved `ubuntu-latest` from 24.04 to 26.04 on 2026-11-16.
+  On the 26.04 runner, every storage, bootstrap and e2e job fails at the first
+  mount inside the bwrap sandbox:
+  `mount: /target: permission denied.` (storage selftest,
+  https://github.com/BoreaProj/borea/actions/runs/43846530120). The same commit
+  `a0b73d0` passed on 24.04 the day before. Runner image `ubuntu-26.04`
+  20261111.82.6, bubblewrap 0.11.1-1ubuntu0.3.
+- **Interim:** image and nightly e2e jobs are pinned to `ubuntu-24.04`. This is a
+  CI pin only: Borea on an Ubuntu 26.04 host is expected to hit the same
+  refusal.
+- **Deliverable:** identify the denial (suspected AppArmor confinement of
+  `/usr/bin/bwrap` on 26.04: capture `dmesg`/audit `apparmor="DENIED"` lines)
+  and either make the sandbox work under it without disabling host security
+  policy, or refuse early with a clear `E_UNSUPPORTED` and remedy. Then unpin CI.
+- **Done when:** the storage selftest and an e2e cell pass on `ubuntu-26.04`, or
+  Borea refuses there before creating anything, with evidence.
+- **Verify:** image workflow on `ubuntu-26.04`.
+- **Out:** turning off AppArmor or user-namespace restrictions on the host.
+
 ### G07 — Real partition devices for the image plan executor
 - **WS:** G · **Dep:** G05
 - **Files:** `crates/borea-run/src/image.rs`, `docs/{TASKS,IMAGE-EXECUTION}.md`

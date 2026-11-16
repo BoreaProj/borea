@@ -8,7 +8,7 @@ permissions:
   contents: read
 jobs:
   storage:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04  # G08: bwrap mounts are denied on the 26.04 runner
     strategy:
       fail-fast: false
       matrix:
@@ -41,7 +41,7 @@ jobs:
 
   bootstrap:
     needs: [storage]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04  # G08: bwrap mounts are denied on the 26.04 runner
     timeout-minutes: 45
     strategy:
       fail-fast: false
@@ -94,7 +94,7 @@ jobs:
 
   e2e:
     needs: [storage]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04  # G08: bwrap mounts are denied on the 26.04 runner
     timeout-minutes: 45
     env:
       CELL: arch/minimal
