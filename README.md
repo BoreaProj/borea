@@ -4,10 +4,22 @@ A small, CLI-first Linux installer and customiser in Rust.
 
 `borea` is an **independent, standalone Linux installer**. It installs a
 **minimal system** without requiring a distro live environment or a
-Borea-specific live environment, then adds one session: KDE, GNOME or COSMIC, or a Wayland compositor (Hyprland,
-Niri, MangoWM) with a shell (Noctalia, DUX/Dank Material Shell, end-4). Its targets are
-**Arch, Debian, Fedora and openSUSE**, and says plainly which combinations
-it cannot install yet instead of offering buttons that fail.
+Borea-specific live environment, then adds one session. Its targets are
+**Arch, Debian, Fedora 45 and openSUSE Tumbleweed**, and it says plainly which
+combinations it cannot install yet instead of offering buttons that fail.
+
+Each family starts from a **minimal worker base** built with that family's own
+bootstrap tool (`pacstrap`, `mmdebstrap`, `dnf --installroot`,
+`zypper --root`). On top of it Borea installs exactly one session
+([D-039](docs/DECISIONS.md)):
+
+- a **desktop**: KDE Plasma, GNOME or COSMIC; or
+- a **shell**: Noctalia v5, DMS (DankMaterialShell) or End4 (Arch only), on
+  Hyprland by default. Noctalia and DMS can run on Niri instead.
+
+A bare compositor without a shell is refused, and MangoWM is refused until a
+shell supports it. Third-party repositories are used only where a family has
+no native package, and then only with a reviewed pin.
 
 The root is **Btrfs by default** (`@`, `@home`, `@snapshots`, `@log`, `@cache`,
 zstd compression), with ext4 where it is the better tool: the small unencrypted
@@ -18,21 +30,46 @@ integration.
 
 Borea owns its installation workflow and runtime tooling; the selected distro
 is the installation target, not the environment Borea must run inside. Verified tool bundles are delivered for all four families; see
-[Independent runtimes](docs/RUNTIME.md). Disk execution and boot validation
-remain separate milestones.
+[Independent runtimes](docs/RUNTIME.md).
 
-The Arch family also offers an experimental **Omarchy profile**, following
+Standalone flavours are planned for v0.2: **Omarchy** (Arch), **PikaOS**
+(Debian) and **Nobara** (Fedora), each adjustable by Borea in the same way as
+Omarchy trim. openSUSE has no flavour; it is base plus desktop or shell.
+
+The Arch family already offers an experimental **Omarchy profile**, following
 Linutil/upstream defaults with explicit `keep`, `remove`, replacement and browser
 choices. Unselected apps stay unchanged. See [Omarchy controls](docs/OMARCHY.md).
 
 It also carries the existing-system Omarchy tools: a **trimmer** for Omarchy defaults and a
 **default manager** that keeps removed defaults from coming back after updates.
 
-**Status: experimental implementation preview.** Config validation, matrix gates,
-deterministic plans, family/session command generation, dry-run, file-only fixture
-execution with resume journals, verification reports and Omarchy policy operations
-are implemented. **Live installs and Omarchy removals are disabled. No VM cell
-has passed.** Third-party/source paths without pins refuse planning.
+**Status: experimental, pre-release.** Config validation, matrix gates,
+deterministic plans, family/session command generation, dry-run, resume
+journals, verification reports and Omarchy policy operations are implemented.
+
+The **image lane** works end to end: `cargo xtask e2e` partitions a raw disk
+image, runs the sealed plan inside a sandbox, boots the result in QEMU/UEFI and
+verifies it over the serial console and SSH. These cells have passed in CI:
+
+| Cell | Root | Loader |
+| --- | --- | --- |
+| `arch/minimal` | Btrfs | Limine |
+| `arch/minimal-ext4` | ext4 | Limine |
+| `arch/minimal-grub` | Btrfs | GRUB |
+| `debian/minimal` | Btrfs | GRUB |
+| `debian/minimal-ext4` | ext4 | GRUB |
+
+A cell only counts as validated while its record in
+[`recipes/validated.json`](recipes/validated.json) matches its current golden
+plan. The C06 base hardening changed every plan, so the earlier records are
+stale and `matrix check` reports **0/29 required cells validated** until the
+nightly run on `main` passes and the cells are re-recorded. Fedora, openSUSE
+and every desktop/shell cell are planned but not yet run in a VM.
+
+**Not available yet:** `apply` against a real disk (it refuses before any
+disk access), LUKS, and Omarchy removals on a live system. Third-party and
+source paths without pins refuse planning. The image lane needs an Ubuntu
+24.04 (or similar) host; Ubuntu 26.04 denies the sandbox's mounts (G08).
 See [`docs/IMPLEMENTATION.md`](docs/IMPLEMENTATION.md) for the exact working
 commands, limitations and remaining work. The full v0.1 contract remains in
 [`docs/PLAN.md`](docs/PLAN.md).
@@ -90,6 +127,18 @@ cargo xtask recipe lint
 cargo xtask plan golden
 ```
 
+The image lane (needs `bwrap`, QEMU and OVMF; uses an image file and loop
+device, never a real disk). Each run writes `target/e2e/<family>/<profile>/`:
+
+```sh
+cargo xtask e2e --family arch --profile minimal
+cargo xtask e2e --family debian --profile minimal --root-fs ext4
+cargo xtask matrix verify --strict
+```
+
+Only CI runs are recorded as validated (`cargo xtask matrix record --result
+... --run ...`); see [`docs/TESTING.md`](docs/TESTING.md).
+
 Use a fresh output path: `plan` refuses to overwrite files. Fixture identities
 are for inspection only. `apply --yes --device ...` returns an unsupported error
 before any disk access or writes. File-only fixture execution and policy
@@ -122,29 +171,29 @@ examples are documented in [`docs/IMPLEMENTATION.md`](docs/IMPLEMENTATION.md).
 | running a real install | [`docs/OPERATIONS.md`](docs/OPERATIONS.md) |
 | an agent (Claude/Codex) | `AGENTS.md` and [`docs/PROMPTS.md`](docs/PROMPTS.md) |
 
-## Target packaging coverage
+## Coverage
 
-The v0.1 plan targets minimal, KDE, GNOME, Hyprland, Noctalia and DUX/DMS on every family.
-These are packaging intentions, not working installs. All cells remain untested;
-some third-party recipes are explicitly refused until pins are reviewed.
-Everything else is a documented gate. The full table, evidence and dates are in
-[`docs/MATRIX.md`](docs/MATRIX.md); the short version:
+29 cells are required for v0.1: the minimal base on every family, plus each
+D-039 desktop and shell where its packages exist. The generated table, with
+evidence and dates, is [`docs/MATRIX.md`](docs/MATRIX.md); in short:
 
 | | Arch | Debian | Fedora | openSUSE |
 | --- | --- | --- | --- | --- |
-| minimal, KDE, GNOME | yes | yes | yes | yes |
-| Hyprland | yes | yes | yes | yes |
-| Noctalia, DUX/DMS | yes | yes | yes | yes |
+| minimal, KDE, GNOME | native | native | native | native |
+| COSMIC | native | refused | native | third-party |
+| Noctalia v5 | native | third-party | native | third-party |
+| DMS | native | third-party | third-party | third-party |
+| End4 | source | refused | refused | refused |
+| Hyprland | native | native | native | native |
+| Niri (Noctalia, DMS) | native | refused | native | native |
 | Btrfs root, ext4 `/boot` | yes | yes | yes | yes |
 | ext4 root fallback | yes | yes | yes | yes |
-| Limine | yes (default) | gate | gate | gate |
-| GRUB | yes (fallback) | yes (default) | yes (default) | yes (default) |
-| Niri | yes | gate | yes | yes |
-| MangoWM | yes | third-party | third-party | gate |
-| COSMIC | yes | gate | yes | third-party |
-| end-4 | source | gate | gate | gate |
+| Limine | default | refused | refused | refused |
+| GRUB | yes | default | default | default |
 
-A gate is a refusal with a reason, not a hidden feature and not a promise.
+`native`, `third-party` and `source` describe where packages come from, not
+that an install works; only cells listed under Status have booted. A refusal
+is an error with a reason and a remedy, not a hidden feature.
 
 ## Licence
 
