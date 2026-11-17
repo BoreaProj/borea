@@ -200,6 +200,13 @@ impl Run {
 pub fn run(args: &Args) -> Result<()> {
     args.gate()?;
     let loader = args.loader_name()?;
+    let golden = crate::build_case(&crate::case_config(
+        args.family,
+        &args.profile,
+        args.root_fs,
+        args.loader,
+    )?)?
+    .digest;
     let started = Instant::now();
     let root = match &args.out {
         Some(out) => out.clone(),
@@ -236,7 +243,7 @@ pub fn run(args: &Args) -> Result<()> {
     }
     order_stages(&mut run.stages);
     let result = serde_json::json!({
-        "schema": 1,
+        "schema": 2,
         "cell": cell,
         "family": args.family,
         "profile": args.profile,
@@ -250,6 +257,8 @@ pub fn run(args: &Args) -> Result<()> {
         "identity": run.identity,
         "duration_s": started.elapsed().as_secs(),
         "release": borea_core::RELEASE,
+        // F06: the cell's golden plan, so a record goes stale when it changes.
+        "golden_digest": golden,
     });
     let path = run.dir.join("result.json");
     OpenOptions::new()

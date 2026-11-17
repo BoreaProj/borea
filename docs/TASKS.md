@@ -799,6 +799,29 @@ release. Deferred cards stay in this file marked `deferred`.
 - **Verify:** `cargo test -p borea-run loop_backing`; `disposable-image-storage` workflow
 - **Out:** waiting for udev, changing the lock model.
 
+### G08 — Image executor on Ubuntu 26.04 hosts
+- **WS:** G · **Dep:** G02, G05
+- **Files:** `crates/borea-run/src/{image,runtime}.rs`, `.github/workflows/{image,nightly}.yml`,
+  `docs/{TASKS,DECISIONS,IMAGE-EXECUTION}.md`
+- **Context:** GitHub moved `ubuntu-latest` from 24.04 to 26.04 on 2026-11-16.
+  On the 26.04 runner, every storage, bootstrap and e2e job fails at the first
+  mount inside the bwrap sandbox:
+  `mount: /target: permission denied.` (storage selftest,
+  https://github.com/BoreaProj/borea/actions/runs/43846530120). The same commit
+  `a0b73d0` passed on 24.04 the day before. Runner image `ubuntu-26.04`
+  20261111.82.6, bubblewrap 0.11.1-1ubuntu0.3.
+- **Interim:** image and nightly e2e jobs are pinned to `ubuntu-24.04`. This is a
+  CI pin only: Borea on an Ubuntu 26.04 host is expected to hit the same
+  refusal.
+- **Deliverable:** identify the denial (suspected AppArmor confinement of
+  `/usr/bin/bwrap` on 26.04: capture `dmesg`/audit `apparmor="DENIED"` lines)
+  and either make the sandbox work under it without disabling host security
+  policy, or refuse early with a clear `E_UNSUPPORTED` and remedy. Then unpin CI.
+- **Done when:** the storage selftest and an e2e cell pass on `ubuntu-26.04`, or
+  Borea refuses there before creating anything, with evidence.
+- **Verify:** image workflow on `ubuntu-26.04`.
+- **Out:** turning off AppArmor or user-namespace restrictions on the host.
+
 ### G07 — Real partition devices for the image plan executor
 - **WS:** G · **Dep:** G05
 - **Files:** `crates/borea-run/src/image.rs`, `docs/{TASKS,IMAGE-EXECUTION}.md`
@@ -884,6 +907,26 @@ release. Deferred cards stay in this file marked `deferred`.
 | Limine on openSUSE | packaged, but GRUB is better integrated and no VM cell exists (O-21) | O-21 accepted + VM cell |
 | alongside/resize | dangerous, large | after v1 |
 | GUI | explicitly removed | never in this repo |
+
+### F06 — Validated cells go stale when their plan changes
+- **WS:** F · **Dep:** F05
+- **Files:** `crates/xtask/src/{matrix,e2e,main}.rs`, `recipes/validated.json`,
+  `docs/{TASKS,TESTING}.md`
+- **Deliverable:** `result.json` (schema 2) carries the cell's golden plan
+  digest at run time, and each record keeps it (`validated.json` schema 2).
+  A record whose digest differs from the cell's current golden plan is
+  **stale**: `matrix check`, `matrix verify` and `MATRIX.generated.md` show it
+  as stale, and `matrix verify --strict` fails until the cell is re-run and
+  re-recorded.
+- **Done when:** a recipe or planner change that alters a cell's plan makes
+  its record stale without any manual step.
+- **Verify:** `cargo test -p xtask matrix`; `cargo xtask matrix verify`
+- **Out:** automatic re-recording (records stay reviewed commits).
+- **Status:** done. Existing records were migrated with the golden digest
+  from their own commit (`git show <commit>:fixtures/plans/<cell>.json`).
+  All three Arch records are stale: A11 and C08 changed the plans after
+  `6b06f35`, and C06 changed every plan after `806671d`. Re-record from the
+  next nightly on `main`.
 
 ### F07 — VM root-mount evidence for script initramfs
 - **WS:** F · **Dep:** F03
