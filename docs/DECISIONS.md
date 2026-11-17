@@ -800,3 +800,23 @@ empty placeholder file.
   inputs, not user config.
 **Evidence:** nightly run 43707335139 on `feature/g07-partition-devices`: arch/minimal, arch/minimal-ext4 and
 arch/minimal-grub all pass.
+
+### D-044 — Shell autostart per compositor; Arch DMS packaging gap closed
+
+**Date:** 2026-11-15
+**Decision:**
+- **Hyprland** keeps the `exec-once` seed in `~/.config/hypr/hyprland.conf`. The seed was written as root, which left
+  `~/.config` root-owned in the user's home. A `session.autostart.owner` step (`chown -R user: ~/.config`, probed by
+  owner) and a verify check now fix that.
+- **Niri** starts the shell as a global systemd user unit, `/etc/systemd/user/borea-shell.service`. The unit is
+  `PartOf`/`After`/`Requisite` and `WantedBy=graphical-session.target`, and is enabled with
+  `systemctl --global enable`. niri's default `niri.service` brings up `graphical-session.target`, and niri's
+  integration docs recommend a `.service` with `WantedBy=graphical-session.target` for autostart
+  (https://github.com/YaLTeR/niri/wiki/Example-systemd-Setup). This leaves the user's niri config untouched.
+- **MangoWM** is refused for shells until a session hook is verified: no evidence that it starts
+  `graphical-session.target`.
+- **Arch DMS (D-042 gap closed):** `extra/dms-shell` 2.1.2 replaces `dms-shell-hyprland` and `dms-shell-niri` and
+  needs no compositor provider (https://archlinux.org/packages/extra/x86_64/dms-shell/, checked 2026-11-15). One
+  package serves both compositors, so per-compositor packages are not needed.
+
+**Not proven yet:** no VM run covers a session cell; their VM checks need display-manager and session assertions.
